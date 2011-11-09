@@ -1,17 +1,17 @@
 %%% @author Peter Myllykoski <peter@UL30JT>
 %%% @copyright (C) 2011, Peter Myllykoski
 %%% @doc
-%%%
+%%% 
 %%% @end
 %%% Created :  9 Nov 2011 by Peter Myllykoski <peter@UL30JT>
 
 -module(torrent).
 -export([start_link_loader/0,init_loader/1]).
--export([start_link/0,init/0]).
+-export([start_link/1,init/1]).
 
 %% =============================================================================
-%% Torrent loader function that dynamically loads all torrents and adds them to
-%% the torrent supervisor list.
+%% Torrent loader function that is responsible for opening the persistent 
+%% storage and dynamically add all the torrents found into the supervisor.
 
 start_link_loader() ->
     Self = self(),
@@ -26,10 +26,14 @@ start_link_loader() ->
 init_loader(Pid)->
     io:fwrite("Torrent Loader Started!\n"),
     Pid ! {ok,self()},
-    StartFunc = {torrent,start_link,[]},
+
+    %% Dummy torrent 1
+    StartFunc = {torrent,start_link,[dummy_torrent_1]},
     ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent1]},
     supervisor:start_child(Pid,ChildSpec),
-    StartFunc2 = {torrent,start_link,[]},
+
+    %% Dummy torrent 2
+    StartFunc2 = {torrent,start_link,[dummy_torrent_2]},
     ChildSpec2 = {torrent2,StartFunc2,permanent,brutal_kill,worker,[torrent2]},
     supervisor:start_child(Pid,ChildSpec2).
 
@@ -45,11 +49,11 @@ init_loader(Pid)->
 %% =============================================================================
 %% Regular torrent functions
 
-start_link() ->
-    {ok,spawn_link(torrent,init,[])}.
+start_link(Var) ->
+    {ok,spawn_link(torrent,init,[Var])}.
 
-init() ->
-    io:fwrite("Torrent started\n"),
+init(Var) ->
+    io:fwrite("~p started\n",[Var]),
     loop().
 
 loop() ->
