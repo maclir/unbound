@@ -16,8 +16,8 @@ start_link() ->
 init(_Args) ->
     io:fwrite("Application Supervisor started!\n"),
     {ok,{{one_for_one,1,10},
-	 [{torrent_sup,{torrent_mapper,start_link,[]},
-	   permanent, brutal_kill, worker,[torrent_sup]},
+	 [{torrent_mapper,{torrent_mapper,start_link,[]},
+	   permanent, brutal_kill, worker,[torrent_mapper]},
 	  {torrent_loader,{torrent,start_link_loader,[]},
 	   transient, brutal_kill, worker,[torrent_loader]},
 	  {port_sup,{port_sup,start_link,[]},
