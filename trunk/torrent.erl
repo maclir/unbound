@@ -8,6 +8,7 @@
 -module(torrent).
 -export([start_link_loader/0,init_loader/1]).
 -export([start_link/1,init/1]).
+-include("torrent_db_records.hrl").
 
 %% =============================================================================
 %% Torrent loader function that is responsible for opening the persistent 
@@ -27,15 +28,24 @@ init_loader(Pid)->
     io:fwrite("Torrent Loader Started!\n"),
     Pid ! {ok,self()},
 
-    %% Dummy torrent 1
-    StartFunc = {torrent,start_link,[dummy_torrent_1]},
-    ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent1]},
-    supervisor:start_child(Pid,ChildSpec),
+    RecordList = torrent_db:size_gt(0),
+    start_torrent(Pid,RecordList).
+    
+%%    %% Dummy torrent 1
+%%    StartFunc = {torrent,start_link,[dummy_torrent_1]},
+%%    ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent1]},
+%%    supervisor:start_child(Pid,ChildSpec),
 
-    %% Dummy torrent 2
-    StartFunc2 = {torrent,start_link,[dummy_torrent_2]},
-    ChildSpec2 = {torrent2,StartFunc2,permanent,brutal_kill,worker,[torrent2]},
-    supervisor:start_child(Pid,ChildSpec2).
+ 
+start_torrent(Pid,[Record|Tail]) -> 
+    InfoHash = Record#torrent.info_sha,
+    StartFunc = {torrent,start_link,[InfoHash]},
+    ChildSpec = {InfoHash,StartFunc,permanent,brutal_kill,worker,[InfoHash]},
+    supervisor:start_child(Pid,ChildSpec),
+    start_torrent(Pid,Tail);
+
+start_torrent(_Pid,[]) ->
+    ok.
 
     %% For each record in the database do:
 
