@@ -28,9 +28,9 @@ init_loader(Pid)->
     io:fwrite("Torrent Loader Started!\n"),
     Pid ! {ok,self()},
 
-%    torrent_db:init().
-%    RecordList = torrent_db:size_gt(0),
-%    start_torrent(Pid,RecordList).
+    torrent_db:init(),
+    RecordList = torrent_db:size_gt(0),
+    start_torrent(Pid,RecordList),
     
     %% Dummy torrent 1
     StartFunc = {torrent,start_link,[dummy_torrent_1]},
@@ -38,15 +38,15 @@ init_loader(Pid)->
     supervisor:start_child(Pid,ChildSpec).
 
  
-%start_torrent(Pid,[Record|Tail]) -> 
-%    InfoHash = Record#torrent.info_sha,
-%    StartFunc = {torrent,start_link,[dummy_torrent_2]},
-%    ChildSpec = {torrent2,StartFunc,permanent,brutal_kill,worker,[torrent2]},
-%    supervisor:start_child(Pid,ChildSpec),
-%    start_torrent(Pid,Tail);
+start_torrent(Pid,[Record|Tail]) -> 
+    InfoHash = Record#torrent.info_sha,
+    StartFunc = {torrent,start_link,[InfoHash]},
+    ChildSpec = {torrent2,StartFunc,permanent,brutal_kill,worker,[torrent2]},
+    supervisor:start_child(Pid,ChildSpec),
+    start_torrent(Pid,Tail);
 
-%start_torrent(_Pid,[]) ->
-%    ok.
+start_torrent(_Pid,[]) ->
+    ok.
 
     %% For each record in the database do:
 
