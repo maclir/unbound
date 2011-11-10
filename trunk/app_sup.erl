@@ -21,7 +21,9 @@ init(_Args) ->
 	  {torrent_loader,{torrent,start_link_loader,[]},
 	   transient, brutal_kill, worker,[torrent_loader]},
 	  {port_sup,{port_sup,start_link,[]},
-	   permanent, infinity, supervisor,[port_sup]}
+	   permanent, infinity, supervisor,[port_sup]},
+	  {com_central,{com_central,start_link,[]},
+	   permanent, brutal_kill, worker,[com_central]}
 	 ]
 	}
     }.
