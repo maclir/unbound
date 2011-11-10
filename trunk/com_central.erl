@@ -8,7 +8,7 @@
 -module(com_central).
 -behaviour(gen_server).
 -export([start_link/0]).
--export([start_download/0]).
+-export([start_download/0,add_new_torrent_file/1,add_new_torrent_url/1]).
 -export([init/1,handle_call/3]).
 
 
@@ -20,6 +20,20 @@ init(_Args) ->
 
 start_download() ->
     gen_server:call(?MODULE, start_download).
+
+add_new_torrent_url(Url) ->
+    inets:start(),
+    {ok, {Status,Headers,Body}} = httpc:request(get,{Url,[]},[],[]),
+    add_new_torrent_file(list_to_binary(Body)).
+
+add_new_torrent_file(Binary) ->
+    gen_server:call(?MODULE, {add_new_torrent,Binary}).
+
+handle_call({add_new_torrent,Binary},_From,State) ->
+    {ok,Record} = metafile:parse(Binary),
+    torrent_db:init(),
+    torrent_db:add(Record),
+    {reply,ok,State};
 
 handle_call(Command, _From, State) ->
     io:fwrite("~p command was received!\n",[Command]),
