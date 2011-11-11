@@ -1,4 +1,4 @@
-%%% @author Peter Myllykoski <peter@UL30JT>
+%%% @author Peter Myllykoski <peter@UL30JT>, Nahid Vafaie
 %%% @copyright (C) 2011, Peter Myllykoski
 %%% @doc
 %%%
@@ -29,11 +29,12 @@ init(Id) ->
 	 ]
 	}
     }.
+%% Function for generating a random number with desired length
 gen_random(0) ->
     [];
 gen_random(Num)->
      [random:uniform(10) +47 | gen_random(Num -1)] .
 
-
+%% Function for generating a 20 charachter unique id client
 clientId() ->
  list_to_binary(["-","U","T","0","0","0","1","-"|gen_random(12)]).
