@@ -7,18 +7,20 @@
 
 -module(app_sup).
 -behaviour(supervisor).
--export([start_link/0]).
+-export([start_link/0,gen_random/1,clientId/0]).
 -export([init/1]).
 
 start_link() ->
-    supervisor:start_link(?MODULE,[]).
+    Id = clientId(),
+    supervisor:start_link(?MODULE,[Id]).
 
-init(_Args) ->
+
+init(Id) ->
     io:fwrite("Application Supervisor started!\n"),
     {ok,{{one_for_one,1,10},
 	 [{torrent_mapper,{torrent_mapper,start_link,[]},
 	   permanent, brutal_kill, worker,[torrent_mapper]},
-	  {torrent_loader,{torrent,start_link_loader,[]},
+	  {torrent_loader,{torrent,start_link_loader,[Id]},
 	   transient, brutal_kill, worker,[torrent_loader]},
 	  {port_sup,{port_sup,start_link,[]},
 	   permanent, infinity, supervisor,[port_sup]},
@@ -27,4 +29,11 @@ init(_Args) ->
 	 ]
 	}
     }.
+gen_random(0) ->
+    [];
+gen_random(Num)->
+     [random:uniform(10) +47 | gen_random(Num -1)] .
 
+
+clientId() ->
+ list_to_binary(["-","U","T","0","0","0","1","-"|gen_random(12)]).
