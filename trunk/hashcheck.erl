@@ -1,3 +1,8 @@
+%%% @author  Nahid Vafaie
+
+%%% Created :  10 Nov 2011 by Nahid Vafaie
+
+
 -module(hashcheck).
 
 -export([calculate_hash/1, compare/2,is_equal/2]).
