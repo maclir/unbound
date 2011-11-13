@@ -11,11 +11,13 @@
 -export([init/1]).
 
 start_link() ->
+    inets:start(),
+    torrent_db:init(),
     Id = clientId(),
     supervisor:start_link(?MODULE,[Id]).
 
 
-init(Id) ->
+init([Id]) ->
     io:fwrite("Application Supervisor started!\n"),
     {ok,{{one_for_one,1,10},
 	 [{torrent_mapper,{torrent_mapper,start_link,[]},

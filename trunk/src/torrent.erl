@@ -7,7 +7,7 @@
 
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
--export([start_link/2,init/1]).
+-export([start_link/3,init/1]).
 -include("torrent_db_records.hrl").
 
 %% =============================================================================
@@ -30,16 +30,16 @@ init_loader({Pid,Id})->
 
     torrent_db:init(),
     RecordList = torrent_db:size_gt(0),
-    start_torrent(Pid,RecordList,Id),
+    start_torrent(Pid,RecordList,Id).
 
-    %% Dummy torrent 1
-    StartFunc = {torrent,start_link,[dummy_torrent_1,Id]},
-    ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent]},
-    supervisor:start_child(Pid,ChildSpec).
+%    %% Dummy torrent 1
+%    StartFunc = {torrent,start_link,[dummy_torrent_1,Id]},
+%    ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent]},
+%    supervisor:start_child(Pid,ChildSpec).
 
 start_torrent(Pid,[Record|Tail],Id) ->
-    InfoHash =info_hash:to_hex(Record#torrent.info_sha),
-    StartFunc = {torrent,start_link,[InfoHash,Id]},
+    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
+    StartFunc = {torrent,start_link,[InfoHash,Id,Record]},
     ChildSpec = {InfoHash,StartFunc,permanent,brutal_kill,worker,[torrent]},
     supervisor:start_child(Pid,ChildSpec),
     start_torrent(Pid,Tail,Id);
@@ -52,10 +52,13 @@ start_torrent(_Pid,[],_) ->
 %% =============================================================================
 %% Regular torrent functions
 
-start_link(Var,Id) ->
-    {ok,spawn_link(torrent,init,[{Var,Id}])}.
+start_link(Var,Id,Record) ->
+    {ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
 
-init({Var,Id}) ->
+init({Var,Id,Record}) ->
+    InfoHashUrl = info_hash:url_encode(Record#torrent.info_sha),
+    Announce = Record#torrent.announce,
+    PeerList = tcp:connect_to_server(Announce,InfoHashUrl,Id),    
     io:fwrite("~p started by client ~p\n",[Var,Id]),
     loop().
 

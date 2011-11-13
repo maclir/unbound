@@ -104,10 +104,20 @@ parseData([{<<"length">>,Value}|Tail],Record) ->
     end,
     parseData(Tail,NewRecord);
 
+
 parseData([{<<"path">>,{list,Value}}|Tail],Record) ->
     PathList = buildPathList(Value),
     NewRecord = Record#file{path=PathList},
     parseData(Tail,NewRecord);
+
+parseData([{<<"locale">>,_Value}|Tail],Record) ->
+    parseData(Tail,Record);
+
+parseData([{<<"modification date">>,_Value}|Tail],Record) ->
+    parseData(Tail,Record);
+
+parseData([{<<"title">>,_Value}|Tail],Record) ->
+    parseData(Tail,Record);
 
 parseData([Head|Tail],Record) ->
     HeadValue = parseData(Head,Record),

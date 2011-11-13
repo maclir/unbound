@@ -1,13 +1,16 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/0, open_a_socket/2, connect_to_client/2]).
+-export([server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/3, open_a_socket/2, connect_to_client/2]).
 
 %%
 %% Tracker communiacation
 %%
 
-connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
-	{ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is used to connect to our tracker and get the peer list
+    Announce = binary_to_list(AnnounceBin),
+    InfoHash = binary_to_list(InfoHashBin),
+    ClientId = binary_to_list(ClientIdBin),
+    {ok,{_,_,Response}} = httpc:request(get, {Announce ++ "?info_hash=" ++ InfoHash ++ "&peer_id=" ++ ClientId ++ "&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
 	{ok,
 		{dict,
 			[{<<"interval">>,Interval},
