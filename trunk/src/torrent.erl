@@ -51,15 +51,9 @@ start_link(Var,Id,Record) ->
 init({Var,Id,Record}) ->
     %% Check dowloaded pieces for consistency
 
-    %% Start a tracker communicator, the following code should go there
-    InfoHash = Record#torrent.info_sha,
-    InfoHashUrl = info_hash:url_encode(Record#torrent.info_sha),
-    Announce = Record#torrent.announce,
-    {ok,Interval,PeerList} = tcp:connect_to_server(Announce,InfoHashUrl,Id),
-    [{Ip,Port}|Rest] = PeerList,
-    Socket = tcp:open_a_socket(Ip,Port,InfoHash,Id),
-    %% End of tracker communicator code
-    
+    %% Start communication with tracker and peers
+    {ok,Interval,PeerList} = getPeerList(Record,Id),
+    connect_to_peer(PeerList,Record#torrent.info_sha,Id),
     io:fwrite("~p started by client ~p\n",[Var,Id]),
     
     loop().
@@ -70,3 +64,20 @@ loop() ->
 	    io:fwrite("~p\n",[Msg]),
 	    loop()
     end.
+
+
+getPeerList(Record,Id) ->
+    InfoHash = Record#torrent.info_sha,
+    InfoHashUrl = info_hash:url_encode(Record#torrent.info_sha),
+    Announce = Record#torrent.announce,
+    tcp:connect_to_server(Announce,InfoHashUrl,Id).
+
+
+connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
+    tcp:open_a_socket(Ip,Port,InfoHash,Id),
+    connect_to_peer(Rest,InfoHash,Id);
+
+connect_to_peer([{Ip,Port}|[]],InfoHash,Id) ->
+    tcp:open_a_socket(Ip,Port,InfoHash,Id),
+    ok.
+
