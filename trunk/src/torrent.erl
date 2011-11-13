@@ -49,14 +49,26 @@ start_link(Var,Id,Record) ->
     {ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
 
 init({Var,Id,Record}) ->
+    %% Check dowloaded pieces for consistency
+    InfoHash = Record#torrent.info_sha,
     InfoHashUrl = info_hash:url_encode(Record#torrent.info_sha),
     Announce = Record#torrent.announce,
-    PeerList = tcp:connect_to_server(Announce,InfoHashUrl,Id),    
+    {ok,Interval,PeerList} = tcp:connect_to_server(Announce,InfoHashUrl,Id),
+    connect_to_peer(PeerList,InfoHash,Id),
     io:fwrite("~p started by client ~p\n",[Var,Id]),
+    
     loop().
 
 loop() ->
     receive
-	{test} ->
-	    ok
+	Msg ->
+	    io:fwrite("~p",[Msg]),
+	    loop()
     end.
+
+connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
+    Socket = tcp:open_a_socket(Ip,Port,InfoHash,Id),
+    connect_to_peer(Rest,InfoHash,Id);
+
+connect_to_peer([],_InfoHash,_Id) ->
+    ok.

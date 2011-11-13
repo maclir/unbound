@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/3, open_a_socket/2, connect_to_client/2]).
+-export([server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/3, open_a_socket/4, connect_to_client/4]).
 
 %%
 %% Tracker communiacation
@@ -20,38 +20,40 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is use
     RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
     {ok,{dict, [{<<"interval">>,Interval}, {<<"peers">>,Peers}]}} = decode(list_to_binary(Response)), %% this separates peer list from everything else
-    io:format("Interval: ~p~n",[Interval]), %% prints the interval
-    separate(Peers). %% formating a peer list
+    PeerList = separate(Peers), %% formating a peer list
+    {ok,Interval,PeerList}.
 	
 separate(<<>>)->
-	ok;
+	[];
+
 separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
-	io:format("~p.~p.~p.~p:~p ~n",[Ip1,Ip2,Ip3,Ip4,Port]),
-	separate(Rest).
+	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)].
 	
 %%	
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort)->
-	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]), %% pay attention to {packet,0}.
-																					%% when this parameter is set to 0, no packaging is done.
-																					%% check here for more info:
-																					%% http://www.erlang.org/doc/man/inet.html#setopts-2
-	case whereis(slave) of %% we make a separate process for communiacation with a peer
-		undefined ->
-			register(slave, spawn(?MODULE, connect_to_client,[self(), Socket]))
-	end,
-	Socket.
+open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
+    {ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]), %% pay attention to {packet,0}.
+    
+    %% when this parameter is set to 0, no packaging is done.
+    %% check here for more info:
+    %% http://www.erlang.org/doc/man/inet.html#setopts-2
+    
+    case whereis(slave) of %% we make a separate process for communiacation with a peer
+	undefined ->
+	    spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId])
+    end,
+    Socket.
 
-connect_to_client(MasterPid, Socket)-> 
-	erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
-	gen_tcp:send(Socket,[  %% sending a handshake
-							19,
-							"BitTorrent protocol",
-							<<0,0,0,0,0,0,0,0>>,
-							<<16#0a, 16#ab, 16#5d, 16#21, 16#39, 16#57, 16#72, 16#99, 16#4e, 16#64, 16#43, 16#cb, 16#b3, 16#e2, 16#ae, 16#03, 16#ce, 16#52, 16#3b, 16#32>>,
-							"BDann7c1d95510bb160a"
+connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
+    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
+    gen_tcp:send(Socket,[  %% sending a handshake
+			   19,
+			   "BitTorrent protocol",
+			   <<0,0,0,0,0,0,0,0>>,
+			   InfoHash,
+			   ClientId
 						]),
 	handshake_loop(Socket, MasterPid), %% starting a loop for handling handshaking
 	inet:setopts(Socket, [{packet, 4}]), %% if you visited the link above, this should be more or less clear
