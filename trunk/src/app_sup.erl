@@ -30,7 +30,8 @@ init([Id]) ->
 	   permanent, brutal_kill, worker,[com_central]}
 	 ]
 	}
-    }.
+    }.    
+
 %% Function for generating a random number with desired length
 gen_random(0) ->
     [];

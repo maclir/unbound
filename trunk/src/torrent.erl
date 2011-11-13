@@ -27,15 +27,8 @@ start_link_loader(Id) ->
 init_loader({Pid,Id})->
     io:fwrite("Torrent Loader Started!\n"),
     Pid ! {ok,self()},
-
-    torrent_db:init(),
     RecordList = torrent_db:size_gt(0),
     start_torrent(Pid,RecordList,Id).
-
-%    %% Dummy torrent 1
-%    StartFunc = {torrent,start_link,[dummy_torrent_1,Id]},
-%    ChildSpec = {torrent1,StartFunc,permanent,brutal_kill,worker,[torrent]},
-%    supervisor:start_child(Pid,ChildSpec).
 
 start_torrent(Pid,[Record|Tail],Id) ->
     InfoHash = info_hash:to_hex(Record#torrent.info_sha),
