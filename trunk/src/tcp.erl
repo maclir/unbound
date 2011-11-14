@@ -7,6 +7,8 @@
 %%
 
 connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is used to connect to our tracker and get the peer list
+    
+    %% Code for building the request string that is sent to the tracker
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
@@ -18,6 +20,8 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is use
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
     Event = "event=" ++ "started",
     RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
+
+    %% Code for making the request and parsing the trackers response
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
     {ok,{dict, [{<<"interval">>,Interval}, {<<"peers">>,Peers}]}} = decode(list_to_binary(Response)), %% this separates peer list from everything else
     PeerList = separate(Peers), %% formating a peer list
