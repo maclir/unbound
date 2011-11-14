@@ -51,16 +51,17 @@ start_link(Var,Id,Record) ->
 init({Var,Id,Record}) ->
     %% Check integrity of downloaded pieces, create a bitfield according to
     %% the result of the integrity check.
-    NumPieces = byte_size(Record#torrent.pieces)/20,
-    
-
+    Name = Record#torrent.info#info.name,
+	PiecesSha = Record#torrent.info#info.pieces,
+	Piece_length = Record#torrent.info#info.piece_length,
+    %%NumPieces = byte_size(Record#torrent.pieces)/20,
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
 	    %% Start communication with tracker and peers
 	    case getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-		    connect_to_peer(PeerList,Record#torrent.info_sha,Id),
+		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop();
 		{error,Reason} ->
@@ -74,7 +75,7 @@ init({Var,Id,Record}) ->
 	    io:fwrite("Torrent has a announce list"),
 	    case getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-		    connect_to_peer(PeerList,Record#torrent.info_sha,Id),
+		    connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop();
 		{error,Reason} ->
@@ -102,9 +103,9 @@ getPeerList(Record,Id) ->
     end.
 
 
-connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
-    tcp:open_a_socket(Ip,Port,InfoHash,Id),
-    connect_to_peer(Rest,InfoHash,Id);
+connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
+    tcp:open_a_socket(Ip,Port,InfoHash,Id, Name, PiecesSha),
+    connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length);
 
-connect_to_peer([],InfoHash,Id) ->
+connect_to_peer([],InfoHash,Id, _, _, _) ->
     ok.
