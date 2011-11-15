@@ -68,7 +68,7 @@ handshake_loop(Socket, MasterPid)->
 		{tcp,_,<< 19, "BitTorrent protocol",  %% pattern match the handshake response
 						_ReservedBytes:8/binary, 
 						_InfoHash:20/binary, 
-						_PeerID:20/binary >> } ->
+						_PeerID:20/binary,_Rest/binary >> } ->
 			MasterPid ! "peer accepted handshake", %% if correct, send an appropriate message to the parent
 			handshake_loop(Socket, MasterPid); %% start the loop again, because there is also a bitfield coming.
 		M ->

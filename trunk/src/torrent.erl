@@ -8,6 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/3,init/1]).
+-export([create_dummy_bitfield/1]).
 -include("torrent_db_records.hrl").
 
 %% =============================================================================
@@ -51,10 +52,15 @@ start_link(Var,Id,Record) ->
 init({Var,Id,Record}) ->
     %% Check integrity of downloaded pieces, create a bitfield according to
     %% the result of the integrity check.
+    
+    NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
+    NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
+    Bitfield = create_dummy_bitfield(NumPieces),
+    
     Name = Record#torrent.info#info.name,
-	PiecesSha = Record#torrent.info#info.pieces,
-	Piece_length = Record#torrent.info#info.piece_length,
-    %%NumPieces = byte_size(Record#torrent.pieces)/20,
+    PiecesSha = Record#torrent.info#info.pieces,
+    Piece_length = Record#torrent.info#info.piece_length,
+
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
@@ -62,6 +68,7 @@ init({Var,Id,Record}) ->
 	    case getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
+		    
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop();
 		{error,Reason} ->
@@ -109,3 +116,15 @@ connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
 
 connect_to_peer([],InfoHash,Id, _, _, _) ->
     ok.
+
+create_dummy_bitfield(Num) ->
+    Int = Num div 8,
+    case Num rem 8 of
+	0 ->
+	    ByteLenght = Int*8;
+	_ ->
+	    ByteLenght = (Int + 1)*8
+    end,
+    Lenght = (ByteLenght div 8) + 1,
+    
+    <<Lenght:32,5:8,0:ByteLenght>>.
