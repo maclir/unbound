@@ -70,7 +70,7 @@ init({Var,Id,Record}) ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
 		    
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop();
+		    loop([]);
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end;
@@ -84,18 +84,16 @@ init({Var,Id,Record}) ->
 		{ok,Interval,PeerList} ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop();
+		    loop([]);
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
-    end,
-    receive
-	{bitfield,Pid,Bitfield} ->
-	    compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid)
     end.
 
-loop() ->
+loop(Status) ->
     receive
+	{bitfield,Pid,Bitfield} ->
+	    compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid);
 	Msg ->
 	    io:fwrite("~p\n",[Msg]),
 	    loop()
@@ -138,8 +136,7 @@ compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/bina
 compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces,Pid) ->
     if
 	OurFirstBit == 0,FirstBit == 1,Index<NumPieces ->
-	    Pid ! {get_piece,Index},
-	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid);
+	    Pid ! {get_piece,Index};
 	true ->
 	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid) 
     end;
