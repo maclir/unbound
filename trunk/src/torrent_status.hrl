@@ -1,1 +1,1 @@
--record(torrent_status,{db_bitfield,temp_bitfield}).
+-record(torrent_status,{priority, name, size, percent, status, seeds, peers, downspeed, upspeed, eta, uploaded, db_bitfield,temp_bitfield}).
