@@ -71,7 +71,7 @@ init({Var,Id,Record}) ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
 		    
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(#torrent_status{db_bitfield=OurBitfield});
+		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end;
@@ -85,7 +85,7 @@ init({Var,Id,Record}) ->
 		{ok,Interval,PeerList} ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(#torrent_status{db_bitfield=OurBitfield});
+		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
@@ -94,7 +94,9 @@ init({Var,Id,Record}) ->
 loop(StatusRecord) ->
     receive
 	{bitfield,Pid,Bitfield} ->
-	    TempBitfield = compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid),
+	    NumPieces = StatusRecord#torrent_status.num_pieces,
+	    TempBitfield = StatusRecord#torrent_status.temp_bitfield,
+	    TempBitfield = compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
 	    loop(StatusRecord#torrent_status{temp_bitfield=TempBitfield});
 	{downloaded,PieceId,Data} ->
 	    %% Validate & write to disk
@@ -103,7 +105,7 @@ loop(StatusRecord) ->
 	    
 	Msg ->
 	    io:fwrite("~p\n",[Msg]),
-	    loop()
+	    loop(StatusRecord)
     end.
 
 
@@ -138,17 +140,35 @@ create_dummy_bitfield(Num) ->
     <<Lenght:32,5:8,0:ByteLenght>>.
 
 compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/binary>>,NumPieces,Pid) ->
-    compare_bits(0,OurBitfield,Bitfield,NumPieces,Pid).
+    Size = bit_size(OurBitfield),
+    case compare_bits(0,OurBitfield,Bitfield,NumPieces,Pid) of
+	{result,nothing_needed} ->
+	    ok;
+	{result,Index} ->
+	    IndexChanged = trunc(math:pow(2,Index)), 
+	    BitPattern = <<IndexChanged:Size>>,
+	    ReversedBitPattern = reverse_bits(BitPattern),
+	    ReversedBitPattern,
+	    <<X:Size>> = OurBitfield,
+	    <<Y:Size>> = ReversedBitPattern,
+	    <<Lenght:32,5,(X bor Y):Size>>
+    end.
+    
+    
 
 compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces,Pid) ->
     if
 	OurFirstBit == 0,FirstBit == 1,Index<NumPieces ->
-	    Pid ! {get_piece,Index};
+	    Pid ! {get_piece,Index},
+	    {result,Index};
 	true ->
 	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid) 
     end;
 
 compare_bits(_Index,<<>>,<<>>,_NumPieces,_Pid) ->
-    ok.
+    {result,nothing_needed}.
 
-	
+reverse_bits(<<X:1,Rest/bits>>) ->
+<<(reverse_bits(Rest))/bits,X:1>>;
+reverse_bits(<<>>) ->
+<<>>.
