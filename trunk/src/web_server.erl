@@ -12,12 +12,11 @@
 %% Args:		Method (<<"GET">> | <<"POST">>)
 %% Returns:		{Header (list|string), Content (binary)}
 %%----------------------------------------------------------------------
-get_resp({<<"GET">>, _, BinPath}) ->
-	Path = binary_to_list(BinPath),
+get_resp({'GET', _, Path}) ->
 	Content = get_content("." ++ Path),
 	Header = get_header(classify(Path), Content),
 	{Header, Content};
-get_resp({<<"POST">>, UnparsedParams, _Path}) ->
+get_resp({'POST', UnparsedParams, _Path}) ->
 	Params = seperate_params(UnparsedParams),
 	{Type , Content} = get_post_result(Params),
 	Header = get_header(Type, Content),
@@ -57,7 +56,7 @@ get_post_result([{<<"qtype">>,_},
 			{<<"sortname">>,_},
 			{<<"rp">>,_},
 			{<<"page">>,_}]) ->
-	{xml, xml_generator:get_xml()};
+	{xml, web_response:get_data_xml({})};
 get_post_result([{<<"row">>, Row},
 				 {<<"command">>,_Command}]) ->
 	BinRow = list_to_binary(lists:map(fun(A) -> list_to_integer(binary_to_list(A)) end, re:split(Row, "-"))),
@@ -77,7 +76,7 @@ get_content(Path) ->
 		{ok, Bin} ->
 			Bin;
 		_ ->
-			"File does not exist on this location: " ++ Path
+			list_to_binary("File does not exist on this location: " ++ Path)
 	end.
 
 %%----------------------------------------------------------------------
@@ -153,4 +152,4 @@ content_type(X) ->
 %% Returns:		ContentLength (list|string)
 %%----------------------------------------------------------------------
 content_size(Content) ->
-	"Content-Length " ++ integer_to_list(size(Content)) ++ "\r\n\r\n".
+	"Content-Length: " ++ integer_to_list(size(Content)) ++ "\r\n\r\n".

@@ -3,30 +3,29 @@
 %%% Desc.:		generating teh xml representing the state of
 %%				the application
 %%%----------------------------------------------------------------------
--module(xml_generator).
+-module(web_response).
 -export([get_xml/0]).
 
-%%----------------------------------------------------------------------
-%% Function:	get_xml/0
-%% Purpose:		creating the xml based on state of the app
-%% Desc.:		Could not use the xmerl library to create the xml from 
-%%				a tuple because xmerl:export/2 does not handle the
-%%				<![CDATA[...]]> in the correct way
-%% Returns:		Xml (binary)
-%%----------------------------------------------------------------------
+get_data_xml() ->
+	Header = 
+		"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>
+		<rows>
+		<page>1</page>
+		<total>1</total>",
+	
 get_xml() ->
 	TempBit = lists:flatten(lists:map(fun(A) -> integer_to_list(A) ++ "-" end, binary_to_list(<<111,171,93>>))),
 	Bit = string:sub_string(TempBit, 1, length(TempBit) - 1),
-	Header = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>
-	<rows>
-	<page>1</page>
-	<total>1</total>",
+
+	Body = get_body(get_data(all_torrents)),
 
 	Body = "
-		<row id=\"" ++ Bit ++ "\">
+		
+		++ "
+		<row id=\"" ++ Bit ++ "-23\">
 			<cell><![CDATA[" ++ "1" ++ "]]></cell>
 			<cell><![CDATA[" ++ "illegal stuff" ++ "]]></cell>
-			<cell><![CDATA[" ++ Bit ++ "]]></cell>
+			<cell><![CDATA[" ++ "1.13 GB" ++ "]]></cell>
 			<cell><![CDATA[" ++ "20" ++ "]]></cell>
 			<cell><![CDATA[" ++ "uploading" ++ "]]></cell>
 			<cell><![CDATA[" ++ "2 (90)" ++ "]]></cell>
@@ -41,3 +40,6 @@ get_xml() ->
 	Data = Header ++ Body ++ Footer,
 	XmlData = lists:flatten(Data),
 	iolist_to_binary(XmlData).
+
+get_body([], ) ->
+	

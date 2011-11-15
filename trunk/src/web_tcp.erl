@@ -2,7 +2,7 @@
 %%% Author:		Alireza Pazirandeh
 %%% Desc.:		main module for the webserver
 %%%----------------------------------------------------------------------
--module(server).
+-module(web_tcp).
 -export([start/0, start/1, stop/0, stop/1]).
 
 %%----------------------------------------------------------------------
@@ -30,7 +30,7 @@ start(Port) ->
 			Pid = spawn(fun () ->
 							{ok, ListenSock} = gen_tcp:listen(Port,[
 															 	binary,
-																{packet, 0},
+																{packet, http},
 																{active, false}
 															]), 
 							loop(ListenSock)
@@ -97,10 +97,58 @@ loop(ListenSock) ->
 %% Args:		Sock (integer)
 %%----------------------------------------------------------------------
 handle_req(Sock) ->
-	{ok, Request} = gen_tcp:recv(Sock, 0),
-	{Method, Path, _Ver, Params} = seperate_req(Request),
-	{Headers, Response} = web_server:get_resp({Method, Params, Path}),
-	respond_to_client(Sock, Headers, Response).
+	{ok, {http_request, Method, {_PathMode ,Path}, _Version}} = gen_tcp:recv(Sock, 0),
+	case (Method) of
+		'GET' ->
+			{Headers, Response} = web_server:get_resp({Method, <<"">>, Path}),
+			respond_to_client(Sock, Headers, Response);
+		'POST' ->
+			Length = get_post_length(Sock),
+			Params = get_params(Sock, Length),
+			{Headers, Response} = web_server:get_resp({Method, Params, Path}),
+			respond_to_client(Sock, Headers, Response);
+		_ ->
+			send_unsupported_error(Sock)
+	end.
+
+%%----------------------------------------------------------------------
+%% Function:	get_post_length/1
+%% Purpose:		calculating the length of the post
+%% Args:		Sock (integer)
+%% Returns:		length (integer)
+%%----------------------------------------------------------------------
+get_post_length(Sock) ->
+ 	case gen_tcp:recv(Sock, 0, 60000) of
+		{ok, {http_header, _, 'Content-Length', _, Length}} ->
+			list_to_integer(Length);
+		{ok, {http_header, _, _Header, _, _}}  ->
+			get_post_length(Sock)
+	end.
+
+%%----------------------------------------------------------------------
+%% Function:	get_params/1
+%% Purpose:		extracting the post params from the header
+%% Args:		Sock (integer), Length (integer)
+%% Returns:		Body (list|integer)
+%%----------------------------------------------------------------------
+get_params(Sock, Length) ->
+	case gen_tcp:recv(Sock, 0) of
+		{ok, http_eoh} ->
+			inet:setopts(Sock, [{packet, raw}]),
+			{ok, Body} = gen_tcp:recv(Sock, Length),
+			Body;
+		_ ->
+			get_params(Sock, Length)
+	end.
+
+%%----------------------------------------------------------------------
+%% Function:	send_unsupported_error/1
+%% Purpose:		send the error response with headers to the client
+%% Args:		Sock (integer)
+%%----------------------------------------------------------------------
+send_unsupported_error(Sock) ->
+	gen_tcp:send(Sock, "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\nAllow: POST, GET\r\nContent-Type: text/html; charset=UTF-8\r\nCache-Control: no-cache\r\n\r\n"),
+	gen_tcp:close(Sock).
 
 %%----------------------------------------------------------------------
 %% Function:	respond_to_client/3
@@ -110,18 +158,3 @@ handle_req(Sock) ->
 respond_to_client(Sock, Headers, Response) ->
 	gen_tcp:send(Sock, [Headers, Response]),
 	gen_tcp:close(Sock).
-
-%%----------------------------------------------------------------------
-%% Function:	seperate_req/1
-%% Purpose:		parsing the request and seperating the different 
-%%				elements
-%% Args:		Resp (list|string)
-%% Returns:		{Method, Path, Ver, PostData}
-%%----------------------------------------------------------------------
-seperate_req(Str) ->
-	Sep = re:split(Str, "\r\n"),
-	FirstLine = re:split(hd(Sep), " "),
-	Method = hd(FirstLine),
-	Path = hd(tl(FirstLine)),
-	Ver = lists:last(FirstLine),
-	{Method, Path, Ver, lists:last(Sep)}.
