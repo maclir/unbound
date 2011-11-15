@@ -96,8 +96,8 @@ loop(StatusRecord) ->
 	{bitfield,Pid,Bitfield} ->
 	    NumPieces = StatusRecord#torrent_status.num_pieces,
 	    TempBitfield = StatusRecord#torrent_status.temp_bitfield,
-	    TempBitfield = compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
-	    loop(StatusRecord#torrent_status{temp_bitfield=TempBitfield});
+	    NewBitfield = compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
+	    loop(StatusRecord#torrent_status{temp_bitfield=NewBitfield});
 	{downloaded,PieceId,Data} ->
 	    %% Validate & write to disk
 	    %% Change bitfield in database
@@ -168,7 +168,7 @@ compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstri
 compare_bits(_Index,<<>>,<<>>,_NumPieces,_Pid) ->
     {result,nothing_needed}.
 
-reverse_bits(<<X:1,Rest/bits>>) ->
-<<(reverse_bits(Rest))/bits,X:1>>;
+reverse_bits(<<X:1,Rest/bitstring>>) ->
+<<(reverse_bits(Rest))/bitstring,X:1>>;
 reverse_bits(<<>>) ->
 <<>>.

@@ -1,11 +1,11 @@
 -module(torrent_db).
--export([init/0, init_table/1, add/1, add/7, get_torrent_by_id/1, create_info_record/7, 
-	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1]).
+-export([init/0, init_table/1, add/1, add/8, get_torrent_by_id/1, create_info_record/7, 
+	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, delete_by_SHA1/1]).
 -import(utils_yavor).
 -include("torrent_db_records.hrl").
 -include_lib("stdlib/include/qlc.hrl").
 
-% Initializes mnesia and creates the download table. TESTED
+% Initializes mnesia and creates the download table. TESTEDy
 init()->
     mnesia:start(),
     mnesia:change_table_copy_type(schema, node(), disc_copies),
@@ -16,8 +16,8 @@ init_table(false) ->
     mnesia:create_schema([node()]),
     mnesia:create_table(torrent, [{attributes, record_info(fields, torrent)}, {disc_copies, [node()]}, {type, ordered_set}]);
 init_table(true) ->
-    mnesia:create_schema([node()]),
     mnesia:delete_table(torrent),
+    init_table(false),
     record_info(fields, torrent).
 
 %% Adds a new entry to the torrent table.
@@ -30,9 +30,9 @@ init_table(true) ->
 %% -CreatedBy: String
 %% -Encoding: String
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-add(Info, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Encoding) ->
+add(Info, InfoSHA, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Encoding) ->
     Torrent = #torrent {
-            info=Info,
+            info=Info, info_sha=InfoSHA,
             announce=Announce, 
             announce_list=AnnounceList, 
             creation_date=CreationDate,
@@ -80,7 +80,6 @@ create_file_record(Length, Md5, Path)->
 num_torrents()->
      case mnesia:dirty_last(torrent) of
 	'$end_of_table' -> 
- 	    io:format("end of table"),
  	    0;
  	Last -> 
  	    Last + 1
@@ -120,3 +119,18 @@ size_lt(Size) ->
 		  end,
     {atomic, Result} = mnesia:transaction(Transaction),
     Result.
+
+
+delete([H|T])->
+    Id = H#torrent.id,
+    delete(Id),
+    delete(T);
+delete([])->
+    ok;
+delete(Id) ->
+    mnesia:dirty_delete({torrent, Id}).
+
+delete_by_SHA1(SHA)->
+    Match = mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
+							creation_date='_', comment='_', created_by='_', info_sha=SHA, bitfield='_', dir='_', status='_'}),
+    delete(Match).
