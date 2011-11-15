@@ -1,0 +1,1 @@
+-record(torrent_status,{db_bitfield,temp_bitfield}).

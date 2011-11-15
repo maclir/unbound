@@ -10,6 +10,7 @@
 -export([start_link/3,init/1]).
 -export([compare_bitfields/4]).
 -include("torrent_db_records.hrl").
+-include("torrent_status.hrl").
 
 %% =============================================================================
 %% Torrent loader function that is responsible for opening the persistent
@@ -70,7 +71,7 @@ init({Var,Id,Record}) ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
 		    
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop([]);
+		    loop(#torrent_status{db_bitfield=OurBitfield});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end;
@@ -84,16 +85,22 @@ init({Var,Id,Record}) ->
 		{ok,Interval,PeerList} ->
 		    connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop([]);
+		    loop(#torrent_status{db_bitfield=OurBitfield});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
     end.
 
-loop(Status) ->
+loop(StatusRecord) ->
     receive
 	{bitfield,Pid,Bitfield} ->
-	    compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid);
+	    TempBitfield = compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid),
+	    loop(StatusRecord#torrent_status{temp_bitfield=TempBitfield});
+	{downloaded,PieceId,Data} ->
+	    %% Validate & write to disk
+	    %% Change bitfield in database
+	    ok;
+	    
 	Msg ->
 	    io:fwrite("~p\n",[Msg]),
 	    loop()
@@ -143,5 +150,5 @@ compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstri
 
 compare_bits(_Index,<<>>,<<>>,_NumPieces,_Pid) ->
     ok.
+
 	
-	    
