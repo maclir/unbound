@@ -47,8 +47,7 @@ open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId, Name, Shas, Piec
     case whereis(slave) of %% we make a separate process for communiacation with a peer
 	undefined ->
 	    spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId, Name, Shas, Piece_length])
-    end,
-    Socket.
+    end.
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId, Name, Shas, Piece_length)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.

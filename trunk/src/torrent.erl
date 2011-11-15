@@ -8,7 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/3,init/1]).
--export([create_dummy_bitfield/1]).
+-export([compare_bitfields/4]).
 -include("torrent_db_records.hrl").
 
 %% =============================================================================
@@ -55,7 +55,7 @@ init({Var,Id,Record}) ->
     
     NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
     NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
-    Bitfield = create_dummy_bitfield(NumPieces),
+    OurBitfield = create_dummy_bitfield(NumPieces),
     
     Name = Record#torrent.info#info.name,
     PiecesSha = Record#torrent.info#info.pieces,
@@ -88,6 +88,10 @@ init({Var,Id,Record}) ->
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
+    end,
+    receive
+	{bitfield,Pid,Bitfield} ->
+	    compare_bitfields(OurBitfield,Bitfield,NumPieces,Pid)
     end.
 
 loop() ->
@@ -111,11 +115,10 @@ getPeerList(Record,Id) ->
 
 
 connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
-    tcp:open_a_socket(Ip,Port,InfoHash,Id, Name, PiecesSha),
-    connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length);
+    [tcp:open_a_socket(Ip,Port,InfoHash,Id, Name, PiecesSha)|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
 
 connect_to_peer([],InfoHash,Id, _, _, _) ->
-    ok.
+    [].
 
 create_dummy_bitfield(Num) ->
     Int = Num div 8,
@@ -128,3 +131,20 @@ create_dummy_bitfield(Num) ->
     Lenght = (ByteLenght div 8) + 1,
     
     <<Lenght:32,5:8,0:ByteLenght>>.
+
+compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/binary>>,NumPieces,Pid) ->
+    compare_bits(0,OurBitfield,Bitfield,NumPieces,Pid).
+
+compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces,Pid) ->
+    if
+	OurFirstBit == 0,FirstBit == 1,Index<NumPieces ->
+	    Pid ! {get_piece,Index},
+	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid);
+	true ->
+	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid) 
+    end;
+
+compare_bits(_Index,<<>>,<<>>,_NumPieces,_Pid) ->
+    ok.
+	
+	    
