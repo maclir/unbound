@@ -1,3 +1,7 @@
+%%% @author Peter Myllykoski , Nahid Vafaie
+%%% Created :  16 Nov 2011
+
+
 -module(peerpiecemanagement).
 
 -export([compare_bitfields/4,connect_to_peer/6,create_dummy_bitfield/1,getPeerList/2]).
@@ -33,6 +37,7 @@ create_dummy_bitfield(Num) ->
 	    ByteLenght = (Int + 1)*8
     end,
     Lenght = (ByteLenght div 8) + 1,
+
 
     <<Lenght:32,5:8,0:ByteLenght>>.
 
