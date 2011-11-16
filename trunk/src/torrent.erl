@@ -57,10 +57,9 @@ init({Var,Id,Record}) ->
     NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
     NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
     OurBitfield = create_dummy_bitfield(NumPieces),
-
-    Name = Record#torrent.info#info.name,
-    PiecesSha = Record#torrent.info#info.pieces,
-    Piece_length = Record#torrent.info#info.piece_length,
+ 		
+    PiecesSha = (Record#torrent.info)#info.pieces,
+    Piece_length = (Record#torrent.info)#info.piece_length,
 
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
@@ -68,8 +67,14 @@ init({Var,Id,Record}) ->
 	    %% Start communication with tracker and peers
 	    case getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-		    connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length),
-
+			case Record#torrent.info#info.files of
+				undefined ->
+						Name =  Record#torrent.info#info.name,
+		    			tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length);
+				_ ->
+						Path = Record#torrent.info#file.path,
+						tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Path, PiecesSha, Piece_length)
+			end,
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces});
 		{error,Reason} ->
