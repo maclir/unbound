@@ -41,9 +41,9 @@ create_dummy_bitfield(Num) ->
 
     <<Lenght:32,5:8,0:ByteLenght>>.
 
-compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/binary>>,NumPieces,Pid) ->
+compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/binary>>,NumPieces) ->
     Size = bit_size(OurBitfield),
-    case compare_bits(0,OurBitfield,Bitfield,NumPieces,Pid) of
+    case compare_bits(0,OurBitfield,Bitfield,NumPieces) of
 	{result,nothing_needed} ->
 	    ok;
 	{result,Index} ->
@@ -56,18 +56,21 @@ compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/bina
 	    <<Lenght:32,5,(X bor Y):Size>>
     end.
 
+get_index(OurBitfield,Bitfield,NumPieces)->
+ compare_bits(0,OurBitfield,Bitfield,NumPieces).
 
 
-compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces,Pid) ->
+
+compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces) ->
     if
 	OurFirstBit == 0,FirstBit == 1,Index<NumPieces ->
-	    Pid ! {get_piece,Index},
+
 	    {result,Index};
 	true ->
-	    compare_bits(Index+1,OurRest,Rest,NumPieces,Pid)
+	    compare_bits(Index+1,OurRest,Rest,NumPieces)
     end;
 
-compare_bits(_Index,<<>>,<<>>,_NumPieces,_Pid) ->
+compare_bits(_Index,<<>>,<<>>,_NumPieces) ->
     {result,nothing_needed}.
 
 reverse_bits(<<X:1,Rest/bits>>) ->

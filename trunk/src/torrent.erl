@@ -8,7 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/3,init/1]).
--export([compare_bitfields/4]).
+-export([create_blocklist/2]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -53,11 +53,11 @@ start_link(Var,Id,Record) ->
 init({Var,Id,Record}) ->
     %% Check integrity of downloaded pieces, create a bitfield according to
     %% the result of the integrity check.
-
+    	Name =  Record#torrent.info#info.name,
     NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
     NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
-    OurBitfield = create_dummy_bitfield(NumPieces),
- 		
+    OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
+
     PiecesSha = (Record#torrent.info)#info.pieces,
     Piece_length = (Record#torrent.info)#info.piece_length,
 
@@ -65,18 +65,18 @@ init({Var,Id,Record}) ->
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
 	    %% Start communication with tracker and peers
-	    case getPeerList(Record,Id) of
+	    case peerpiecemanagement:getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
 			case Record#torrent.info#info.files of
 				undefined ->
-						Name =  Record#torrent.info#info.name,
+
 		    			tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length);
 				_ ->
 						Path = Record#torrent.info#file.path,
 						tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Path, PiecesSha, Piece_length)
 			end,
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces});
+		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces,num_blocks=NumBlocks});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end;
@@ -86,11 +86,11 @@ init({Var,Id,Record}) ->
 	%% the main one?
 	AnnounceList ->
 	    io:fwrite("Torrent has a announce list"),
-	    case getPeerList(Record,Id) of
+	    case peerpiecemanagement:getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-		    connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
+		   peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces});
+		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces,num_blocks=NumBlocks});
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
@@ -101,7 +101,16 @@ loop(StatusRecord) ->
 	{bitfield,Pid,Bitfield} ->
 	    NumPieces = StatusRecord#torrent_status.num_pieces,
 	    TempBitfield = StatusRecord#torrent_status.temp_bitfield,
-
+          Index = peerpiecemanagement:get_index(TempBitfield,Bitfield,NumPieces),
+            case get_blocklist(Index) of
+                {result,not_found} ->
+                    NumBlocks = StatusRecord#torrent_status.num_blocks,
+                    BlockList = create_blocklist(Index,NumBlocks);
+                 {result,BlockList} ->
+                    ok
+            end,
+         BlockIndex=findblock(BlockList),
+            Pid ! {piece , Index, BlockIndex * 16384 , 16384},
 	    TempBitfield =peerpiecemanagement:compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
 	    loop(StatusRecord#torrent_status{temp_bitfield=TempBitfield});
 
@@ -115,6 +124,32 @@ loop(StatusRecord) ->
 	    loop(StatusRecord)
     end.
 
+
+
+
+create_blocklist(Index,NumBlocks) ->
+     {Index ,fillblocklist(NumBlocks)}.
+
+fillblocklist(0) ->
+    [];
+fillblocklist(NumBlocks) ->
+    [0|fillblocklist(NumBlocks -1)].
+
+
+
+findblock(BlockList) ->
+  {_,List} = BlockList,
+    iteratelist(0,List).
+
+iteratelist(_,[])->
+ok;
+iteratelist(Index,[H|T]) ->
+    case H of
+        0 ->
+            Index;
+        _ ->
+            iteratelist(Index,T)
+    end.
 
 
 
