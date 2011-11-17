@@ -53,13 +53,14 @@ start_link(Var,Id,Record) ->
 init({Var,Id,Record}) ->
     %% Check integrity of downloaded pieces, create a bitfield according to
     %% the result of the integrity check.
-    	Name =  Record#torrent.info#info.name,
     NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
     NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
     OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
 
+    Name =  Record#torrent.info#info.name,
     PiecesSha = (Record#torrent.info)#info.pieces,
     Piece_length = (Record#torrent.info)#info.piece_length,
+	Path = Record#file.path,
 
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
@@ -67,14 +68,7 @@ init({Var,Id,Record}) ->
 	    %% Start communication with tracker and peers
 	    case peerpiecemanagement:getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-			case Record#torrent.info#info.files of
-				undefined ->
-
-		    			tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Name, PiecesSha, Piece_length);
-				_ ->
-						Path = Record#torrent.info#file.path,
-						tcp:connect_to_peer(PeerList,Record#torrent.info_sha, Id, Path, PiecesSha, Piece_length)
-			end,
+			tcp:connect_to_peer(PeerList,Record#torrent.info_sha),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces,num_blocks=NumBlocks});
 		{error,Reason} ->
@@ -88,7 +82,7 @@ init({Var,Id,Record}) ->
 	    io:fwrite("Torrent has a announce list"),
 	    case peerpiecemanagement:getPeerList(Record,Id) of
 		{ok,Interval,PeerList} ->
-		   peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id, Name, PiecesSha, Piece_length),
+		   peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(#torrent_status{db_bitfield=OurBitfield,temp_bitfield=OurBitfield,num_pieces=NumPieces,num_blocks=NumBlocks});
 		{error,Reason} ->
@@ -114,10 +108,29 @@ loop(StatusRecord) ->
 	    TempBitfield =peerpiecemanagement:compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
 	    loop(StatusRecord#torrent_status{temp_bitfield=TempBitfield});
 
-	{downloaded,PieceId,Data} ->
+	{downloaded,PieceId, Offset, Data} -> 
+		
+		%%case Record#torrent.info#info.files of
+		%%		undefined ->
+			%%		write_to_file:check_sha(Data, PieceId, Offset,  Name, PiecesSha, Piece_length, []);
+			%%_ ->
+				
+				%%	write_to_file:check_sha(Data, PieceId, Offset, Path, Shas, Piece_length, [])		
+	%%	end;
+		
+		
 	    %% Validate & write to disk
 	    %% Change bitfield in database
-	    ok;
+		
+		%% I Need information about Name/Path, Sha1 for all the pieces, length of one piece inside the loop.
+		%% I guess inside the status Record??
+		%% Can you add it?
+		%% Or I can do that, If you are ok with that. Or is there another way for me to get that information?
+		%% And receiving the Offset of the piece, in order to know exact place where to write it in the file.
+		%%
+		
+		ok;
+		
 
 	Msg ->
 	    io:fwrite("~p\n",[Msg]),
