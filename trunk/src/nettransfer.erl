@@ -1,3 +1,6 @@
+%%%author: Nahid Vafaie ,Peter Myllykoski
+%%% created: 18 Nov 2011
+
 -module(nettransfer).
 
 -export([init/8,loop/4]).
@@ -54,7 +57,22 @@ loop(Status,Pid,NextBlock,MasterPid) ->
                   Pid ! not_interested,
                   NewStatus = {false,false}
           end,
-            loop(NewStatus,Pid,NextBlock,MasterPid)
+            loop(NewStatus,Pid,NextBlock,MasterPid);
+
+        {have,SenderPid,Piece_Index} ->
+            case SenderPid of
+                Pid ->
+                    MasterPid ! {have,Piece_Index};
+                MasterPid ->
+                    Pid ! { have, Piece_Index}
+            end;
+        {bitfield,SenderPid, Bitfield} ->
+            case SenderPid of
+                Pid ->
+                    MasterPid ! {bitfield,Bitfield} ;
+                MasterPid ->
+                    Pid ! {bitfield,Bitfield}
+            end
 
 
     after 120000 ->
