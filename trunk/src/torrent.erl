@@ -56,7 +56,7 @@ init({Var,Id,Record}) ->
 	NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
 	NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
 	OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
-	
+
 	case Record#torrent.announce_list of
 		%% If the tracker list is empty, only use the main tracker
 		[] ->
@@ -74,7 +74,7 @@ init({Var,Id,Record}) ->
 				{error,Reason} ->
 					io:fwrite("~p",[Reason])
 			end;
-		
+
 		%% Should be changed so that all the trackers are queried, or should
 		%% the other trackers be fallback trackers if there is no connection to
 		%% the main one?
@@ -94,28 +94,38 @@ init({Var,Id,Record}) ->
 					io:fwrite("~p",[Reason])
 			end
 	end.
-    
+
 loop(Record, StatusRecord) ->
+   	NumPieces = StatusRecord#torrent_status.num_pieces,
+    TempBitfield = StatusRecord#torrent_status.temp_bitfield,
 	receive
 		{bitfield,Pid,Bitfield} ->
-			NumPieces = StatusRecord#torrent_status.num_pieces,
-			TempBitfield = StatusRecord#torrent_status.temp_bitfield,
-			Index = peerpiecemanagement:get_index(TempBitfield,Bitfield,NumPieces),
-			case get_blocklist(Index) of
-				{result,not_found} ->
-					NumBlocks = StatusRecord#torrent_status.num_blocks,
-					BlockList = create_blocklist(Index,NumBlocks);
-				{result,BlockList} ->
-					ok
-			end,
-			BlockIndex=findblock(BlockList),
-			Pid ! {piece , Index, BlockIndex * 16384 , 16384},
-			TempBitfield =peerpiecemanagement:compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
-			loop(Record, StatusRecord#torrent_status{temp_bitfield=TempBitfield});
-		
-		{downloaded,PieceId, Offset, Data} -> 
+
+          case	peerpiecemanagement:compare_bits(0,TempBitfield,Bitfield,NumPieces) of
+              {result,nothing_needed} ->
+                  Pid!  not_interested;
+              {result,_} ->
+                  Pid ! interested
+          end;
+
+        {blockrequest,Pid,Bitfield} ->
+            NumPieces = StatusRecord#torrent_status.num_pieces,
+            Index = peerpiecemanagement:get_index(TempBitfield,Bitfield,NumPieces);
+		%	case get_blocklist(Index) of
+		%		{result,not_found} ->
+		%			NumBlocks = StatusRecord#torrent_status.num_blocks,
+		%			BlockList = create_blocklist(Index,NumBlocks);
+		%		{result,BlockList} ->
+		%			ok
+		%	end,
+		%	BlockIndex=findblock(BlockList),
+		%	Pid ! {piece , Index, BlockIndex * 16384 , 16384},
+		%	TempBitfield =peerpiecemanagement:compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
+		%	loop(Record, StatusRecord#torrent_status{temp_bitfield=TempBitfield});
+
+		{downloaded,PieceId, Offset, Data} ->
 		%%send request for new piece and proccess if done or not
-		write_to_file:write(PieceId, Offset, Data, Record, Done);
+		write_to_file:write(PieceId, Offset, Data, Record, done);
 		Msg ->
 			io:fwrite("~p\n",[Msg]),
 			loop(Record, StatusRecord)

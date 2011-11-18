@@ -69,7 +69,7 @@ loop(Status,Pid,NextBlock,MasterPid) ->
         {bitfield,SenderPid, Bitfield} ->
             case SenderPid of
                 Pid ->
-                    MasterPid ! {bitfield,Bitfield} ;
+                    MasterPid ! {bitfield,self(),Bitfield} ;
                 MasterPid ->
                     Pid ! {bitfield,Bitfield}
             end
