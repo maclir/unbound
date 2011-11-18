@@ -94,7 +94,7 @@ init({Var,Id,Record}) ->
 					io:fwrite("~p",[Reason])
 			end
 	end.
-
+    
 loop(Record, StatusRecord) ->
 	receive
 		{bitfield,Pid,Bitfield} ->
