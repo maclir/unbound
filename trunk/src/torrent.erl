@@ -114,7 +114,8 @@ loop(Record, StatusRecord) ->
 			loop(Record, StatusRecord#torrent_status{temp_bitfield=TempBitfield});
 		
 		{downloaded,PieceId, Offset, Data} -> 
-			write_to_file:write(PieceId, Offset, Data, Record);
+		%%send request for new piece and proccess if done or not
+		write_to_file:write(PieceId, Offset, Data, Record, Done);
 		Msg ->
 			io:fwrite("~p\n",[Msg]),
 			loop(Record, StatusRecord)
