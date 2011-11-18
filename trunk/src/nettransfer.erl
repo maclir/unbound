@@ -1,17 +1,17 @@
 -module(nettransfer).
 
--export([init/7,loop/3]).
+-export([init/8,loop/4]).
 
 
-init(DestinationIp,DestinationPort,InfoHash,ClientId,Name,Shas,Piece_length)->
+init(MasterPid,DestinationIp,DestinationPort,InfoHash,ClientId,Name,Shas,Piece_length)->
     Pid = tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId, Name, Shas, Piece_length),
     Choked = true,
     Interested = false,
     Status= {Choked,Interested},
-    loop(Status,Pid,{0,0,0}).
+    loop(Status,Pid,{0,0,0},MasterPid).
 
 
-loop(Status,Pid,NextBlock) ->
+loop(Status,Pid,NextBlock,MasterPid) ->
     receive
         got_unchoked ->
             case Status of
@@ -22,7 +22,7 @@ loop(Status,Pid,NextBlock) ->
                 {_,false} ->
                     NewStatus = {false,false}
             end,
-            loop(NewStatus,Pid,NextBlock);
+            loop(NewStatus,Pid,NextBlock,MasterPid);
         got_choked ->
             case Status of
                 {_,true} ->
@@ -30,7 +30,7 @@ loop(Status,Pid,NextBlock) ->
                 {_,false} ->
                     NewStatus = {true,false}
             end,
-            loop(NewStatus,Pid,NextBlock);
+            loop(NewStatus,Pid,NextBlock,MasterPid);
         is_interested ->
             case Status of
                 {true,_} ->
@@ -42,7 +42,7 @@ loop(Status,Pid,NextBlock) ->
                       Pid ! { piece,Index,Offset,Length},
                      NewStatus = {false,true}
             end,
-                    loop(NewStatus,Pid,NextBlock);
+                    loop(NewStatus,Pid,NextBlock,MasterPid);
 
 
         not_interested ->
@@ -54,7 +54,7 @@ loop(Status,Pid,NextBlock) ->
                   Pid ! not_interested,
                   NewStatus = {false,false}
           end,
-            loop(NewStatus,Pid,NextBlock)
+            loop(NewStatus,Pid,NextBlock,MasterPid)
 
 
     after 120000 ->

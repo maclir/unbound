@@ -23,7 +23,7 @@ getPeerList(Record,Id) ->
 
 
 connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
-    [nettransfer:init(Ip,Port,InfoHash,Id, Name, PiecesSha,Piece_length)|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
+    [spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id, Name, PiecesSha,Piece_length])|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
 
 connect_to_peer([],InfoHash,Id, _, _, _) ->
     [].
