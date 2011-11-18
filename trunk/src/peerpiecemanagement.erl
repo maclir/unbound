@@ -4,7 +4,7 @@
 
 -module(peerpiecemanagement).
 
--export([compare_bitfields/4,connect_to_peer/6,create_dummy_bitfield/1,getPeerList/2]).
+-export([compare_bitfields/3,connect_to_peer/6,create_dummy_bitfield/1,getPeerList/2]).
 
 -include("torrent_db_records.hrl").
 
@@ -23,7 +23,7 @@ getPeerList(Record,Id) ->
 
 
 connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
-    [tcp:open_a_socket(Ip,Port,InfoHash,Id, Name, PiecesSha)|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
+    [nettransfer:init(Ip,Port,InfoHash,Id, Name, PiecesSha,Piece_length)|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
 
 connect_to_peer([],InfoHash,Id, _, _, _) ->
     [].
