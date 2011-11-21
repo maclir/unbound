@@ -143,7 +143,7 @@ process_bitfield_payload(MasterPid, BitFieldLengthPrefix, Rest)->
 		if byte_size(Rest1) >= 9 ->
 			process_have_messages(MasterPid, Rest1,[]);
 		true ->
-			self() ! {bitfield,Rest1}
+			self() ! {bitfield,BitField}
 		end.
 process_have_messages(MasterPid, <<>>, Result)->
 		MasterPid ! Result;
