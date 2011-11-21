@@ -6,7 +6,7 @@
 %%% Created : 21 Nov 2011 by Peter Myllykoski <peter@UL30JT>
 
 -module(piece).
--export([init/3]).
+-export([init/3,register_peer_process/3]).
 
 init(PieceIndex,PieceLength,LastPiece) ->
     <<Piece/bitstring>> = <<0:PieceLength>>,
@@ -27,6 +27,7 @@ loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
 	    NewWanted = Wanted -- [RandomBlock],
 	    NewDownloading = [{RandomBlock,FromPid}|Downloading],
 	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
+	    FromPid ! is_interested,
 	    FromPid ! {download_block,self(),PieceIndex,RandomBlock,16384},
 	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,NumBlocks);
 
