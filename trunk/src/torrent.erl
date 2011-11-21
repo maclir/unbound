@@ -51,85 +51,52 @@ start_link(Var,Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
 
 init({Var,Id,Record}) ->
-	%% Check integrity of downloaded pieces, create a bitfield according to
-	%% the result of the integrity check.
-	NumPieces = byte_size((Record#torrent.info)#info.pieces) div 20,
-	NumBlocks = (Record#torrent.info)#info.piece_length div 16384,
-	OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
+    %% Read bitfield from database
+    OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
+    PieceIndexList = downloader:bitfield_to_indexlist(OurBitfield),
+    PidIndexList = keymap(bind_pid_to_index,1,PieceIndexList),
+    
+    case Record#torrent.announce_list of
+	%% If the tracker list is empty, only use the main tracker
+	[] ->
+	    %% Start communication with tracker and peers
+	    case peerpiecemanagement:getPeerList(Record,Id) of
+		{ok,Interval,PeerList} ->
+		    tcp:connect_to_peer(PeerList,Record#torrent.info_sha),
+		    io:fwrite("~p started by client ~p\n",[Var,Id]),
+		    loop(Record, #torrent_status{});
+		{error,Reason} ->
+		    io:fwrite("~p",[Reason])
+	    end;
+	
+	%% Should be changed so that all the trackers are queried, or should
+	%% the other trackers be fallback trackers if there is no connection to
+	%% the main one?
+	AnnounceList ->
+	    io:fwrite("Torrent has a announce list"),
+	    case peerpiecemanagement:getPeerList(Record,Id) of
+		{ok,Interval,PeerList} ->
+		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
+		    io:fwrite("~p started by client ~p\n",[Var,Id]),
+		    loop(Record, #torrent_status{});
+		{error,Reason} ->
+		    io:fwrite("~p",[Reason])
+	    end
+    end.
 
-	case Record#torrent.announce_list of
-		%% If the tracker list is empty, only use the main tracker
-		[] ->
-			%% Start communication with tracker and peers
-			case peerpiecemanagement:getPeerList(Record,Id) of
-				{ok,Interval,PeerList} ->
-					tcp:connect_to_peer(PeerList,Record#torrent.info_sha),
-					io:fwrite("~p started by client ~p\n",[Var,Id]),
-					loop(Record, #torrent_status{
-									 db_bitfield=OurBitfield,
-									 temp_bitfield=OurBitfield,
-									 num_pieces=NumPieces,
-									 num_blocks=NumBlocks
-								});
-				{error,Reason} ->
-					io:fwrite("~p",[Reason])
-			end;
-
-		%% Should be changed so that all the trackers are queried, or should
-		%% the other trackers be fallback trackers if there is no connection to
-		%% the main one?
-		AnnounceList ->
-			io:fwrite("Torrent has a announce list"),
-			case peerpiecemanagement:getPeerList(Record,Id) of
-				{ok,Interval,PeerList} ->
-					peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
-					io:fwrite("~p started by client ~p\n",[Var,Id]),
-					loop(Record, #torrent_status{
-										db_bitfield=OurBitfield,
-										temp_bitfield=OurBitfield,
-										num_pieces=NumPieces,
-										num_blocks=NumBlocks
-								});
-				{error,Reason} ->
-					io:fwrite("~p",[Reason])
-			end
-	end.
-
-loop(Record, StatusRecord) ->
-   	NumPieces = StatusRecord#torrent_status.num_pieces,
-    TempBitfield = StatusRecord#torrent_status.temp_bitfield,
-	receive
-		{bitfield,Pid,Bitfield} ->
-
-          case	peerpiecemanagement:compare_bits(0,TempBitfield,Bitfield,NumPieces) of
-              {result,nothing_needed} ->
-                  Pid!  not_interested;
-              {result,_} ->
-                  Pid ! interested
-          end;
-
-        {blockrequest,Pid,Bitfield} ->
-            NumPieces = StatusRecord#torrent_status.num_pieces,
-            Index = peerpiecemanagement:get_index(TempBitfield,Bitfield,NumPieces);
-		%	case get_blocklist(Index) of
-		%		{result,not_found} ->
-		%			NumBlocks = StatusRecord#torrent_status.num_blocks,
-		%			BlockList = create_blocklist(Index,NumBlocks);
-		%		{result,BlockList} ->
-		%			ok
-		%	end,
-		%	BlockIndex=findblock(BlockList),
-		%	Pid ! {piece , Index, BlockIndex * 16384 , 16384},
-		%	TempBitfield =peerpiecemanagement:compare_bitfields(TempBitfield,Bitfield,NumPieces,Pid),
-		%	loop(Record, StatusRecord#torrent_status{temp_bitfield=TempBitfield});
-
-		{downloaded,PieceId, Offset, Data} ->
-		%%send request for new piece and proccess if done or not
-		write_to_file:write(PieceId, Offset, Data, Record, done);
-		Msg ->
-			io:fwrite("~p\n",[Msg]),
-			loop(Record, StatusRecord)
-	end.
+loop(Record, StatusRecord,PidIndexList) ->
+    receive
+	{bitfield,FromPid,Bitfield} ->    
+	    PeerIndexList = downloader:bitfield_to_indexlist(Bitfield),
+	    piece:register_peer_process(FromPid,PeerIndexList,PidIndexList),
+	    loop(Record,StatusRecord,PidIndexList);
+	{have,FromPid,Index} ->
+	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
+	    loop(Record,StatusRecord,PidIndexList);
+	{'EXIT',FromPid,Reason} ->
+	    piece:unregister_peer_process(FromPid,PidIndexList),
+	    loop(Record,StatusRecord,PidIndexList);
+    end.
 
 
 
@@ -157,6 +124,12 @@ iteratelist(Index,[H|T]) ->
 		_ ->
 			iteratelist(Index,T)
 	end.
+
+
+
+bind_pid_to_index(Index) ->
+    {Index,spawn(piece,init,[])}.
+
 
 
 
