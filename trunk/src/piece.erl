@@ -8,21 +8,38 @@
 -module(piece).
 -export(init/0).
 
-init() ->
+init(IndexNumber,PieceLength,LastPiece) ->
+    <<Piece/bitstring>> = <<0:PieceLenght>>,
+    BlockSize = 16384,
+    NumBlocks = PieceLength / BlockSize,
     PeerPidList = [],
+    Wanted = create_block_list(NumBlocks),
     Downloading = [],
     Finished = [],
-    loop(PeerPidList,{Downloading,Finished}).
+    loop(Piece,PeerPidList,{Wanted,Downloading,Finished},NumBlocks).
 
-loop(PeerPidList,BlockStatus) ->
+loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
     receive
 	{register,FromPid} ->
+	    {Wanted,Downloading,Finished} = BlockStatus,
 	    NewPeerPidList = [Pid|PeerPidList],
-	    loop(NewPeerPidList,BlockStatus);
+	    RandomBlock = lists:nth(random:uniform(lenght(Wanted)),Wanted),
+	    NewWanted = Wanted -- [RandomBlock],
+	    NewDownloading = [{RandomBlock,FromPid}|Downloading],
+	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
+	    FromPid ! {download_block,self(),PieceIndex,BlockIndex,16384},
+	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,NumBlocks);
+       
 	{unregister, FromPid} ->
 	    NewPeerPidList = PeerPidList -- [FromPid],
-	    loop(NewPeerPidList,BlockStatus)
+	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,NumBlocks)
     end.
+
+create_blocklist(0) ->
+    [0];
+
+create_blockList(NumBlocks) ->
+    [NumBlocks-1|create_blocklist(NumBlocks-2)].
 
 %% Functions for registering and removing peer processes from peer list
 
