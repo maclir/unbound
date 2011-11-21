@@ -3,29 +3,30 @@
 
 -module(nettransfer).
 
--export([init/8,loop/5]).
+-export([init/8,loop/6]).
 
 
-init(MasterPid,DestinationIp,DestinationPort,InfoHash,ClientId,Name,Shas,Piece_length)->
-    Pid = tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId, Name, Shas, Piece_length),
+init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,Name,Shas,Piece_length)->
+    TcpPid = tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId, Name, Shas, Piece_length),
     Choked = true,
     Interested = false,
     Status= {Choked,Interested},
-    loop(Status,Pid,{0,0,0},MasterPid,0).
+    loop(Status,TcpPid,{0,0,0},TorrentPid,0,piecepid).
 
 
-loop(Status,Pid,NextBlock,MasterPid,StoredBitfield) ->
+loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
     receive
         got_unchoked ->
             case Status of
                 {_,true}->
                     {Index,Offset,Length} = NextBlock,
-		    MasterPid ! {get_block,Bitfield},
-		    NewStatus= {false,true};
+                    TorrentPid ! {get_block,StoredBitfield},
+                    NewStatus= {false,true};
                 {_,false} ->
                     NewStatus = {false,false}
             end,
-            loop(NewStatus,Pid,NextBlock,MasterPid,StoredBitfield);
+            loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+
         got_choked ->
             case Status of
                 {_,true} ->
@@ -33,51 +34,62 @@ loop(Status,Pid,NextBlock,MasterPid,StoredBitfield) ->
                 {_,false} ->
                     NewStatus = {true,false}
             end,
-            loop(NewStatus,Pid,NextBlock,MasterPid,StoredBitfield);
+            loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+
         is_interested ->
             case Status of
                 {true,_} ->
-                    Pid ! interested ,
+                    TcpPid ! interested ,
                     NewStatus = {true,true};
                 {false, _} ->
-		    Pid ! interested,
-		    MasterPid ! {get_block,Bitfield}
-		    NewStatus = {false,true}
+                    TorrentPid ! interested,
+                    TorrentPid ! {get_block,StoredBitfield},
+                    NewStatus = {false,true}
             end,
-                    loop(NewStatus,Pid,NextBlock,MasterPid,StoredBitfield);
+            loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 
         not_interested ->
           case Status of
               {true,_} ->
-                  Pid ! not_interested ,
+                  TcpPid ! not_interested ,
                   NewStatus = {true,false} ;
               {false, _} ->
-                  Pid ! not_interested,
+                  TcpPid ! not_interested,
                   NewStatus = {false,false}
           end,
-            loop(NewStatus,Pid,NextBlock,MasterPid,StoredBitfield);
+          loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 
         {have,SenderPid,Piece_Index} ->
             case SenderPid of
-                Pid ->
-                    MasterPid ! {have,Piece_Index};
-                MasterPid ->
-                    Pid ! { have, Piece_Index}
+                TcpPid ->
+                    TorrentPid ! {have,Piece_Index};
+                TorrentPid ->
+                    TcpPid ! { have, Piece_Index}
             end,
-	    loop(Status,Pid,NextBlock,MasterPid,StoredBitfield);
+            loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+
         {bitfield,SenderPid, Bitfield} ->
             case SenderPid of
-                Pid ->
-                    MasterPid ! {bitfield,self(),Bitfield},
-                MasterPid ->
-                    Pid ! {bitfield,Bitfield},
+                TcpPid ->
+                    TorrentPid ! {bitfield,self(),Bitfield};
+                TorrentPid ->
+                   TcpPid ! {bitfield,Bitfield}
             end,
-	    loop(Status,Pid,NextBlock,MasterPid,Bitfield);
-	{start_download,{Index,Offset,Lenght}} ->
-	    Pid ! {request, Index,Offset,Lenght},
-	    loop(Status,Pid,{Index,Offset,Lenght},MasterPid,Bitfield);
+            loop(Status,TcpPid,NextBlock,TorrentPid,Bitfield,PiecePid);
+
+        {download_block,FromPid,Index,Offset,Length} ->
+            case PiecePid of
+                piecepid ->
+                    TcpPid ! {request, Index,Offset,Length},
+                    loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid);
+                _ ->
+                    FromPid ! {busy, self(),Offset},
+                    loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
+
+            end
+
     after 120000 ->
-            Pid ! keep_alive
+            TcpPid ! keep_alive
 
     end.
 
