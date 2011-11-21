@@ -7,7 +7,7 @@
 %% -----------------------------------------------------------------------------------------------------------------
 
 % connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.mininova.org/announce?info_hash=%95%a2%b4%e4%51%7a%6b%55%17%7f%e6%e2%71%98%52%43%70%f2%75%22&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
+	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
 	% {ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	% Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
 	% [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)].
@@ -102,9 +102,9 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
+open_a_socket(DestinationIp, DestinationPort, InfoHash, ClientId)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
-	spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]).
+	spawn(?MODULE, connect_to_client,[self(), Socket, InfoHash,ClientId]).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
@@ -134,22 +134,22 @@ process_handshake(MasterPid, << 19, "BitTorrent protocol",
 						 _PeerID:20/binary,
 						 Rest/binary >>)->
 		MasterPid ! "peer accepted handshake~n",
-		process_bitfield(MasterPid, Rest).
-process_bitfield(MasterPid, <<_BitFieldLengthPrefix:4/binary, Rest/binary>>)->
+		process_bitfield(Rest).
+process_bitfield(<<_BitFieldLengthPrefix:4/binary, Rest/binary>>)->
 		 BitFieldLengthPrefix = lists:nth(length(binary_to_list(_BitFieldLengthPrefix)),binary_to_list(_BitFieldLengthPrefix)),
-		 process_bitfield_payload(MasterPid, BitFieldLengthPrefix, Rest).
-process_bitfield_payload(MasterPid, BitFieldLengthPrefix, Rest)->
+		 process_bitfield_payload(BitFieldLengthPrefix, Rest).
+process_bitfield_payload(BitFieldLengthPrefix, Rest)->
 		<<BitField:BitFieldLengthPrefix/binary,Rest1/binary>> = Rest,
 		if byte_size(Rest1) >= 9 ->
-			process_have_messages(MasterPid, Rest1,[]);
+			process_have_messages(Rest1);
 		true ->
 			self() ! {bitfield,BitField}
 		end.
-process_have_messages(MasterPid, <<>>, Result)->
-		MasterPid ! Result;
-process_have_messages(MasterPid, <<HaveMessageLengthPrefix:5/binary, HaveMessagePayload:4/binary, Rest/binary>>, Result)->
-		<<PieceIndex:32>> = HaveMessagePayload,
-		process_have_messages(MasterPid, Rest, [{tcp,have,PieceIndex}|Result]).
+process_have_messages(<<>>)->
+		ok;
+process_have_messages(<<HaveMessage:9/binary, Rest/binary>>)->
+		self() ! {have, self(), HaveMessage},
+		process_have_messages(Rest).
 	
 %% this loop processes ALL messages. The ones it gets from the peer AND the ones we send to it, from the parent process
 %% to send a message from the parent process, as a common structure: <process name> ! <message body>, for example: slave ! keep_alive.	
@@ -171,11 +171,14 @@ main_loop(Socket, MasterPid)->
 			gen_tcp:send(Socket,<<0,0,0,1,3>>),
 			main_loop(MasterPid, Socket);
 		{bitfield,Rest1} ->
-			MasterPid ! {client_bitfield, Rest1};
+			MasterPid ! {client_bitfield, self(), Rest1};
 		{piece, Index, Offset, Length} ->
 			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
 			HoleBlock = process_block(MasterPid, Length, <<>>),
 			MasterPid ! {"got the block:", HoleBlock}, 
+			main_loop(Socket,MasterPid);
+		{tcp,_,<<4:8, PieceIndex:32>>} ->
+			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
 		{tcp,_,<<0,0,0,0>>}-> 
 			MasterPid ! got_keep_alive, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
