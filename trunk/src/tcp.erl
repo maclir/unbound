@@ -6,7 +6,7 @@
 %% Tracker communiacation
 %%
 
-%% THIS COMMENTED BLOCK IS FOR TESTING HERE! DO NOT DELETE IT!
+%% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 %% -----------------------------------------------------------
 % connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
 	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
@@ -21,14 +21,19 @@
 	% separate(Peers). %% formating a peer list
 
 % scrape()->
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/scrape?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32",[]},[], []),
+	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.thepiratebay.org/scrape?info_hash=%8a%c3%73%1a%d4%b0%39%c0%53%93%b5%40%4a%fa%6e%73%97%81%0b%41",[]},[], []),
+	% case decode(list_to_binary(Response)) of	
 	% {ok,
 		% {dict,
 			% [{<<"files">>,
 				% {dict, [{InfoHash,
 							% {dict,[{<<"complete">>,Complete},
 								   % {<<"downloaded">>,Downloaded},
-								   % {<<"incomplete">>,Incomplete}]}}]}}]}} = decode(list_to_binary(Response)).
+								   % {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
+								   % io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
+	% _ -> io:format("Tracker does not support scraping or probably does not like you~n")
+	% end.
+	
 %% -----------------------------------------------------------
 	
 scrape(ScrapeBin,InfoHashBin)->	
@@ -36,15 +41,17 @@ scrape(ScrapeBin,InfoHashBin)->
 	InfoHash = "info_hash" ++ binary_to_list(InfoHashBin),
 	RequestString = Scrape ++ InfoHash,
 	
-	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
+	case decode(list_to_binary(Response)) of	
 	{ok,
 		{dict,
 			[{<<"files">>,
 				{dict, [{InfoHash,
 							{dict,[{<<"complete">>,Complete},
 								   {<<"downloaded">>,Downloaded},
-								   {<<"incomplete">>,Incomplete}]
-							}}]}}]}} = decode(list_to_binary(Response)).
+								   {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
+								   io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
+	_ -> io:format("Tracker does not support scraping or probably does not like you~n")
+	end.
 	
 	
 connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function is used to connect to our tracker and get the peer list
