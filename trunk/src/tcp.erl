@@ -150,7 +150,7 @@ process_bitfield_payload(MasterPid, BitFieldLengthPrefix, Rest)->
 		if byte_size(Rest1) >= 9 ->
 			process_have_messages(MasterPid, Rest1,[]);
 		true ->
-			self() ! {tcp,thisIsADummyVariableAnyway,Rest1}
+			self() ! {bitfield,Rest1}
 		end.
 process_have_messages(MasterPid, <<>>, Result)->
 		MasterPid ! Result;
@@ -177,6 +177,8 @@ main_loop(Socket, MasterPid)->
 		not_interested ->
 			gen_tcp:send(Socket,<<0,0,0,1,3>>),
 			main_loop(MasterPid, Socket);
+		{bitfield,Rest1} ->
+			MasterPid ! {client_bitfield, Rest1};
 		{piece, Index, Offset, Length} ->
 			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
 			HoleBlock = process_block(MasterPid, Length, <<>>),
