@@ -7,9 +7,9 @@
 %% -----------------------------------------------------------------------------------------------------------------
 
 % connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.mininova.org/announce?info_hash=%95%a2%b4%e4%51%7a%6b%55%17%7f%e6%e2%71%98%52%43%70%f2%75%22&peer_id=FTaa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
+	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
 	% {ok,{dict,Pairs}} = decode(list_to_binary(Response)),
-	% lists:foreach(fun(X)->process_pairs(X) end,Pairs).
+	% lists:map(fun(X)->process_pairs(X) end,Pairs).
 
 % "http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started"	
 	
@@ -47,7 +47,7 @@
 	
 connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function is used to connect to our tracker and get the peer list
     
-    %% Code for building the request string that is sent to the tracker
+    % Code for building the request string that is sent to the tracker
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
@@ -60,10 +60,10 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function
     Event = "event=" ++ Eventt,
     RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
 
-    %% Code for making the request and parsing the trackers response
+    % Code for making the request and parsing the trackers response
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
-	lists:foreach(fun(X)->process_pairs(X) end, Pairs).
+	lists:map(fun(X)->process_pairs(X) end, Pairs).
 	
 scrape(ScrapeBin,InfoHashBin)->	
 	Scrape = binary_to_list(ScrapeBin) ++ "?",
@@ -84,22 +84,19 @@ scrape(ScrapeBin,InfoHashBin)->
 
 process_pairs({Key, Value})->
 	case binary_to_list(Key) of
-		"complete" -> io:format("Complete (Seeders): ~p~n",[Value]);
-		"incomplete" -> io:format("Incomplete (Leechers): ~p~n", [Value]);
-		"min interval" -> io:format("Min Interval: ~p~n",[Value]);
-		"interval" -> io:format("Interval: ~p~n",[Value]);
-		"peers" -> 
-			%%  DO NOT PANIC! ALL IO:FORMATS ARE JUST FOR TESTING. THEY ARE TO BE REPLACED WITH ACTUAL VALUE RETURNING.
-			io:format("Peers:~n"),
-			separate(Value);
+		"complete" -> {"complete", Value};
+		"incomplete" -> {"incomplete",Value};
+		"min interval" -> {"Min Interval",Value};
+		"interval" -> {"Interval",Value};
+		"peers" -> separate(Value);
+			%%  DO NOT PANIC! ALL IO:FORMATS ARE JUST FOR TESTING. THEY ARE TO BE REPLACED WITH ACTUAL VALUE RETURNING.		
 		_ -> io:format("Unknown pair. Key: ~p Value: ~p~n",[Key,Value])
 	end.
 	
 separate(<<>>)->
-	ok;
+	[];
 separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
-	io:format("~p.~p.~p.~p:~p ~n",[Ip1,Ip2,Ip3,Ip4,Port]),
-	separate(Rest).
+	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)].
 	
 %%	
 %% Peer Communication
