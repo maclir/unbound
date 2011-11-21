@@ -29,7 +29,7 @@ start_link_loader(Id) ->
 init_loader({Pid,Id})->
 	io:fwrite("Torrent Loader Started!\n"),
 	Pid ! {ok,self()},
-	RecordList = torrent_db:size_gt(0),
+	RecordList = [torrent_db:get_torrent_by_id(0)],
 	start_torrent(Pid,RecordList,Id).
 
 start_torrent(Pid,[Record|Tail],Id) ->
@@ -51,20 +51,22 @@ start_link(Var,Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
 
 init({Var,Id,Record}) ->
+    PieceLength = Record#torrent.info#info.piece_length,
+    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
     %% Read bitfield from database
-    OurBitfield = peerpiecemanagement:create_dummy_bitfield(NumPieces),
+    <<_:40,OurBitfield/binary>> = peerpiecemanagement:create_dummy_bitfield(NumPieces),
     PieceIndexList = downloader:bitfield_to_indexlist(OurBitfield),
-    PidIndexList = keymap(bind_pid_to_index,1,PieceIndexList),
+    PidIndexList = bind_pid_to_index(PieceIndexList,PieceLength),
     
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
 	    %% Start communication with tracker and peers
 	    case peerpiecemanagement:getPeerList(Record,Id) of
-		{ok,Interval,PeerList} ->
-		    tcp:connect_to_peer(PeerList,Record#torrent.info_sha),
+		[{"Interval",Interval},{"peers",PeerList}] ->
+		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(Record, #torrent_status{});
+		    loop(Record, #torrent_status{},PidIndexList);
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end;
@@ -78,7 +80,7 @@ init({Var,Id,Record}) ->
 		{ok,Interval,PeerList} ->
 		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(Record, #torrent_status{});
+		    loop(Record, #torrent_status{},PidIndexList);
 		{error,Reason} ->
 		    io:fwrite("~p",[Reason])
 	    end
@@ -95,7 +97,7 @@ loop(Record, StatusRecord,PidIndexList) ->
 	    loop(Record,StatusRecord,PidIndexList);
 	{'EXIT',FromPid,Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
-	    loop(Record,StatusRecord,PidIndexList);
+	    loop(Record,StatusRecord,PidIndexList)
     end.
 
 
@@ -126,9 +128,13 @@ iteratelist(Index,[H|T]) ->
 	end.
 
 
+bind_pid_to_index([{H}|[]],PieceLength) ->
+   [{H,spawn(piece,init,[H,PieceLength,true])}];
 
-bind_pid_to_index(Index) ->
-    {Index,spawn(piece,init,[])}.
+bind_pid_to_index([{H}|T],PieceLength) ->
+    [{H,spawn(piece,init,[H,PieceLength,false])}|bind_pid_to_index(T,PieceLength)].
+
+
 
 
 

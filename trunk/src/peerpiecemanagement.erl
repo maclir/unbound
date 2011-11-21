@@ -4,7 +4,7 @@
 
 -module(peerpiecemanagement).
 
--export([compare_bitfields/3,connect_to_peer/6,create_dummy_bitfield/1,getPeerList/2]).
+-export([compare_bitfields/3,connect_to_peer/3,create_dummy_bitfield/1,getPeerList/2]).
 
 -include("torrent_db_records.hrl").
 
@@ -16,16 +16,16 @@ getPeerList(Record,Id) ->
     Announce = Record#torrent.announce,
     case Announce of
 	<<"http",_Rest/binary>> ->
-	    tcp:connect_to_server(Announce,InfoHashUrl,Id);
+	    tcp:connect_to_server(Announce,InfoHashUrl,Id,"started");
 	<<"udp",_Rest/binary>> ->
 	    {error,udp_not_supported}
     end.
 
 
-connect_to_peer([{Ip,Port}|Rest],InfoHash,Id, Name, PiecesSha, Piece_length) ->
-    [spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id, Name, PiecesSha,Piece_length])|connect_to_peer(Rest,InfoHash,Id, Name, PiecesSha, Piece_length)];
+connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
+    [spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id])|connect_to_peer(Rest,InfoHash,Id)];
 
-connect_to_peer([],InfoHash,Id, _, _, _) ->
+connect_to_peer([],InfoHash,Id) ->
     [].
 
 create_dummy_bitfield(Num) ->

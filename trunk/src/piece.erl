@@ -6,30 +6,37 @@
 %%% Created : 21 Nov 2011 by Peter Myllykoski <peter@UL30JT>
 
 -module(piece).
--export(init/0).
+-export([init/3]).
 
-init(IndexNumber,PieceLength,LastPiece) ->
-    <<Piece/bitstring>> = <<0:PieceLenght>>,
+init(PieceIndex,PieceLength,LastPiece) ->
+    <<Piece/bitstring>> = <<0:PieceLength>>,
     BlockSize = 16384,
-    NumBlocks = PieceLength / BlockSize,
+    NumBlocks = PieceLength div BlockSize,
     PeerPidList = [],
-    Wanted = create_block_list(NumBlocks),
+    Wanted = create_blocklist(NumBlocks-1),
     Downloading = [],
     Finished = [],
-    loop(Piece,PeerPidList,{Wanted,Downloading,Finished},NumBlocks).
+    loop(Piece,PieceIndex,PeerPidList,{Wanted,Downloading,Finished},NumBlocks).
 
 loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
     receive
 	{register,FromPid} ->
 	    {Wanted,Downloading,Finished} = BlockStatus,
-	    NewPeerPidList = [Pid|PeerPidList],
-	    RandomBlock = lists:nth(random:uniform(lenght(Wanted)),Wanted),
+	    NewPeerPidList = [FromPid|PeerPidList],
+	    RandomBlock = lists:nth(random:uniform(length(Wanted)),Wanted),
 	    NewWanted = Wanted -- [RandomBlock],
 	    NewDownloading = [{RandomBlock,FromPid}|Downloading],
 	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
-	    FromPid ! {download_block,self(),PieceIndex,BlockIndex,16384},
+	    FromPid ! {download_block,self(),PieceIndex,RandomBlock,16384},
 	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,NumBlocks);
-       
+
+	{busy,FromPid,Offset} ->
+	    {Wanted,Downloading,Finished} = BlockStatus,
+	    NewDownloading = Downloading -- [{Offset,FromPid}],
+	    NewWanted = [Offset|Wanted],
+	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
+	    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,NumBlocks);
+	    
 	{unregister, FromPid} ->
 	    NewPeerPidList = PeerPidList -- [FromPid],
 	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,NumBlocks)
@@ -38,8 +45,8 @@ loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
 create_blocklist(0) ->
     [0];
 
-create_blockList(NumBlocks) ->
-    [NumBlocks-1|create_blocklist(NumBlocks-2)].
+create_blocklist(NumBlocks) ->
+    [NumBlocks|create_blocklist(NumBlocks-1)].
 
 %% Functions for registering and removing peer processes from peer list
 
@@ -50,13 +57,13 @@ unregister_peer_process(_FromPid,[]) ->
     ok.
 
 register_peer_process(FromPid,[{H}|T],PidIndexList) ->
-    case keyfind(H,1,PidIndexList) of
+    case lists:keyfind(H,1,PidIndexList) of
 	{Index,ToPid} ->
 	    ToPid ! {register,FromPid};
 	false ->
 	    ok
     end,
-    register_peer_process(PeerPid,T,PidIndexList);
+    register_peer_process(FromPid,T,PidIndexList);
 
 register_peer_process(_PeerPid,[],_PidIndexList) ->
     ok.

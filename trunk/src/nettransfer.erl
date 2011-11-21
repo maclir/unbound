@@ -3,11 +3,11 @@
 
 -module(nettransfer).
 
--export([init/8,loop/6]).
+-export([init/5,loop/6]).
 
 
-init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,Name,Shas,Piece_length)->
-    TcpPid = tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId, Name, Shas, Piece_length),
+init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
+    TcpPid=tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId),
     Choked = true,
     Interested = false,
     Status= {Choked,Interested},
@@ -68,7 +68,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
             end,
             loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 
-        {bitfield,SenderPid, Bitfield} ->
+        {client_bitfield,SenderPid, Bitfield} ->
             case SenderPid of
                 TcpPid ->
                     TorrentPid ! {bitfield,self(),Bitfield};
