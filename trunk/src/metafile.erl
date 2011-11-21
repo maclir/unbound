@@ -134,7 +134,7 @@ parseData(<<Value/binary>>) ->
     Value.
 
 buildPathList([Head|Tail]) ->
-    [binary_to_list(parseData(Head))++"/"|buildPathList(Tail)];
+    [Head|buildPathList(Tail)];
 
 buildPathList([]) ->
     [].
