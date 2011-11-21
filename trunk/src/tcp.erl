@@ -115,7 +115,7 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 			   InfoHash,
 			   ClientId
 						]),
-	handshake_loop(Socket, MasterPid), %% starting a loop for handling handshaking
+	handshake_loop(MasterPid,<<>>), %% starting a loop for handling handshaking
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
 handshake_loop(MasterPid,HandshakeResponse)->
