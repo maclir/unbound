@@ -171,13 +171,14 @@ main_loop(Socket, MasterPid)->
 			gen_tcp:send(Socket,<<0,0,0,1,3>>),
 			main_loop(MasterPid, Socket);
 		{bitfield,Rest1} ->
-			MasterPid ! {client_bitfield, self(), Rest1};
+			MasterPid ! {client_bitfield, self(), Rest1},
+			main_loop(Socket,MasterPid);
 		{piece, Index, Offset, Length} ->
 			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
 			HoleBlock = process_block(MasterPid, Length, <<>>),
 			MasterPid ! {"got the block:", HoleBlock}, 
 			main_loop(Socket,MasterPid);
-		{tcp,_,<<4:8, PieceIndex:32>>} ->
+		{have,From,<<5:32, 4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
 		{tcp,_,<<0,0,0,0>>}-> 
