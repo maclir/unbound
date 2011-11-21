@@ -1,25 +1,18 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/0, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/2, connect_to_client/2]).
-
-%%
-%% Tracker communiacation
-%%
+-export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/4, connect_to_client/4]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
-%% -----------------------------------------------------------
-% connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
-	% {ok,
-		% {dict,
-			% [{<<"interval">>,Interval},
-				% {<<"peers">>,Peers}
-			% ]
-		% }
-	% } = decode(list_to_binary(Response)), %% this separates peer list from everything else
-	% io:format("Interval: ~p~n",[Interval]), %% prints the interval
-	% separate(Peers). %% formating a peer list
 
+%% -----------------------------------------------------------------------------------------------------------------
+
+% connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
+	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.mininova.org/announce?info_hash=%95%a2%b4%e4%51%7a%6b%55%17%7f%e6%e2%71%98%52%43%70%f2%75%22&peer_id=FTaa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
+	% {ok,{dict,Pairs}} = decode(list_to_binary(Response)),
+	% lists:foreach(fun(X)->process_pairs(X) end,Pairs).
+
+% "http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started"	
+	
 % scrape()->
 	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.thepiratebay.org/scrape?info_hash=%8a%c3%73%1a%d4%b0%39%c0%53%93%b5%40%4a%fa%6e%73%97%81%0b%41",[]},[], []),
 	% case decode(list_to_binary(Response)) of	
@@ -33,26 +26,24 @@
 								   % io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
 	% _ -> io:format("Tracker does not support scraping or probably does not like you~n")
 	% end.
+
+% connect_to_client(MasterPid, Socket)-> 
+	% erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
+	% gen_tcp:send(Socket,[  %% sending a handshake
+							% 19,
+							% "BitTorrent protocol",
+							% <<0,0,0,0,0,0,0,0>>,
+							% <<16#0a, 16#ab, 16#5d, 16#21, 16#39, 16#57, 16#72, 16#99, 16#4e, 16#64, 16#43, 16#cb, 16#b3, 16#e2, 16#ae, 16#03, 16#ce, 16#52, 16#3b, 16#32>>,
+							% "BDann7c1d95510bb160a"
+						% ]),
+	% handshake_loop(MasterPid, <<>>), 
+	% main_loop(Socket, MasterPid).
 	
-%% -----------------------------------------------------------
-	
-scrape(ScrapeBin,InfoHashBin)->	
-	Scrape = bianry_to_list(AnnounceBin) ++ "?",
-	InfoHash = "info_hash" ++ binary_to_list(InfoHashBin),
-	RequestString = Scrape ++ InfoHash,
-	
-	case decode(list_to_binary(Response)) of	
-	{ok,
-		{dict,
-			[{<<"files">>,
-				{dict, [{InfoHash,
-							{dict,[{<<"complete">>,Complete},
-								   {<<"downloaded">>,Downloaded},
-								   {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
-								   io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
-	_ -> io:format("Tracker does not support scraping or probably does not like you~n")
-	end.
-	
+%% -----------------------------------------------------------------------------------------------------------------
+
+%%
+%% Tracker communiacation
+%%
 	
 connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function is used to connect to our tracker and get the peer list
     
@@ -71,11 +62,38 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function 
 
     %% Code for making the request and parsing the trackers response
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
-    {ok,{dict, [{<<"interval">>,Interval}, {<<"peers">>,Peers}]}} = decode(list_to_binary(Response)), %% this separates peer list from everything else
-    PeerList = separate(Peers), %% formating a peer list
-    {ok,Interval,PeerList}.
+	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
+	lists:foreach(fun(X)->process_pairs(X) end, Pairs).
+	
+scrape(ScrapeBin,InfoHashBin)->	
+	Scrape = binary_to_list(ScrapeBin) ++ "?",
+	InfoHash = "info_hash" ++ binary_to_list(InfoHashBin),
+	RequestString = Scrape ++ InfoHash,
+	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
+	case decode(list_to_binary(Response)) of	
+	{ok,
+		{dict,
+			[{<<"files">>,
+				{dict, [{InfoHash,
+							{dict,[{<<"complete">>,Complete},
+								   {<<"downloaded">>,Downloaded},
+								   {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
+								   io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
+	_ -> io:format("Tracker does not support scraping or probably does not like you~n")
+	end.
 
-
+process_pairs({Key, Value})->
+	case binary_to_list(Key) of
+		"complete" -> io:format("Complete (Seeders): ~p~n",[Value]);
+		"incomplete" -> io:format("Incomplete (Leechers): ~p~n", [Value]);
+		"min interval" -> io:format("Min Interval: ~p~n",[Value]);
+		"interval" -> io:format("Interval: ~p~n",[Value]);
+		"peers" -> 
+			%%  DO NOT PANIC! ALL IO:FORMATS ARE JUST FOR TESTING. THEY ARE TO BE REPLACED WITH ACTUAL VALUE RETURNING.
+			io:format("Peers:~n"),
+			separate(Value);
+		_ -> io:format("Unknown pair. Key: ~p Value: ~p~n",[Key,Value])
+	end.
 	
 separate(<<>>)->
 	ok;
@@ -87,24 +105,24 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort)->
+open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
 	case whereis(slave) of %% we make a separate process for communiacation with a peer
 		undefined ->
-			register(slave, spawn(?MODULE, connect_to_client,[self(), Socket]))
+			register(slave, spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]))
 	end,
 	Socket.
 
-connect_to_client(MasterPid, Socket)-> 
-	erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
-	gen_tcp:send(Socket,[  %% sending a handshake
-							19,
-							"BitTorrent protocol",
-							<<0,0,0,0,0,0,0,0>>,
-							<<16#0a, 16#ab, 16#5d, 16#21, 16#39, 16#57, 16#72, 16#99, 16#4e, 16#64, 16#43, 16#cb, 16#b3, 16#e2, 16#ae, 16#03, 16#ce, 16#52, 16#3b, 16#32>>,
-							"BDann7c1d95510bb160a"
+connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
+    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
+    gen_tcp:send(Socket,[  %% sending a handshake
+			   19,
+			   "BitTorrent protocol",
+			   <<0,0,0,0,0,0,0,0>>,
+			   InfoHash,
+			   ClientId
 						]),
-	handshake_loop(MasterPid, <<>>), %% starting a loop for handling handshaking
+	handshake_loop(Socket, MasterPid), %% starting a loop for handling handshaking
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
 handshake_loop(MasterPid,HandshakeResponse)->
@@ -201,6 +219,7 @@ process_block(MasterPid, Length, Result)->
 				end
 		end
 	end.
+
 %%
 %% File transferring from one computer to another
 %%	
