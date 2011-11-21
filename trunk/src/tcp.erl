@@ -45,7 +45,7 @@
 %% Tracker communiacation
 %%
 	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function is used to connect to our tracker and get the peer list
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function is used to connect to our tracker and get the peer list
     
     %% Code for building the request string that is sent to the tracker
     Announce = binary_to_list(AnnounceBin) ++ "?",
@@ -57,7 +57,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function 
     Left = "left=" ++ "0" ++ "&",
     Compact = "compact=" ++ "0" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
-    Event = "event=" ++ Event,
+    Event = "event=" ++ Eventt,
     RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
 
     %% Code for making the request and parsing the trackers response
