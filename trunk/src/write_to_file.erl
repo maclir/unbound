@@ -5,13 +5,13 @@
 -export([write/4]).
 -include("torrent_db_records.hrl").
 
-%% Validating the piece's SHA1 
 write(PieceId, Data, Records, Done) ->
 	case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
 		true ->
 			%%TODO get the TempFolder from settings db
 			TempFolder = "/Users/Eff/Documents/workspace/Desktop/tempfolder/",
 			DestFolder = "/Users/Eff/Documents/workspace/Desktop/test/",
+			
 			PieceLength = Records#torrent.info#info.piece_length,		
 			StartPos = (PieceId * PieceLength),		
 			Result = file_split:start(Data, StartPos, PieceLength, TempFolder, Records#torrent.info#info.files),
@@ -27,6 +27,7 @@ write(PieceId, Data, Records, Done) ->
 	end.
 	
 
+%% Validating the piece's SHA1 
 check_sha(Shas, PieceId, Data) ->
 	hashcheck:compare(shas_split(Shas, PieceId), Data).
 
@@ -35,6 +36,7 @@ shas_split(Shas, Index) ->
 		Start = (20 * Index) + 1,
 		string:substr(Shas, Start, 20).
 
+%% Move the downloaded data from temporary folder into destination folder
 move_to_folder([], _, _) ->
 	{ok, done};
 move_to_folder([H|T], TempFolder, DestFolder) ->

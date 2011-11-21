@@ -5,11 +5,12 @@
 -export([start/4, path_create/2, merge_data/4]).
 -include("torrent_db_records.hrl").
 
-
+%% Starting function
 start(Data, StartPos, TempPath, Records) ->
 	Files = calc_files(StartPos, Records#torrent.info#info.piece_length, Records#torrent.info#info.files, 0, []),
 	write_to_file(Files, Data, TempPath).
 
+%% Function to write the data to the file
 write_to_file([], _, _) ->
 	{error, no_file_match};
 write_to_file([{Path, Name, StartPos, _}|[]], Data, TempPath) ->
@@ -28,6 +29,7 @@ write_to_file([{Path, Name, StartPos, Length}|T], AllData, TempPath) ->
 	file:close(Index),
 	write_to_file(T, Rest, TempPath).
 
+%% Function to change the binary data into Strings and create the path for saving the data on the HD
 path_create([H|[]], String) ->
 	Name = binary_to_list(H),
  	{Name, String};
@@ -35,7 +37,8 @@ path_create([H|T], String) ->
 	Path = String ++ binary_to_list(H) ++ "/",
 	path_create(T, Path).
 
-%% ...#...files
+%% Merging the binary data from the files
+%% Files = Records#torrent.info#info.files
 merge_data(StartPos, Length, Files, TorrentPath) ->
 	FileMap = calc_files(StartPos, Length, Files, 0, []),
 	merge_data(TorrentPath, FileMap, <<>>).
@@ -46,12 +49,12 @@ merge_data(TorrentPath, [{Path, Name, StartPos, Length}|T], BinaryData) ->
 	{ok, File} = file:open(TorrentPath ++ Path ++ Name, [read]),
 	{ok, Data} = file:pread(File, StartPos, Length),
 	file:close(File),
-	NewData = <<Data, BinaryData>>,
+	NewData = <<BinaryData, Data>>,
 	merge_data(TorrentPath, T, NewData).
 	
 
-
 %% co-author: Alireza Pazirandeh
+%% The function for calculating the positions of of the pieces inside the files
 %% the startPos < startFilePos, it is over
 calc_files(StartPos, Length, _, StartFilePos, Files)
 	when (StartPos + Length =< StartFilePos) ->
