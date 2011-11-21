@@ -1,12 +1,13 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/0, open_a_socket/2, connect_to_client/2]).
+-export([scrape/0, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/2, connect_to_client/2]).
 
 %%
 %% Tracker communiacation
 %%
 
-	%% THIS COMMENTED BLOCK IS FOR TESTING HERE! DO NOT DELETE IT! 
+%% THIS COMMENTED BLOCK IS FOR TESTING HERE! DO NOT DELETE IT!
+%% -----------------------------------------------------------
 % connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
 	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
 	% {ok,
@@ -19,7 +20,34 @@
 	% io:format("Interval: ~p~n",[Interval]), %% prints the interval
 	% separate(Peers). %% formating a peer list
 
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is used to connect to our tracker and get the peer list
+% scrape()->
+	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/scrape?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32",[]},[], []),
+	% {ok,
+		% {dict,
+			% [{<<"files">>,
+				% {dict, [{InfoHash,
+							% {dict,[{<<"complete">>,Complete},
+								   % {<<"downloaded">>,Downloaded},
+								   % {<<"incomplete">>,Incomplete}]}}]}}]}} = decode(list_to_binary(Response)).
+%% -----------------------------------------------------------
+	
+scrape(ScrapeBin,InfoHashBin)->	
+	Scrape = bianry_to_list(AnnounceBin) ++ "?",
+	InfoHash = "info_hash" ++ binary_to_list(InfoHashBin),
+	RequestString = Scrape ++ InfoHash,
+	
+	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
+	{ok,
+		{dict,
+			[{<<"files">>,
+				{dict, [{InfoHash,
+							{dict,[{<<"complete">>,Complete},
+								   {<<"downloaded">>,Downloaded},
+								   {<<"incomplete">>,Incomplete}]
+							}}]}}]}} = decode(list_to_binary(Response)).
+	
+	
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event)-> %% this function is used to connect to our tracker and get the peer list
     
     %% Code for building the request string that is sent to the tracker
     Announce = binary_to_list(AnnounceBin) ++ "?",
@@ -31,7 +59,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin)-> %% this function is use
     Left = "left=" ++ "0" ++ "&",
     Compact = "compact=" ++ "0" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
-    Event = "event=" ++ "started",
+    Event = "event=" ++ Event,
     RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
 
     %% Code for making the request and parsing the trackers response
