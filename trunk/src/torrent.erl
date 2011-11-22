@@ -55,7 +55,7 @@ init({Var,Id,Record}) ->
     NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
     %% Read bitfield from database
     <<_:32,OurBitfield/binary>> = peerpiecemanagement:create_dummy_bitfield(NumPieces),
-    PieceIndexList = downloader:bitfield_to_indexlist(OurBitfield),
+    PieceIndexList = peerpiecemanagement:bitfield_to_indexlist(OurBitfield),
     PidIndexList = bind_pid_to_index(PieceIndexList,PieceLength),
     
     case Record#torrent.announce_list of
@@ -89,7 +89,7 @@ init({Var,Id,Record}) ->
 loop(Record, StatusRecord,PidIndexList) ->
     receive
 	{bitfield,FromPid,Bitfield} ->
-	    PeerIndexList = downloader:bitfield_to_peerindexlist(Bitfield),
+	    PeerIndexList = peerpiecemanagement:bitfield_to_peerindexlist(Bitfield),
 	    piece:register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->

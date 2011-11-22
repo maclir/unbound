@@ -5,6 +5,7 @@
 -module(peerpiecemanagement).
 
 -export([compare_bitfields/3,connect_to_peer/3,create_dummy_bitfield/1,getPeerList/2]).
+-export([bitfield_to_indexlist/1, bitfield_to_peerindexlist/1]).
 
 -include("torrent_db_records.hrl").
 
@@ -78,3 +79,30 @@ reverse_bits(<<X:1,Rest/bits>>) ->
 reverse_bits(<<>>) ->
 <<>>.
 
+bitfield_to_indexlist(<<_Id,Bitfield/binary>>) ->
+    bitfield_to_indexlist(0,Bitfield).
+
+bitfield_to_indexlist(_Index,<<>>) ->
+    [];
+
+bitfield_to_indexlist(Index,<<H:1,Rest/bitstring>>) ->
+    case H of
+	0 ->
+	    [{Index}|bitfield_to_indexlist(Index+1,Rest)];
+	1 ->
+	    bitfield_to_indexlist(Index+1,Rest)
+    end.
+
+bitfield_to_peerindexlist(<<_Id,Bitfield/binary>>) ->
+    bitfield_to_peerindexlist(0,Bitfield).
+
+bitfield_to_peerindexlist(_Index, <<>>) ->
+    [];
+
+bitfield_to_peerindexlist(Index,<<H:1,Rest/bitstring>>) ->
+    case H of
+	1 ->
+	    [{Index}|bitfield_to_peerindexlist(Index+1,Rest)];
+	0 ->
+	    bitfield_to_peerindexlist(Index+1,Rest)
+    end.
