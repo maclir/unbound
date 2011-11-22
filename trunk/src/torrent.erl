@@ -86,12 +86,16 @@ init({Var,Id,Record}) ->
 loop(Record, StatusRecord,PidIndexList) ->
     receive
 	{bitfield,FromPid,Bitfield} ->
-	    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
+	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
+	    <<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield
+	    PeerIndexList = bitfield:to_indexlist(Bitfield),
 	    piece:register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
+	{dowloaded,PieceIndex,Data} ->
+	    write_to_file:write(PieceIndex,Data,Record);
 	{'EXIT',FromPid,_Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList)
