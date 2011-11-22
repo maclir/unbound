@@ -42,67 +42,6 @@ create_dummy_bitfield(Num) ->
 
     <<Lenght:32,5:8,0:ByteLenght>>.
 
-compare_bitfields(<<Lenght:32,5,OurBitfield/binary>>,<<Lenght:32,5,Bitfield/binary>>,NumPieces) ->
-    Size = bit_size(OurBitfield),
-    case compare_bits(0,OurBitfield,Bitfield,NumPieces) of
-	{result,nothing_needed} ->
-	    ok;
-	{result,Index} ->
-	    IndexChanged = trunc(math:pow(2,Index)),
-	    BitPattern = <<IndexChanged:Size>>,
-	    ReversedBitPattern = reverse_bits(BitPattern),
-	    ReversedBitPattern,
-	    <<X:Size>> = OurBitfield,
-	    <<Y:Size>> = ReversedBitPattern,
-	    <<Lenght:32,5,(X bor Y):Size>>
-    end.
-
-get_index(OurBitfield,Bitfield,NumPieces)->
- compare_bits(0,OurBitfield,Bitfield,NumPieces).
 
 
 
-compare_bits(Index,<<OurFirstBit:1,OurRest/bitstring>>,<<FirstBit:1,Rest/bitstring>>,NumPieces) ->
-    if
-	OurFirstBit == 0,FirstBit == 1,Index<NumPieces ->
-
-	    {result,Index};
-	true ->
-	    compare_bits(Index+1,OurRest,Rest,NumPieces)
-    end;
-
-compare_bits(_Index,<<>>,<<>>,_NumPieces) ->
-    {result,nothing_needed}.
-
-reverse_bits(<<X:1,Rest/bits>>) ->
-<<(reverse_bits(Rest))/bits,X:1>>;
-reverse_bits(<<>>) ->
-<<>>.
-
-bitfield_to_indexlist(<<_Id,Bitfield/binary>>) ->
-    bitfield_to_indexlist(0,Bitfield).
-
-bitfield_to_indexlist(_Index,<<>>) ->
-    [];
-
-bitfield_to_indexlist(Index,<<H:1,Rest/bitstring>>) ->
-    case H of
-	0 ->
-	    [{Index}|bitfield_to_indexlist(Index+1,Rest)];
-	1 ->
-	    bitfield_to_indexlist(Index+1,Rest)
-    end.
-
-bitfield_to_peerindexlist(<<_Id,Bitfield/binary>>) ->
-    bitfield_to_peerindexlist(0,Bitfield).
-
-bitfield_to_peerindexlist(_Index, <<>>) ->
-    [];
-
-bitfield_to_peerindexlist(Index,<<H:1,Rest/bitstring>>) ->
-    case H of
-	1 ->
-	    [{Index}|bitfield_to_peerindexlist(Index+1,Rest)];
-	0 ->
-	    bitfield_to_peerindexlist(Index+1,Rest)
-    end.
