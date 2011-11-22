@@ -4,8 +4,8 @@
 
 -module(peerpiecemanagement).
 
--export([compare_bitfields/3,connect_to_peer/3,create_dummy_bitfield/1,getPeerList/2]).
--export([bitfield_to_indexlist/1, bitfield_to_peerindexlist/1]).
+-export([connect_to_peer/3,getPeerList/2]).
+
 
 -include("torrent_db_records.hrl").
 
@@ -29,18 +29,7 @@ connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
 connect_to_peer([],InfoHash,Id) ->
     [].
 
-create_dummy_bitfield(Num) ->
-    Int = Num div 8,
-    case Num rem 8 of
-	0 ->
-	    ByteLenght = Int*8;
-	_ ->
-	    ByteLenght = (Int + 1)*8
-    end,
-    Lenght = (ByteLenght div 8) + 1,
 
-
-    <<Lenght:32,5:8,0:ByteLenght>>.
 
 
 
