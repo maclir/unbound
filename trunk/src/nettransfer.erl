@@ -80,6 +80,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
         {download_block,FromPid,Index,Offset,Length} ->
             case PiecePid of
                 piecepid ->
+		    FromPid ! {ok, downloading},
                     TcpPid ! {piece, Index,Offset,Length},
                     loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid);
                 _ ->

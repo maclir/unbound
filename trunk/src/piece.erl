@@ -18,29 +18,24 @@ init(PieceIndex,PieceLength,_LastPiece,TorrentPid) ->
     Finished = [],
     loop(Piece,PieceIndex,PeerPidList,{Wanted,Downloading,Finished},TorrentPid,[]).
 
-loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePeerPid) ->
+loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePeerPid,FreePrivatePids) ->
     receive
 	{register,FromPid} ->
-	    {Wanted,Downloading,Finished} = BlockStatus,
 	    NewPeerPidList = [FromPid|PeerPidList],
-	    RandomBlock = lists:nth(random:uniform(length(Wanted)),Wanted),
-	    NewWanted = Wanted -- [RandomBlock],
-	    NewDownloading = [{RandomBlock,FromPid}|Downloading],
-	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
-	    FromPid ! is_interested,
-	    FromPid ! {download_block,self(),PieceIndex,RandomBlock,16384},
-	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid);
+	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,TorrentPid,PrivatePeerPid,FreePrivatePids);
 
-	{busy,FromPid,Offset} ->
+  	{unregister, PeerPid} ->
+	    NewPeerPidList = PeerPidList -- [PeerPid],
+	    NewPrivatePeerPid = PrivatePeerPid -- [PeerPid],
 	    {Wanted,Downloading,Finished} = BlockStatus,
-	    NewDownloading = Downloading -- [{Offset,FromPid}],
-	    NewWanted = [Offset|Wanted],
-	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
-	    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid);
-	
-  	{unregister, FromPid} ->
-	    NewPeerPidList = PeerPidList -- [FromPid],
-	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,TorrentPid,PrivatePeerPid);
+	    case keyfind(PeerPid,2,Downloading) of
+		{Block,Pid} ->
+		    TempBlockStatus = {[Block|Wanted],Downloading--[{Block,Pid}],Finished};
+		false ->
+		    TempBlockStatus = BlockStatus
+	    end,
+	    {NewBlockStatus,NewFreePrivatePids} = request_block(FreePrivatePids,TempBlockStatus,PieceIndex),
+	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid,NewFreePrivatePids);
 	
 	{block,SenderPid,Offset,Length,BlockBinary} ->
 	    {Wanted, Downloading, Finished} = BlockStatus,
@@ -57,26 +52,47 @@ loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePe
 			    ok;
 			{error,_Reason} ->
 			    ErrorBlockStatus = {NewFinished,[],[]},
-			    loop(Piece,PieceIndex,PeerPidList,ErrorBlockStatus,TorrentPid,PrivatePeerPid)
+			    {NewBlockStatus,NewFreePrivatePids} = request_block(FreePrivatePids,ErrorBlockStatus,PieceIndex),
+			    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid,NewFreePrivatePids)
 		    end;
 		_ ->
-		    NewBlockStatus = {Wanted,NewDownloading,NewFinished},
-		    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid)
+		    TempBlockStatus = {Wanted,NewDownloading,NewFinished},
+		    {NewBlockStatus,NewFreePrivatePids} = request_block(FreePrivatePids,TempBlockStatus,PieceIndex),
+		    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid,PrivatePeerPid,NewFreePrivatePids)
 	    end;
 	{connectionsRequest,Pid} ->
 	    Pid ! {connection_list,PeerPidList},
-	    loop(Piece,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePeerPids);
+	    loop(Piece,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePeerPids,FreePrivatePids);
 	{assignedConnections,NewPrivatePeerPids} ->
-	    loop(Piece,PieceIndex,PeerPidList,BlockStatus,TorrentPid,NewPrivatePeerPids)
+	    TempFreePrivatePids = (NewPrivatePeerPids -- PrivatePids) ++ FreePrivatePids,
+	    {NewBlockStatus,NewFreePrivatePids} = request_block(TempPrivatePids,BlockStatus,PieceIndex),
+	    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid,NewPrivatePeerPids,NewFreePrivatePids);
+	{startDownload} ->
+	    {NewBlockStatus,NewFreePrivate} = request_block(FreePrivatePids,BlockStatus,PieceIndex),
+	    loop(Piece,PieceIndex,PeerPidList,BlockStatus,TorrentPid,PrivatePeerPids,NewFreePrivatePids)
     end.
 
 create_blocklist(0) ->
-
     [0];
 
 create_blocklist(NumBlocks) ->
     [NumBlocks|create_blocklist(NumBlocks-1)].
 
+request_block([],BlockStatus,_)-> 
+    {BlockStatus, []};
+
+request_block(Pids,{[],Downloading,Finished},_) ->
+    {{[],Downloading,Finished},Pids};
+
+request_block([Pid|T],{Wanted,Downloading,Finished},PieceIndex) ->
+    Pid ! {download_block,self(),PieceIndex,hd(Wanted),16384},
+    receive
+	{ok,downloading} ->
+	    request_block(T,{tl(Wanted),[{hd(Wanted),Pid}|Downloading],Finished},PieceIndex);
+	{busy,_Pid,_Offset} ->
+	    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex)
+    end.
+ 
 %% Functions for registering and removing peer processes from peer list
 
 %unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
