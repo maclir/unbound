@@ -94,12 +94,43 @@ loop(Record, StatusRecord,PidIndexList) ->
 	{have,FromPid,Index} ->
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
-	{dowloaded,PieceIndex,Data} ->
-	    write_to_file:write(PieceIndex,Data,Record);
+%	{dowloaded,PieceIndex,Data} ->
+%	    write_to_file:write(PieceIndex,Data,Record),
+	    
 	{'EXIT',FromPid,_Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList)
+    end,
+    case whereis(assigner) of
+	undefined ->
+	    register(assigner,spawn(recalculateConnections(PidIndexList)));
+	_ ->
+	    ok
     end.
+
+recalculateConnections(PidIndexList) ->
+    ConnectionList = getConnections(PidIndexList,[]),
+    SortedConnections = keysort(3,ConnectionList),
+    setConnections(SortedConnections,[]).
+
+getConnections([],ResultList) ->
+    ResultList;
+
+getConnections([{_Index,Pid}|Tail],ResultList) ->
+    Pid ! {connectionsRequest,self()},
+    receive
+	{connection_list,ConnectionList} ->
+	    loop(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
+    after 500 ->
+	    loop(Tail,ResultList)
+    end.
+
+setConnections([],_) ->
+    unregister(assigner);
+
+setConnections([{Pid,List,_}|T],Assigned) ->
+    Pid ! {assignedConnections,List -- Assigned},
+    setConnections(T,Assigned ++ List).
 
 
 bind_pid_to_index([{H}|[]],PieceLength) ->
