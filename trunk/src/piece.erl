@@ -6,9 +6,9 @@
 %%% Created : 21 Nov 2011 by Peter Myllykoski <peter@UL30JT>
 
 -module(piece).
--export([init/3,register_peer_process/3]).
+-export([init/4,register_peer_process/3]).
 
-init(PieceIndex,PieceLength,_LastPiece) ->
+init(PieceIndex,PieceLength,_LastPiece,TorrentPid) ->
     <<Piece/bitstring>> = <<0:PieceLength>>,
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
@@ -16,9 +16,9 @@ init(PieceIndex,PieceLength,_LastPiece) ->
     Wanted = create_blocklist(NumBlocks-1),
     Downloading = [],
     Finished = [],
-    loop(Piece,PieceIndex,PeerPidList,{Wanted,Downloading,Finished},NumBlocks).
+    loop(Piece,PieceIndex,PeerPidList,{Wanted,Downloading,Finished},TorrentPid).
 
-loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
+loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,TorrentPid) ->
     receive
 	{register,FromPid} ->
 	    {Wanted,Downloading,Finished} = BlockStatus,
@@ -29,18 +29,41 @@ loop(<<Piece/bitstring>>,PieceIndex,PeerPidList,BlockStatus,NumBlocks) ->
 	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
 	    FromPid ! is_interested,
 	    FromPid ! {download_block,self(),PieceIndex,RandomBlock,16384},
-	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,NumBlocks);
+	    loop(Piece,PieceIndex,NewPeerPidList,NewBlockStatus,TorrentPid);
 
 	{busy,FromPid,Offset} ->
 	    {Wanted,Downloading,Finished} = BlockStatus,
 	    NewDownloading = Downloading -- [{Offset,FromPid}],
 	    NewWanted = [Offset|Wanted],
 	    NewBlockStatus = {NewWanted,NewDownloading,Finished},
-	    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,NumBlocks);
-	    
-	{unregister, FromPid} ->
+	    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid);
+	
+  	{unregister, FromPid} ->
 	    NewPeerPidList = PeerPidList -- [FromPid],
-	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,NumBlocks)
+	    loop(Piece,PieceIndex,NewPeerPidList,BlockStatus,TorrentPid);
+	
+	{block,SenderPid,Offset,Length,BlockBinary} ->
+	    {Wanted, Downloading, Finished} = BlockStatus,
+	    NewDownloading = Downloading -- [{SenderPid,Offset}],
+	    NewFinished = [Offset|Finished],
+	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
+	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
+	    
+	    case Wanted ++ NewDownloading of
+		[] ->
+		    TorrentPid ! {dowloaded,PieceIndex,NewPiece},
+		    receive
+			{ok, done} ->
+			    ok;
+			{error,_Reason} ->
+			    ErrorBlockStatus = {NewFinished,[],[]},
+			    loop(Piece,PieceIndex,PeerPidList,
+				 ErrorBlockStatus,TorrentPid)
+		    end;
+		_ ->
+		    NewBlockStatus = {Wanted,NewDownloading,NewFinished},
+		    loop(Piece,PieceIndex,PeerPidList,NewBlockStatus,TorrentPid)
+	    end	
     end.
 
 create_blocklist(0) ->
