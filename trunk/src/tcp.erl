@@ -178,7 +178,7 @@ main_loop(Socket, MasterPid)->
 			HoleBlock = process_block(MasterPid, Length, <<>>),
 			MasterPid ! {"got the block:", HoleBlock}, 
 			main_loop(Socket,MasterPid);
-		{have,From,<<5:32, 4:8, PieceIndex:32>>} ->
+		{have,_From,<<5:32, 4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
 		{tcp,_,<<0,0,0,0>>}-> 

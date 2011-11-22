@@ -12,7 +12,6 @@
 
 
 getPeerList(Record,Id) ->
-    InfoHash = Record#torrent.info_sha,
     InfoHashUrl = info_hash:url_encode(Record#torrent.info_sha),
     Announce = Record#torrent.announce,
     case Announce of
@@ -26,7 +25,7 @@ getPeerList(Record,Id) ->
 connect_to_peer([{Ip,Port}|Rest],InfoHash,Id) ->
     [spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id])|connect_to_peer(Rest,InfoHash,Id)];
 
-connect_to_peer([],InfoHash,Id) ->
+connect_to_peer([],_InfoHash,_Id) ->
     [].
 
 

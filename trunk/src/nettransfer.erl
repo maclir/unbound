@@ -19,7 +19,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
         got_unchoked ->
             case Status of
                 {_,true}->
-                    {Index,Offset,Length} = NextBlock,
+%                    {_Index,_Offset,_Length} = NextBlock,
                     TorrentPid ! {get_block,StoredBitfield},
                     NewStatus= {false,true};
                 {_,false} ->

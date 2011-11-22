@@ -8,7 +8,7 @@
 -module(piece).
 -export([init/3,register_peer_process/3]).
 
-init(PieceIndex,PieceLength,LastPiece) ->
+init(PieceIndex,PieceLength,_LastPiece) ->
     <<Piece/bitstring>> = <<0:PieceLength>>,
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
@@ -51,15 +51,15 @@ create_blocklist(NumBlocks) ->
 
 %% Functions for registering and removing peer processes from peer list
 
-unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
-    ToPid ! {unregister,FromPid};
+%unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
+%    ToPid ! {unregister,FromPid};
 
-unregister_peer_process(_FromPid,[]) ->
-    ok.
+%unregister_peer_process(_FromPid,[]) ->
+%    ok.
 
 register_peer_process(FromPid,[{H}|T],PidIndexList) ->
     case lists:keyfind(H,1,PidIndexList) of
-	{Index,ToPid} ->
+	{_Index,ToPid} ->
 	    ToPid ! {register,FromPid};
 	false ->
 	    ok

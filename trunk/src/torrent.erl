@@ -8,7 +8,6 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/3,init/1]).
--export([create_blocklist/2]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -51,19 +50,17 @@ start_link(Var,Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
 
 init({Var,Id,Record}) ->
+    OurBitfield = Record#torrent.info#info.bitfield,
+    IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
-    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-    %% Read bitfield from database
-    <<_:32,OurBitfield/binary>> = peerpiecemanagement:create_dummy_bitfield(NumPieces),
-    PieceIndexList = peerpiecemanagement:bitfield_to_indexlist(OurBitfield),
-    PidIndexList = bind_pid_to_index(PieceIndexList,PieceLength),
+    PidIndexList = bind_pid_to_index(IndexList,PieceLength),
     
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
 	    %% Start communication with tracker and peers
 	    case peerpiecemanagement:getPeerList(Record,Id) of
-		[{"Interval",Interval},{"peers",PeerList}] ->
+		[{"Interval",_Interval},{"peers",PeerList}] ->
 		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(Record, #torrent_status{},PidIndexList);
@@ -74,10 +71,10 @@ init({Var,Id,Record}) ->
 	%% Should be changed so that all the trackers are queried, or should
 	%% the other trackers be fallback trackers if there is no connection to
 	%% the main one?
-	AnnounceList ->
+	_AnnounceList ->
 	    io:fwrite("Torrent has a announce list"),
 	    case peerpiecemanagement:getPeerList(Record,Id) of
-		{ok,Interval,PeerList} ->
+		{ok,_Interval,PeerList} ->
 		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(Record, #torrent_status{},PidIndexList);
@@ -89,43 +86,16 @@ init({Var,Id,Record}) ->
 loop(Record, StatusRecord,PidIndexList) ->
     receive
 	{bitfield,FromPid,Bitfield} ->
-	    PeerIndexList = peerpiecemanagement:bitfield_to_peerindexlist(Bitfield),
+	    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
 	    piece:register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
-	{'EXIT',FromPid,Reason} ->
+	{'EXIT',FromPid,_Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList)
     end.
-
-
-
-
-create_blocklist(Index,NumBlocks) ->
-	{Index ,fillblocklist(NumBlocks)}.
-
-fillblocklist(0) ->
-	[];
-fillblocklist(NumBlocks) ->
-	[0|fillblocklist(NumBlocks -1)].
-
-
-
-findblock(BlockList) ->
-	{_,List} = BlockList,
-	iteratelist(0,List).
-
-iteratelist(_,[])->
-	ok;
-iteratelist(Index,[H|T]) ->
-	case H of
-		0 ->
-			Index;
-		_ ->
-			iteratelist(Index,T)
-	end.
 
 
 bind_pid_to_index([{H}|[]],PieceLength) ->

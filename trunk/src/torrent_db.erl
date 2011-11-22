@@ -132,5 +132,5 @@ delete(Id) ->
 
 delete_by_SHA1(SHA)->
     Match = mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
-							creation_date='_', comment='_', created_by='_', info_sha=SHA, bitfield='_', dir='_', status='_'}),
+							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}),
     delete(Match).

@@ -77,7 +77,9 @@ parseData([{<<"piece length">>,Value}|Tail],Record) ->
     parseData(Tail,NewRecord);
 
 parseData([{<<"pieces">>,Value}|Tail],Record) ->
-    NewRecord = Record#info{pieces=Value},
+    NumPieces = bit_size(Value) div 20,
+    <<Bitfield/bitstring>> = <<0:NumPieces>>,
+    NewRecord = Record#info{pieces=Value,bitfield=Bitfield},
     parseData(Tail,NewRecord);
 
 parseData([{<<"private">>,Value}|Tail],Record) ->
@@ -130,8 +132,8 @@ parseData([],Record) ->
 parseData(<<Value/binary>>,_Record) ->
     Value.
 
-parseData(<<Value/binary>>) ->
-    Value.
+%% parseData(<<Value/binary>>) ->
+%%    Value.
 
 buildPathList([Head|Tail]) ->
     [Head|buildPathList(Tail)];
