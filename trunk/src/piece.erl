@@ -6,7 +6,7 @@
 %%% Created : 21 Nov 2011 by Peter Myllykoski <peter@UL30JT>
 
 -module(piece).
--export([init/4,register_peer_process/3]).
+-export([init/4]).
 
 init(PieceIndex,PieceLength,_LastPiece,TorrentPid) ->
     <<Piece/bitstring>> = <<0:PieceLength>>,
@@ -46,7 +46,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	    NewFinished = [Offset|Finished],
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
-	    TempBusyPrivatePeerPids = BusyPrivatePids -- [SenderPid],
+	    TempBusyPrivatePeerPids = BusyPrivatePeerPids -- [SenderPid],
 	    
 	    case Wanted ++ NewDownloading of
 		[] ->
@@ -98,25 +98,3 @@ request_block([Pid|T],{Wanted,Downloading,Finished},PieceIndex,BusyPids) ->
 	{busy,_Pid,_Offset} ->
 	    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex, BusyPids)
     end.
- 
-%% Functions for registering and removing peer processes from peer list
-
-%unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
-%    ToPid ! {unregister,FromPid};
-
-%unregister_peer_process(_FromPid,[]) ->
-%    ok.
-
-register_peer_process(FromPid,[{H}|T],PidIndexList) ->
-    case lists:keyfind(H,1,PidIndexList) of
-	{_Index,ToPid} ->
-	    ToPid ! {register,FromPid};
-	false ->
-	    ok
-    end,
-    register_peer_process(FromPid,T,PidIndexList);
-
-register_peer_process(_PeerPid,[],_PidIndexList) ->
-    ok.
-
-

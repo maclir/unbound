@@ -85,11 +85,11 @@ init({Var,Id,Record}) ->
 
 loop(Record, StatusRecord,PidIndexList) ->
     receive
-	{bitfield,FromPid,Bitfield} ->
+	{bitfield,FromPid,ReceivedBitfield} ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-	    <<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield
+	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
 	    PeerIndexList = bitfield:to_indexlist(Bitfield),
-	    piece:register_peer_process(FromPid,PeerIndexList,PidIndexList),
+	    register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
@@ -110,7 +110,7 @@ loop(Record, StatusRecord,PidIndexList) ->
 
 recalculateConnections(PidIndexList) ->
     ConnectionList = getConnections(PidIndexList,[]),
-    SortedConnections = keysort(3,ConnectionList),
+    SortedConnections = lists:keysort(3,ConnectionList),
     setConnections(SortedConnections,[]).
 
 getConnections([],ResultList) ->
@@ -120,9 +120,9 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
     Pid ! {connectionsRequest,self()},
     receive
 	{connection_list,ConnectionList} ->
-	    loop(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
+	    getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
     after 500 ->
-	    loop(Tail,ResultList)
+	    getConnections(Tail,ResultList)
     end.
 
 setConnections([],_) ->
@@ -132,6 +132,24 @@ setConnections([{Pid,List,_}|T],Assigned) ->
     Pid ! {assignedConnections,List -- Assigned},
     setConnections(T,Assigned ++ List).
 
+%% Functions for registering and removing peer processes from peer list
+%unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
+%    ToPid ! {unregister,FromPid};
+
+%unregister_peer_process(_FromPid,[]) ->
+%    ok.
+
+register_peer_process(FromPid,[{H}|T],PidIndexList) ->
+    case lists:keyfind(H,1,PidIndexList) of
+	{_Index,ToPid} ->
+	    ToPid ! {register,FromPid};
+	false ->
+	    ok
+    end,
+    register_peer_process(FromPid,T,PidIndexList);
+
+register_peer_process(_PeerPid,[],_PidIndexList) ->
+    ok.
 
 bind_pid_to_index([{H}|[]],PieceLength) ->
    [{H,spawn(piece,init,[H,PieceLength,true])}];
