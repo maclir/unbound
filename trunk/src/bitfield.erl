@@ -1,3 +1,4 @@
+
 -module(bitfield).
 
 -export([to_indexlist/2, compare/2, count_zeros/1]).
