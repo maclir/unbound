@@ -61,7 +61,7 @@ init({Var,Id,Record}) ->
 	[] ->
 	    %% Start communication with tracker and peers
 	    case peerpiecemanagement:getPeerList(Record,Id) of
-		[{"Interval",_Interval},{"peers",PeerList}] ->
+		
 		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id),
 		    io:fwrite("~p started by client ~p\n",[Var,Id]),
 		    loop(Record, #torrent_status{},PidIndexList);
@@ -86,6 +86,8 @@ init({Var,Id,Record}) ->
 
 loop(Record, StatusRecord,PidIndexList) ->
     receive
+	{peerlist, PeerList} ->
+	    ok.
 	{bitfield,FromPid,ReceivedBitfield} ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
