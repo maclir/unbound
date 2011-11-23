@@ -29,6 +29,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
   	{unregister, PeerPid} ->
 	    NewPeerPids = PeerPids -- [PeerPid],
 	    NewPrivatePeerPids = PrivatePeerPids -- [PeerPid],
+	    TempBusyPrivatePeerPids = BusyPrivatePeerPids -- [PeerPid],
 	    {Wanted,Downloading,Finished} = BlockStatus,
 	    case lists:keyfind(PeerPid,2,Downloading) of
 		{Block,Pid} ->
@@ -36,7 +37,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 		false ->
 		    TempBlockStatus = BlockStatus
 	    end,
-	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- BusyPrivatePeerPids,TempBlockStatus,PieceIndex),
+	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- TempBusyPrivatePeerPids,TempBlockStatus,PieceIndex),
 	    loop(Piece,PieceIndex,NewPeerPids,NewBlockStatus,TorrentPid,NewPrivatePeerPids,NewBusyPrivatePeerPids);
 	
 	{block,SenderPid,Offset,Length,BlockBinary} ->
@@ -45,6 +46,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	    NewFinished = [Offset|Finished],
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
+	    TempBusyPrivatePeerPids = BusyPrivatePids -- [SenderPid],
 	    
 	    case Wanted ++ NewDownloading of
 		[] ->
@@ -54,12 +56,12 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 			    ok;
 			{error,_Reason} ->
 			    ErrorBlockStatus = {NewFinished,[],[]},
-			    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- BusyPrivatePeerPids,ErrorBlockStatus,PieceIndex),
+			    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- TempBusyPrivatePeerPids,ErrorBlockStatus,PieceIndex),
 			    loop(Piece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PrivatePeerPids,NewBusyPrivatePeerPids)
 		    end;
 		_ ->
 		    TempBlockStatus = {Wanted,NewDownloading,NewFinished},
-		    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- BusyPrivatePeerPids,TempBlockStatus,PieceIndex),
+		    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- TempBusyPrivatePeerPids,TempBlockStatus,PieceIndex),
 		    loop(Piece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PrivatePeerPids,NewBusyPrivatePeerPids)
 	    end;
 	{connectionsRequest,Pid} ->
