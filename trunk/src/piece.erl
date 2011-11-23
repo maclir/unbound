@@ -42,7 +42,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	
 	{block,SenderPid,Offset,Length,BlockBinary} ->
 	    {Wanted, Downloading, Finished} = BlockStatus,
-	    NewDownloading = Downloading -- [{SenderPid,Offset}],
+	    NewDownloading = Downloading -- [{Offset,SenderPid}],
 	    NewFinished = [Offset|Finished],
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
