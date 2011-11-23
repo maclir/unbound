@@ -1,6 +1,6 @@
 -module(torrent_db).
 -export([init/0, init_table/1, add/1, add/8, get_torrent_by_id/1, create_info_record/7, 
-	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, delete_by_SHA1/1]).
+	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, delete_by_SHA1/1, find_by_SHA1/1]).
 -import(utils_yavor).
 -include("torrent_db_records.hrl").
 -include_lib("stdlib/include/qlc.hrl").
@@ -137,4 +137,4 @@ delete_by_SHA1(SHA)->
 
 finb_by_SHA1(SHA)->
     mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
-							creation_date='_', comment='_', created_by='_', info_sha=SHA, bitfield='_', dir='_', status='_'}).
+							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}).
