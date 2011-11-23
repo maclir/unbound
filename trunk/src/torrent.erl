@@ -89,9 +89,23 @@ loop(Record, StatusRecord,PidIndexList) ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
 	    PeerIndexList = bitfield:to_indexlist(Bitfield),
+		Intrested = is_intrested(PeerIndexList, PidIndexList),
+		if 
+			Intrested ->
+				send_is_intrested(FromPid);
+		   	true ->
+				ok
+		end,
 	    register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->
+		Intrested = is_intrested({Index}, PidIndexList),
+		if 
+			Intrested ->
+				send_is_intrested(FromPid);
+		   	true ->
+				ok
+		end,
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 %	{dowloaded,PieceIndex,Data} ->
@@ -157,8 +171,5 @@ bind_pid_to_index([{H}|[]],PieceLength) ->
 bind_pid_to_index([{H}|T],PieceLength) ->
     [{H,spawn(piece,init,[H,PieceLength,false])}|bind_pid_to_index(T,PieceLength)].
 
-
-
-
-
-
+is_intrested(PeerIndexList, PidIndexList) ->
+	length([Index1 || {Index1} <- PeerIndexList, {Index2, _Pid} <- PidIndexList, Index1 == Index2]) > 0.
