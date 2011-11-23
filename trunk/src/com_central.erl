@@ -11,6 +11,7 @@
 -export([start_download/0,add_new_torrent_file/1,add_new_torrent_url/1]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
+-include("torrent_db_records.hrl").
 
 
 start_link() ->
@@ -33,7 +34,16 @@ add_new_torrent_file(Binary) ->
 handle_call({add_new_torrent,Binary},_From,State) ->
     {ok,Record} = metafile:parse(Binary),
     torrent_db:init(),
-    torrent_db:add(Record),
+    case Record#torrent.info#info.files of
+	undefined ->
+	    torrent_db:add(Record);
+	Files ->
+	    Sizes = [X || {_,X,_,_} <- Files, X /= undefined],
+	    TotalSize = lists:sum(Sizes),
+	    io:fwrite("Size: ~p",[TotalSize]),
+	    NewRecord = Record#torrent{info = (Record#torrent.info)#info{length=TotalSize}},
+	    torrent_db:add(NewRecord)
+    end,
     {reply,ok,State};
 
 handle_call(Command, _From, State) ->
