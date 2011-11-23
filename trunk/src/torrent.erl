@@ -54,7 +54,8 @@ init({Var,Id,Record}) ->
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength),
-    
+
+    spawn_link(tracker,init,Announce),
     case Record#torrent.announce_list of
 	%% If the tracker list is empty, only use the main tracker
 	[] ->
@@ -89,23 +90,23 @@ loop(Record, StatusRecord,PidIndexList) ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
 	    PeerIndexList = bitfield:to_indexlist(Bitfield),
-		Intrested = is_intrested(PeerIndexList, PidIndexList),
-		if 
-			Intrested ->
-				send_is_intrested(FromPid);
-		   	true ->
-				ok
+	    Intrested = is_intrested(PeerIndexList, PidIndexList),
+	    if 
+		    Intrested ->
+			FromPid ! is_interested;
+		    true ->
+			FromPid ! not_interested
 		end,
 	    register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 	{have,FromPid,Index} ->
-		Intrested = is_intrested({Index}, PidIndexList),
-		if 
-			Intrested ->
-				send_is_intrested(FromPid);
-		   	true ->
-				ok
-		end,
+	    Intrested = is_intrested({Index}, PidIndexList),
+	    if 
+		Intrested ->
+		    FromPid ! is_interested;
+		true ->
+		    FromPid ! not_interested
+	    end,
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList);
 %	{dowloaded,PieceIndex,Data} ->
