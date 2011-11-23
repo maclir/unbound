@@ -55,41 +55,18 @@ init({Var,Id,Record}) ->
     PieceLength = Record#torrent.info#info.piece_length,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength),
     Announce = merge(Record#torrent.announce_list,[Record#torrent.announce]),
-    TrackerPidList = new_tracker(Announce,Record#torrent.info_sha,Id,[]),
+    spawn_trackers(Announce,Record#torrent.info_sha,Id),
+    loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
-    spawn_link(tracker,init,Announce),
-    case Record#torrent.announce_list of
-	%% If the tracker list is empty, only use the main tracker
-	[] ->
-	    %% Start communication with tracker and peers
-	    case peerpiecemanagement:getPeerList(Record,Id) of
-		
-		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha,Id),
-		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(Record, #torrent_status{},PidIndexList);
-		{error,Reason} ->
-		    io:fwrite("~p",[Reason])
-	    end;
-	
-	%% Should be changed so that all the trackers are queried, or should
-	%% the other trackers be fallback trackers if there is no connection to
-	%% the main one?
-	_AnnounceList ->
-	    io:fwrite("Torrent has a announce list"),
-	    case peerpiecemanagement:getPeerList(Record,Id) of
-		{ok,_Interval,PeerList} ->
-		    peerpiecemanagement:connect_to_peer(PeerList,Record#torrent.info_sha),
-		    io:fwrite("~p started by client ~p\n",[Var,Id]),
-		    loop(Record, #torrent_status{},PidIndexList);
-		{error,Reason} ->
-		    io:fwrite("~p",[Reason])
-	    end
-    end.
-
-loop(Record, StatusRecord,PidIndexList) ->
+loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
     receive
-	{peerlist, PeerList} ->
-	    ok.
+	{peerlist,FromPid,ReceivedPeerList} ->
+	    NewTrackerList = [FromPid|TrackerList],
+	    NewPeers = ReceivedPeerList -- PeerList,
+	    NewPeerList = NewPeers ++ PeerList,
+	    spawn_connections(NewPeers,Record#torrent.info_sha,Id),
+	    loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList);
+	     
 	{bitfield,FromPid,ReceivedBitfield} ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
@@ -126,11 +103,18 @@ loop(Record, StatusRecord,PidIndexList) ->
 	_ ->
 	    ok
     end.
-new_tracker([],_,_) ->
+spawn_trackers([],_,_) ->
     ok;
-new_tracker([Announce|AnnounceList],InfoHash,Id) ->
+spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
     spawn(self(),Announce,InfoHash,Id),
     new_tracker(AnnounceList,InfoHash,Id).
+
+spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
+    spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
+    spawn_connection(Rest,InfoHash,Id);
+
+spawn_connection([],_InfoHash,_Id) ->
+    [].
 
 recalculateConnections(PidIndexList) ->
     ConnectionList = getConnections(PidIndexList,[]),
