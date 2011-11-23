@@ -104,8 +104,19 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    end,
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-%	{dowloaded,PieceIndex,Data} ->
-%	    write_to_file:write(PieceIndex,Data,Record),
+	{dowloaded,SenderPid,PieceIndex,Data} ->
+		Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
+		case write_to_file:write(PieceIndex,Data,Record,Done) of
+			{ok,done} ->
+				NewBitField = bitfield:flip_bit(PieceIndex, Record#torrent.info#info.bitfield),
+				NewRecord = Record#torrent{info = (Record#torrent.info)#info{bitfield = NewBitField}},
+				torrent_db:delete_by_SHA1(Record#torrent.info_sha),
+				torrent_db:add(NewRecord),
+	    		loop(NewRecord,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+			{error, _Reason} ->
+				SenderPid ! {error, corrupt_data},
+	    		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
+		end;
 	    
 	{'EXIT',FromPid,_Reason} ->
 	    io:fwrite("Got EXIT\n"),
