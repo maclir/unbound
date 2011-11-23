@@ -77,12 +77,16 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
             end,
             loop(Status,TcpPid,NextBlock,TorrentPid,Bitfield,PiecePid);
 
+	{got_block,Offset,Length,Data} ->
+	    PiecePid ! {block,self(),Offset,Length,Data},
+	    loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,piecepid);
+
         {download_block,FromPid,Index,Offset,Length} ->
             case PiecePid of
                 piecepid ->
 		    FromPid ! {ok, downloading},
                     TcpPid ! {piece, Index,Offset,Length},
-                    loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid);
+                    loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
                 _ ->
                     FromPid ! {busy, self(),Offset},
                     loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)

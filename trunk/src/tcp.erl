@@ -176,7 +176,7 @@ main_loop(Socket, MasterPid)->
 		{piece, Index, Offset, Length} ->
 			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
 			HoleBlock = process_block(MasterPid, Length, <<>>),
-			MasterPid ! {"got the block:", HoleBlock}, 
+			MasterPid ! {got_block, Offset,Length,HoleBlock}, 
 			main_loop(Socket,MasterPid);
 		{have,_From,<<5:32, 4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},

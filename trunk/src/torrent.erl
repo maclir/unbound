@@ -68,6 +68,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
     end,
     receive
 	{peer_list,FromPid,ReceivedPeerList} ->
+	    io:fwrite("Got Peer List\n"),
 	    NewTrackerList = lists:merge(TrackerList,[FromPid]),
 	    NewPeers = ReceivedPeerList -- PeerList,
 	    NewPeerList = NewPeers ++ PeerList,
@@ -75,24 +76,30 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList,Id);
 	     
 	{bitfield,FromPid,ReceivedBitfield} ->
+	    io:fwrite("Got Bitfield\n"),
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
 	    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
 	    Intrested = is_intrested(PeerIndexList, PidIndexList),
 	    if 
 		    Intrested ->
+		    io:fwrite("Sent Interested\n"),
 			FromPid ! is_interested;
 		    true ->
+		    io:fwrite("Sent not interested\n"),
 			FromPid ! not_interested
 		end,
 	    register_peer_process(FromPid,PeerIndexList,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{have,FromPid,Index} ->
+	    io:fwrite("Got have\n"),
 	    Intrested = is_intrested({Index}, PidIndexList),
 	    if 
 		Intrested ->
+		    io:fwrite("Sent interested (have)\n"),
 		    FromPid ! is_interested;
 		true ->
+		    io:fwrite("Sent not interested (have)\n"),
 		    FromPid ! not_interested
 	    end,
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
@@ -101,6 +108,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 %	    write_to_file:write(PieceIndex,Data,Record),
 	    
 	{'EXIT',FromPid,_Reason} ->
+	    io:fwrite("Got EXIT\n"),
 	    piece:unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
     end.
@@ -131,8 +139,10 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
     receive
 	{connection_list,ConnectionList} ->
 	    getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
-    after 500 ->
-	    getConnections(Tail,ResultList)
+
+% Should be added back when done testing
+%   after 500 ->
+%	    getConnections(Tail,ResultList)
     end.
 
 setConnections([],_) ->

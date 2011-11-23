@@ -68,7 +68,11 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	    Pid ! {connection_list,PeerPids},
 	    loop(Piece,PieceIndex,PeerPids,BlockStatus,TorrentPid,PrivatePeerPids,BusyPrivatePeerPids);
 	{assignedConnections,NewPrivatePeerPids} ->
-	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- BusyPrivatePeerPids,BlockStatus,PieceIndex),
+	    io:fwrite("Private peer pids: ~p\n",[PrivatePeerPids]),
+	    io:fwrite("Got private peer pids: ~p\n",[NewPrivatePeerPids]),
+	    io:fwrite("Free pids: ~p\n",[NewPrivatePeerPids -- BusyPrivatePeerPids]),
+	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(NewPrivatePeerPids -- BusyPrivatePeerPids,BlockStatus,PieceIndex),
+	    io:fwrite("Busy pids: ~p\n",[NewBusyPrivatePeerPids]),
 	    loop(Piece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,NewPrivatePeerPids,NewBusyPrivatePeerPids);
 	{startDownload} ->
 	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- BusyPrivatePeerPids,BlockStatus,PieceIndex),
