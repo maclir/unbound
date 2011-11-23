@@ -54,6 +54,8 @@ init({Var,Id,Record}) ->
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength),
+    Announce = merge(Record#torrent.announce_list,[Record#torrent.announce]),
+    TrackerPidList = new_tracker(Announce,Record#torrent.info_sha,Id,[]),
 
     spawn_link(tracker,init,Announce),
     case Record#torrent.announce_list of
@@ -124,6 +126,11 @@ loop(Record, StatusRecord,PidIndexList) ->
 	_ ->
 	    ok
     end.
+new_tracker([],_,_) ->
+    ok;
+new_tracker([Announce|AnnounceList],InfoHash,Id) ->
+    spawn(self(),Announce,InfoHash,Id),
+    new_tracker(AnnounceList,InfoHash,Id).
 
 recalculateConnections(PidIndexList) ->
     ConnectionList = getConnections(PidIndexList,[]),
