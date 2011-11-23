@@ -8,6 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/2,init/1]).
+-export([recalculateConnections/1]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -50,7 +51,7 @@ start_link(Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Id,Record}])}.
 
 init({Id,Record}) ->
-    OurBitfield = Record#torrent.info#info.bitfield,
+    OurBitfield = <<(Record#torrent.info#info.bitfield)/bitstring>>,
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength),
@@ -59,9 +60,15 @@ init({Id,Record}) ->
     loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
+    case whereis(assigner) of
+	undefined ->
+	    register(assigner,spawn(torrent,recalculateConnections,[PidIndexList]));
+	_ ->
+	    ok
+    end,
     receive
-	{peerlist,FromPid,ReceivedPeerList} ->
-	    NewTrackerList = [FromPid|TrackerList],
+	{peer_list,FromPid,ReceivedPeerList} ->
+	    NewTrackerList = lists:merge(TrackerList,[FromPid]),
 	    NewPeers = ReceivedPeerList -- PeerList,
 	    NewPeerList = NewPeers ++ PeerList,
 	    spawn_connections(NewPeers,Record#torrent.info_sha,Id),
@@ -70,7 +77,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	{bitfield,FromPid,ReceivedBitfield} ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    <<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
-	    PeerIndexList = bitfield:to_indexlist(Bitfield),
+	    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
 	    Intrested = is_intrested(PeerIndexList, PidIndexList),
 	    if 
 		    Intrested ->
@@ -96,17 +103,12 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	{'EXIT',FromPid,_Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
-    end,
-    case whereis(assigner) of
-	undefined ->
-	    register(assigner,spawn(recalculateConnections(PidIndexList)));
-	_ ->
-	    ok
     end.
+
 spawn_trackers([],_,_) ->
     ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
-    spawn(self(),Announce,InfoHash,Id),
+    spawn(tracker,init,[self(),Announce,InfoHash,Id]),
     spawn_trackers(AnnounceList,InfoHash,Id).
 
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
@@ -134,7 +136,7 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
     end.
 
 setConnections([],_) ->
-    unregister(assigner);
+    ok;
 
 setConnections([{Pid,List,_}|T],Assigned) ->
     Pid ! {assignedConnections,List -- Assigned},
@@ -160,10 +162,10 @@ register_peer_process(_PeerPid,[],_PidIndexList) ->
     ok.
 
 bind_pid_to_index([{H}|[]],PieceLength) ->
-   [{H,spawn(piece,init,[H,PieceLength,true])}];
+   [{H,spawn(piece,init,[H,PieceLength,true,self()])}];
 
 bind_pid_to_index([{H}|T],PieceLength) ->
-    [{H,spawn(piece,init,[H,PieceLength,false])}|bind_pid_to_index(T,PieceLength)].
+    [{H,spawn(piece,init,[H,PieceLength,false,self()])}|bind_pid_to_index(T,PieceLength)].
 
 is_intrested(PeerIndexList, PidIndexList) ->
 	length([Index1 || {Index1} <- PeerIndexList, {Index2, _Pid} <- PidIndexList, Index1 == Index2]) > 0.

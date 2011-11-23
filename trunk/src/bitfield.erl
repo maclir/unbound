@@ -5,9 +5,9 @@
 count_zeros(BitField) ->
 	length(to_indexlist(BitField, normal)).
 
-to_indexlist(<<Bitfield/binary>>, invert) ->
+to_indexlist(<<Bitfield/bitstring>>, invert) ->
     to_indexlist(0,Bitfield, true);
-to_indexlist(<<Bitfield/binary>>, _) ->
+to_indexlist(<<Bitfield/bitstring>>, _) ->
     to_indexlist(0,Bitfield, false).
 
 to_indexlist(_Index, <<>>, _) ->

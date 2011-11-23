@@ -170,7 +170,7 @@ main_loop(Socket, MasterPid)->
 		not_interested ->
 			gen_tcp:send(Socket,<<0,0,0,1,3>>),
 			main_loop(MasterPid, Socket);
-		{bitfield,Rest1} ->
+		{bitfield,<<_Id,Rest1/binary>>} ->
 			MasterPid ! {client_bitfield, self(), Rest1},
 			main_loop(Socket,MasterPid);
 		{piece, Index, Offset, Length} ->
