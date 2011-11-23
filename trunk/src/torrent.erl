@@ -54,7 +54,8 @@ init({Id,Record}) ->
     OurBitfield = <<(Record#torrent.info#info.bitfield)/bitstring>>,
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
-    PidIndexList = bind_pid_to_index(IndexList,PieceLength),
+	LastPieceSize = Record#torrent.info#info.length rem PieceLength,
+    PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
     Announce = lists:merge(Record#torrent.announce_list,[Record#torrent.announce]),
     spawn_trackers(Announce,Record#torrent.info_sha,Id),
     loop(Record,#torrent_status{},PidIndexList,[],[],Id).
@@ -183,11 +184,11 @@ register_peer_process(FromPid,[{H}|T],PidIndexList) ->
 register_peer_process(_PeerPid,[],_PidIndexList) ->
     ok.
 
-bind_pid_to_index([{H}|[]],PieceLength) ->
-   [{H,spawn(piece,init,[H,PieceLength,true,self()])}];
+bind_pid_to_index([{H}|[]],PieceLength,LastPieceSize) ->
+   [{H,spawn(piece,init,[H,PieceLength,true,self(), LastPieceSize])}];
 
-bind_pid_to_index([{H}|T],PieceLength) ->
-    [{H,spawn(piece,init,[H,PieceLength,false,self()])}|bind_pid_to_index(T,PieceLength)].
+bind_pid_to_index([{H}|T],PieceLength, LastPieceSize) ->
+    [{H,spawn(piece,init,[H,PieceLength,false,self(), PieceLength])}|bind_pid_to_index(T,PieceLength, LastPieceSize)].
 
 is_intrested(PeerIndexList, PidIndexList) ->
 	length([Index1 || {Index1} <- PeerIndexList, {Index2, _Pid} <- PidIndexList, Index1 == Index2]) > 0.
