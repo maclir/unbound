@@ -20,7 +20,7 @@ init(PieceIndex,PieceLength,_LastPiece,TorrentPid) ->
     Finished = [],
     loop(Piece,PieceIndex,PeerPids,{Wanted,Downloading,Finished},TorrentPid,PrivatePeerPids,BusyPrivatePeerPids).
 
-loop(<<Piece/bitstring>>,PieceIndex,PeerPids,BlockStatus,TorrentPid,PrivatePeerPids,BusyPrivatePeerPids) ->
+loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePeerPids, BusyPrivatePeerPids) ->
     receive
 	{register,FromPid} ->
 	    NewPeerPids = [FromPid|PeerPids],
