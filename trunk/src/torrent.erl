@@ -7,7 +7,7 @@
 
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
--export([start_link/3,init/1]).
+-export([start_link/2,init/1]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -33,7 +33,7 @@ init_loader({Pid,Id})->
 
 start_torrent(Pid,[Record|Tail],Id) ->
 	InfoHash = info_hash:to_hex(Record#torrent.info_sha),
-	StartFunc = {torrent,start_link,[InfoHash,Id,Record]},
+	StartFunc = {torrent,start_link,[Id,Record]},
 	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
 	supervisor:start_child(Pid,ChildSpec),
 	start_torrent(Pid,Tail,Id);
@@ -46,15 +46,15 @@ start_torrent(_Pid,[],_) ->
 %% =============================================================================
 %% Regular torrent functions
 
-start_link(Var,Id,Record) ->
-	{ok,spawn_link(torrent,init,[{Var,Id,Record}])}.
+start_link(Id,Record) ->
+	{ok,spawn_link(torrent,init,[{Id,Record}])}.
 
-init({Var,Id,Record}) ->
+init({Id,Record}) ->
     OurBitfield = Record#torrent.info#info.bitfield,
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength),
-    Announce = merge(Record#torrent.announce_list,[Record#torrent.announce]),
+    Announce = lists:merge(Record#torrent.announce_list,[Record#torrent.announce]),
     spawn_trackers(Announce,Record#torrent.info_sha,Id),
     loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
@@ -65,7 +65,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    NewPeers = ReceivedPeerList -- PeerList,
 	    NewPeerList = NewPeers ++ PeerList,
 	    spawn_connections(NewPeers,Record#torrent.info_sha,Id),
-	    loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList);
+	    loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList,Id);
 	     
 	{bitfield,FromPid,ReceivedBitfield} ->
 	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
@@ -79,7 +79,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			FromPid ! not_interested
 		end,
 	    register_peer_process(FromPid,PeerIndexList,PidIndexList),
-	    loop(Record,StatusRecord,PidIndexList);
+	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{have,FromPid,Index} ->
 	    Intrested = is_intrested({Index}, PidIndexList),
 	    if 
@@ -89,13 +89,13 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 		    FromPid ! not_interested
 	    end,
 	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
-	    loop(Record,StatusRecord,PidIndexList);
+	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 %	{dowloaded,PieceIndex,Data} ->
 %	    write_to_file:write(PieceIndex,Data,Record),
 	    
 	{'EXIT',FromPid,_Reason} ->
 	    piece:unregister_peer_process(FromPid,PidIndexList),
-	    loop(Record,StatusRecord,PidIndexList)
+	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
     end,
     case whereis(assigner) of
 	undefined ->
@@ -107,13 +107,13 @@ spawn_trackers([],_,_) ->
     ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
     spawn(self(),Announce,InfoHash,Id),
-    new_tracker(AnnounceList,InfoHash,Id).
+    spawn_trackers(AnnounceList,InfoHash,Id).
 
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
     spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
-    spawn_connection(Rest,InfoHash,Id);
+    spawn_connections(Rest,InfoHash,Id);
 
-spawn_connection([],_InfoHash,_Id) ->
+spawn_connections([],_InfoHash,_Id) ->
     [].
 
 recalculateConnections(PidIndexList) ->
