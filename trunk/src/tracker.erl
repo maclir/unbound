@@ -25,7 +25,7 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	{completed} ->
 	    perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed")
     after Interval ->
-	    perform_request(TorrentPid,Announce,UrlInfoHash,Id,undefined)
+	    perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started")
 end.
 
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event) ->
