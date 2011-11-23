@@ -31,7 +31,7 @@ end.
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event) ->
     case tcp:connect_to_server(Announce,UrlInfoHash,Id,Event) of
 	[{"Interval",Interval},{"peers",PeerList}] ->
-	    TorrentPid ! {ok,PeerList},
+	    TorrentPid ! {peer_list,self(),PeerList},
 	    loop(TorrentPid,Announce,UrlInfoHash,Id,Interval);
 	{error,Reason} ->
 	    TorrentPid ! {error,Reason}
