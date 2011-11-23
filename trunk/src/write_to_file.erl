@@ -9,8 +9,9 @@ write(PieceId, Data, Records, Done) ->
 	case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
 		true ->
 			%%TODO get the TempFolder from settings db
-			TempFolder = "/Users/Eff/Documents/workspace/Desktop/tempfolder/",
-			DestFolder = "/Users/Eff/Documents/workspace/Desktop/test/",
+			{ok, Dir} = file:get_cwd(),
+			TempFolder = Dir ++ "/Unbound_Test/" ,
+			DestFolder = Dir ++ "/Unbound_Dest/",
 			
 			PieceLength = Records#torrent.info#info.piece_length,		
 			StartPos = (PieceId * PieceLength),		
