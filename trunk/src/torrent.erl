@@ -185,10 +185,10 @@ register_peer_process(_PeerPid,[],_PidIndexList) ->
     ok.
 
 bind_pid_to_index([{H}|[]],PieceLength,LastPieceSize) ->
-   [{H,spawn(piece,init,[H,PieceLength,true,self(), LastPieceSize])}];
+   [{H,spawn(piece,init,[H,PieceLength,self(), LastPieceSize])}];
 
 bind_pid_to_index([{H}|T],PieceLength, LastPieceSize) ->
-    [{H,spawn(piece,init,[H,PieceLength,false,self(), PieceLength])}|bind_pid_to_index(T,PieceLength, LastPieceSize)].
+    [{H,spawn(piece,init,[H,PieceLength,self(), PieceLength])}|bind_pid_to_index(T,PieceLength, LastPieceSize)].
 
 is_intrested(PeerIndexList, PidIndexList) ->
 	length([Index1 || {Index1} <- PeerIndexList, {Index2, _Pid} <- PidIndexList, Index1 == Index2]) > 0.
