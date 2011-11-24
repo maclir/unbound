@@ -50,7 +50,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 
 	    case Wanted ++ NewDownloading of
 		[] ->
-			<<FinalPiece:PieceSize/binary>> = NewPiece,
+			<<FinalPiece:PieceSize/binary,_Rest/binary>> = NewPiece,
 		    TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 		    receive
 			{ok, done} ->

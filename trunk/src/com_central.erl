@@ -32,7 +32,7 @@ add_new_torrent_file(Binary) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary}).
 
 handle_call({add_new_torrent,Binary},_From,State) ->
-    {ok,Record} = bencode:decode(Binary),
+    {ok,Record} = parser:decode(Binary),
     torrent_db:init(),
     torrent_db:add(Record),
     {reply,ok,State};

@@ -8,7 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/2,init/1]).
--export([recalculateConnections/1]).
+-export([recalculateConnections/2]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -51,10 +51,12 @@ start_link(Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Id,Record}])}.
 
 init({Id,Record}) ->
+    process_flag(trap_exit,true),
     OurBitfield = <<(Record#torrent.info#info.bitfield)/bitstring>>,
     IndexList = bitfield:to_indexlist(OurBitfield,normal),
     PieceLength = Record#torrent.info#info.piece_length,
-	LastPieceSize = Record#torrent.info#info.length rem PieceLength,
+	Length = Record#torrent.info#info.length,
+	LastPieceSize = Length rem PieceLength,
     PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
     Announce = lists:merge(Record#torrent.announce_list,[Record#torrent.announce]),
     spawn_trackers(Announce,Record#torrent.info_sha,Id),
@@ -63,7 +65,7 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
     case whereis(assigner) of
 	undefined ->
-	    register(assigner,spawn(torrent,recalculateConnections,[PidIndexList]));
+	    register(assigner,spawn(torrent,recalculateConnections,[PidIndexList,Record#torrent.info#info.piece_length div 16384]));
 	_ ->
 	    ok
     end,
@@ -94,7 +96,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{have,FromPid,Index} ->
 	    io:fwrite("Got have\n"),
-	    Intrested = is_intrested({Index}, PidIndexList),
+	    Intrested = is_intrested([{Index}], PidIndexList),
 	    if 
 		Intrested ->
 		    io:fwrite("Sent interested (have)\n"),
@@ -103,7 +105,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 		    io:fwrite("Sent not interested (have)\n"),
 		    FromPid ! not_interested
 	    end,
-	    piece:register_peer_process(FromPid,[{Index}],PidIndexList),
+	    register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{dowloaded,SenderPid,PieceIndex,Data} ->
 		Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
@@ -122,7 +124,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    
 	{'EXIT',FromPid,_Reason} ->
 	    io:fwrite("Got EXIT\n"),
-	    piece:unregister_peer_process(FromPid,PidIndexList),
+	    unregister_peer_process(FromPid,PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
     end.
 
@@ -133,16 +135,16 @@ spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
     spawn_trackers(AnnounceList,InfoHash,Id).
 
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
-    spawn(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
+    spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
     spawn_connections(Rest,InfoHash,Id);
 
 spawn_connections([],_InfoHash,_Id) ->
     [].
 
-recalculateConnections(PidIndexList) ->
+recalculateConnections(PidIndexList,BlockCount) ->
     ConnectionList = getConnections(PidIndexList,[]),
     SortedConnections = lists:keysort(3,ConnectionList),
-    setConnections(SortedConnections,[]).
+    setConnections(SortedConnections,[],BlockCount).
 
 getConnections([],ResultList) ->
     ResultList;
@@ -158,19 +160,27 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
 %	    getConnections(Tail,ResultList)
     end.
 
-setConnections([],_) ->
+setConnections([],_,_) ->
     ok;
 
-setConnections([{Pid,List,_}|T],Assigned) ->
-    Pid ! {assignedConnections,List -- Assigned},
-    setConnections(T,Assigned ++ List).
+setConnections([{Pid,List,_}|T],Assigned,BlockCount) ->
+    TempPidList = List --Assigned,
+    if 
+	length(TempPidList) > BlockCount ->
+	    {PidList,_} = lists:split(BlockCount,TempPidList);
+	true ->
+	    PidList = TempPidList
+    end,
+    Pid ! {assignedConnections,PidList},
+    setConnections(T,Assigned ++ PidList,BlockCount).
 
 %% Functions for registering and removing peer processes from peer list
-%unregister_peer_process(FromPid,[{Index,ToPid}|T]) ->
-%    ToPid ! {unregister,FromPid};
+unregister_peer_process(FromPid,[{_Index,ToPid}|T]) ->
+    ToPid ! {unregister,FromPid},
+    unregister_peer_process(FromPid,T);
 
-%unregister_peer_process(_FromPid,[]) ->
-%    ok.
+unregister_peer_process(_FromPid,[]) ->
+    ok.
 
 register_peer_process(FromPid,[{H}|T],PidIndexList) ->
     case lists:keyfind(H,1,PidIndexList) of

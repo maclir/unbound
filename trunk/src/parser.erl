@@ -6,7 +6,8 @@
 
 
 decode(Data) ->
-    case catch dec(Data,#torrent{}) of
+    InfoSha = calculateInfoSha(Data),
+    case catch dec(Data,#torrent{info_sha=InfoSha}) of
 	{'EXIT', _} ->
 	    {error, unparsed};
 	{Res, _} ->
@@ -54,3 +55,14 @@ dec_dict(Data, Record) ->
     end,
     {Val, Tail2} = dec(Tail1,NewRecord),
     dec_dict(Tail2, record:store(Key,Val,Record)).
+
+calculateInfoSha(Binary) ->
+    case Binary of
+	<<$4,$:,$i,$n,$f,$o,A/binary>> ->
+	    Info = binary:part(A,0,byte_size(A)-1),
+	    SHA1 = crypto:sha(binary_to_list(Info)),
+	    SHA1;
+	_ ->
+	    <<_,End/binary>> = Binary,
+	    calculateInfoSha(End)
+    end.

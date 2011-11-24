@@ -29,7 +29,7 @@ store(Key,Value,Record) ->
 	<<"name">> ->
 	    NewRecord = Record#info{name=Value};
 	<<"files">> ->
-	    Sizes = [X || {_,X,_,_} <- Value],
+	    Sizes = [X || {_,X,_,_,_} <- Value],
 	    TotalSize = lists:sum(Sizes),
 	    NewRecord = Record#info{files=Value,length=TotalSize};
 	<<"length">> ->

@@ -40,7 +40,7 @@ compare(Index,<<_FirstBit:1,Rest1/bitstring>>,<<_SecondtBit:1,Rest2/bitstring>>,
 
 flip_bit(Index, <<Bitfield/bitstring>>) ->
 	BitSize = bit_size(Bitfield),
-	<<OrBitString:BitSize>> = math:pow(2, Index),
+	<<OrBitString:BitSize>> = <<(trunc(math:pow(2, ((BitSize-1)-Index)))):BitSize>>,
 	<<BitfieldInt:BitSize>> = Bitfield,
 	OrBitString bxor BitfieldInt.
 
