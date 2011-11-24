@@ -32,18 +32,9 @@ add_new_torrent_file(Binary) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary}).
 
 handle_call({add_new_torrent,Binary},_From,State) ->
-    {ok,Record} = metafile:parse(Binary),
+    {ok,Record} = bencode:decode(Binary),
     torrent_db:init(),
-    case Record#torrent.info#info.files of
-	undefined ->
-	    torrent_db:add(Record);
-	Files ->
-	    Sizes = [X || {_,X,_,_} <- Files, X /= undefined],
-	    TotalSize = lists:sum(Sizes),
-	    io:fwrite("Size: ~p",[TotalSize]),
-	    NewRecord = Record#torrent{info = (Record#torrent.info)#info{length=TotalSize}},
-	    torrent_db:add(NewRecord)
-    end,
+    torrent_db:add(Record),
     {reply,ok,State};
 
 handle_call(Command, _From, State) ->

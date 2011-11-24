@@ -21,13 +21,17 @@ store(Key,Value,Record) ->
 	<<"piece length">> ->
 	    NewRecord = Record#info{piece_length=Value};
 	<<"pieces">> ->
-	    NewRecord = Record#info{pieces=Value};
+	    NumberOfPieces = byte_size(Value) div 20,
+	    Bitfield = <<0:NumberOfPieces>>,
+	    NewRecord = Record#info{pieces=Value,bitfield = <<Bitfield/bitstring>>};
 	<<"private">> ->
 	    NewRecord = Record#info{private=Value};
 	<<"name">> ->
 	    NewRecord = Record#info{name=Value};
 	<<"files">> ->
-	    NewRecord = Record#info{files=Value};
+	    Sizes = [X || {_,X,_,_} <- Value],
+	    TotalSize = lists:sum(Sizes),
+	    NewRecord = Record#info{files=Value,length=TotalSize};
 	<<"length">> ->
 	    if 
 		is_record(Record,info) ->
