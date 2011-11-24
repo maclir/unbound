@@ -8,7 +8,7 @@
 -module(piece).
 -export([init/4]).
 
-init(PieceIndex,PieceLength,PieceSize,TorrentPid) ->
+init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
     <<Piece/bitstring>> = <<0:PieceLength>>,
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
