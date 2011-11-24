@@ -122,7 +122,7 @@ handshake_loop(MasterPid,HandshakeResponse)->
 	receive
 		{tcp,_,Msg} ->
 			handshake_loop(MasterPid,<<HandshakeResponse/binary,Msg/binary>>)
-		after 5000 ->
+		after 1000 ->
 			process_handshake(MasterPid, HandshakeResponse)%% stop the loop after 5 seconds
 			
 	end.
@@ -143,7 +143,8 @@ process_bitfield_payload(BitFieldLengthPrefix, Rest)->
 		if byte_size(Rest1) >= 9 ->
 			process_have_messages(Rest1);
 		true ->
-			self() ! {bitfield,BitField}
+			self() ! {bitfield,BitField},
+			self() ! {tcp,icannotputanunderscorehere,Rest1}
 		end.
 process_have_messages(<<>>)->
 		ok;
