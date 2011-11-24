@@ -13,7 +13,7 @@ write(PieceId, Data, Records, Done) ->
 			TempFolder = Dir ++ "/Unbound_Test/" ,
 			DestFolder = Dir ++ "/Unbound_Dest/",
 			
-			PieceLength = Records#torrent.info#info.piece_length,		
+			PieceLength = byte_size(Data),		
 			StartPos = (PieceId * PieceLength),		
 			Result = file_split:start(Data, StartPos, PieceLength, TempFolder, Records#torrent.info#info.files),
 			
