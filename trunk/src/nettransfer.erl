@@ -62,9 +62,9 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
         {have,SenderPid,Piece_Index} ->
             case SenderPid of
                 TcpPid ->
-                    TorrentPid ! {have,Piece_Index};
+                    TorrentPid ! {have,self(),Piece_Index};
                 TorrentPid ->
-                    TcpPid ! { have, Piece_Index}
+                    TcpPid ! { have,self(), Piece_Index}
             end,
             loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 
