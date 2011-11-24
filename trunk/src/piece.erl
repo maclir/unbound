@@ -9,7 +9,8 @@
 -export([init/4]).
 
 init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
-    <<Piece/bitstring>> = <<0:PieceLength>>,
+    <<Piece/binary>> = <<0:(PieceSize*8)>>,
+    Y = size(Piece),
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
     PeerPids = [],
@@ -20,7 +21,7 @@ init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
     Finished = [],
     loop(Piece,PieceIndex,PeerPids,{Wanted,Downloading,Finished},TorrentPid,PrivatePeerPids,BusyPrivatePeerPids,PieceSize).
 
-loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePeerPids, BusyPrivatePeerPids,PieceSize) ->
+loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePeerPids, BusyPrivatePeerPids,PieceSize) ->
     receive
 	{register,FromPid} ->
 	    NewPeerPids = [FromPid|PeerPids],
@@ -50,7 +51,8 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 
 	    case Wanted ++ NewDownloading of
 		[] ->
-			<<FinalPiece:PieceSize/binary,_Rest/binary>> = NewPiece,
+		    X = size(NewPiece),
+		    <<FinalPiece:PieceSize/binary,_Rest/binary>> = NewPiece,
 		    TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 		    receive
 			{ok, done} ->

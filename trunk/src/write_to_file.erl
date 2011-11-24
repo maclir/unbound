@@ -34,8 +34,9 @@ check_sha(Shas, PieceId, Data) ->
 
 %% Split sha1 String into 20-bit piece for exact piece of Data
 shas_split(Shas, Index) ->
-		Start = (20 * Index) + 1,
-		string:substr(Shas, Start, 20).
+    Start = (20 * Index),
+    <<_Head:Start/binary,Sha:20/binary,_Tail/binary>> = Shas,
+    Sha.
 
 %% Move the downloaded data from temporary folder into destination folder
 move_to_folder([], _, _) ->
