@@ -50,7 +50,7 @@ add(Info, InfoSHA, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Enc
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 add(Torrent) -> 
    % Torrent#torrent.id = num_torrents(),
-    Result = mnesia:dirty_write(Torrent#torrent{id=num_torrents()}),
+    Result = mnesia:dirty_write(Torrent#torrent{id=get_last()+1}),
     Result.
     
 %% Returns the #torrent with the specified id.
@@ -79,13 +79,26 @@ create_file_record(Length, Md5, Path)->
 
 %% Returns the number of torrents added to the database.
 num_torrents()->
-     case mnesia:dirty_last(torrent) of
-	'$end_of_table' -> 
- 	    0;
- 	Last -> 
- 	    Last + 1
-     end.
-%% Returns the sum of the lengths of all files described 
+    num_torrents(0, -1).
+num_torrents(Num, Prev)->
+    case mnesia:dirty_next(torrent, Prev) of
+	'$end_of_table'->
+	    Num;
+	Next when Next =/= Prev ->
+	    num_torrents(Num+1, Next);
+	Next ->
+	    num_torrents(Num, Next)
+    end.
+%% Returns the last id in the table.
+get_last()->
+    case mnesia:dirty_last(torrent) of
+	'$end_of_table' ->
+	    -1;
+	Last ->
+	    Last
+    end.
+
+%% Returns the sum of the lengthys of all files described 
 %% in the torrent at the specified index in the table.
 get_size_by_id(Id) -> 
     Torrent = get_torrent_by_id(Id),
@@ -155,24 +168,29 @@ init_test_()->
 
 manipulation_test_()->
     [?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="first_torrent", length=10000, md5sum="md5sum", files=[]}, 
-			    "sha", "announce", ["announce", "list"], 
+			    "first_sha", "announce", ["announce", "list"], 
 			    "date", "comment", "created by", "encoding")== ok), %% Add a single-file entry to torrent table, id is 0. 
      ?_assert(num_torrents()==1), %% Get the number of torrent entries currently in the table.
      ?_assertMatch(#torrent{info=#info{name="first_torrent"}}, get_torrent_by_id(0)), %% Get torrent with id=0, should match the one that was added.
      ?_assertException(error, {badmatch,[]}, get_torrent_by_id(1)), %% Trying to access torrent which doesn't exist. Crashes with badmatch error.
-     ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="first_torrent", length=0, md5sum="md5sum", 
+     ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="second_torrent", length=0, md5sum="md5sum", 
 			 files=[#file{path="filepath1", length=2500}, #file{path="filepath2", length=4500}, #file{path="filepath3", length=13500}]}, 
-		   "sha", "announce", ["announce", "list"], 
+		   "second_sha", "announce", ["announce", "list"], 
 		   "date", "comment", "created by", "encoding")== ok), %% Add a multi-file entry to torrent table, id is 1.
      ?_assert(num_torrents()==2), %% Get the number of torrent entries currently in the table.
      ?_assert(get_size_by_id(0)==10000), %% Get correct size of single file entry.
      ?_assert(get_size_by_id(1)==20500), %% Get correct size of multi-file entry.
      ?_assertException(error, {badmatch,[]}, get_size_by_id(2)), %% Trying to get the size of a torrent which doesn't exist.
-     ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="first_torrent", length=10000, md5sum="md5sum", files=[]}, 
-			    "sha", "announce", ["announce", "list"], 
+     ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="third_torrent", length=5000, md5sum="md5sum", files=[]}, 
+			    "third_sha", "announce", ["announce", "list"], 
 			    "date", "comment", "created by", "encoding")== ok), %% Add another single-file entry to the torrent table, id is 2.
      ?_assert(num_torrents()==3), %% Get the number of torrent entries currently in the table.
+     ?_assertMatch([#torrent{info=#info{name="first_torrent"}}, #torrent{info=#info{name="second_torrent"}}], size_gt(8000)),
+     ?_assertMatch([#torrent{info=#info{name="first_torrent"}}, #torrent{info=#info{name="third_torrent"}}], size_lt(20500)),
+     ?_assertMatch([#torrent{info=#info{name="first_torrent"}}], find_by_SHA1("first_sha")),
      ?_assert(delete(1)==ok), %% Delete torrent entry with id==1 (the one added second).
-     ?_assert(num_torrents()==2)
+     ?_assert(num_torrents()==2),
+     ?_assert(delete_by_SHA1("first_sha")==ok),
+     ?_assert(num_torrents()==1)
     ]. 
      
