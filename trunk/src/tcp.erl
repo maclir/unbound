@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/2, connect_to_client/4]).
+-export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/4, connect_to_client/4]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -102,9 +102,9 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort)->
+open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
-	spawn(?MODULE, connect_to_client,[self(), Socket]).
+	spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
