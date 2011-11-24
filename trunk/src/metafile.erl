@@ -93,9 +93,13 @@ parseData([{<<"name">>,Value}|Tail],Record) ->
 parseData([{<<"files">>,Value}|Tail],Record) ->
     FilesRecord = #file{},
     NewFilesRecord = parseData(Value,FilesRecord),
-    NewRecord = Record#info{files=NewFilesRecord},
-    parseData(Tail,NewRecord);
-
+    case NewFilesRecord of
+	{file,undefined,[],undefined} ->
+	    parseData(Tail,Record);
+	{file,_,_,_} ->
+	    NewRecord = Record#info{files=NewFilesRecord},
+	    parseData(Tail,NewRecord)
+    end;
 
 parseData([{<<"length">>,Value}|Tail],Record) ->
     if
@@ -107,8 +111,8 @@ parseData([{<<"length">>,Value}|Tail],Record) ->
     parseData(Tail,NewRecord);
 
 
-parseData([{<<"path">>,{list,Value}}|Tail],Record) ->
-    PathList = buildPathList(Value),
+parseData([{<<"path">>,Value}|Tail],Record) ->
+    PathList = parseData(Value,Record),
     NewRecord = Record#file{path=PathList},
     parseData(Tail,NewRecord);
 
