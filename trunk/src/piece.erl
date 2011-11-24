@@ -9,7 +9,7 @@
 -export([init/4]).
 
 init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
-    <<Piece/binary>> = <<0:(PieceSize*8)>>,
+    <<Piece/binary>> = <<0:(PieceLength*8)>>,
     Y = size(Piece),
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
@@ -45,8 +45,10 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePee
 	    {Wanted, Downloading, Finished} = BlockStatus,
 	    NewDownloading = Downloading -- [{Offset,SenderPid}],
 	    NewFinished = [Offset|Finished],
-	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
-	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
+	    CalcOffset = Offset*16384*8,
+	    CalcLength = Length*8,
+	    <<HeadBytes:CalcOffset,_Block:CalcLength,Rest/binary>> = Piece,
+	    NewPiece = <<HeadBytes:CalcOffset,BlockBinary/binary,Rest/binary>>,
 	    TempBusyPrivatePeerPids = BusyPrivatePeerPids -- [SenderPid],
 
 	    case Wanted ++ NewDownloading of
