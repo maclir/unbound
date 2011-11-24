@@ -1,4 +1,4 @@
-%%% @author Peter Myllykoski <peter@UL30JT>
+%%% @author Peter Myllykoski <peter@UL30JT>,Nahid Vafaie
 %%% @copyright (C) 2011, Peter Myllykoski
 %%% @doc
 %%%
@@ -39,7 +39,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	    end,
 	    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- TempBusyPrivatePeerPids,TempBlockStatus,PieceIndex),
 	    loop(Piece,PieceIndex,NewPeerPids,NewBlockStatus,TorrentPid,NewPrivatePeerPids,NewBusyPrivatePeerPids,PieceSize);
-	
+
 	{block,SenderPid,Offset,Length,BlockBinary} ->
 	    {Wanted, Downloading, Finished} = BlockStatus,
 	    NewDownloading = Downloading -- [{Offset,SenderPid}],
@@ -47,7 +47,7 @@ loop(<<Piece/bitstring>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, Private
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
 	    TempBusyPrivatePeerPids = BusyPrivatePeerPids -- [SenderPid],
-	    
+
 	    case Wanted ++ NewDownloading of
 		[] ->
 			<<FinalPiece:PieceSize/binary>> = NewPiece,
