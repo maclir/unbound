@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/4, connect_to_client/4]).
+-export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/2, connect_to_client/4]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -102,9 +102,9 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort, InfoHash, ClientId)->
+open_a_socket(DestinationIp, DestinationPort)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
-	spawn(?MODULE, connect_to_client,[self(), Socket, InfoHash,ClientId]).
+	spawn(?MODULE, connect_to_client,[self(), Socket]).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
@@ -148,7 +148,7 @@ process_bitfield_payload(BitFieldLengthPrefix, Rest)->
 process_have_messages(<<>>)->
 		ok;
 process_have_messages(<<HaveMessage:9/binary, Rest/binary>>)->
-		self() ! {have, self(), HaveMessage},
+		self() ! {tcp, self(), HaveMessage},
 		process_have_messages(Rest).
 	
 %% this loop processes ALL messages. The ones it gets from the peer AND the ones we send to it, from the parent process
@@ -170,23 +170,58 @@ main_loop(Socket, MasterPid)->
 		not_interested ->
 			gen_tcp:send(Socket,<<0,0,0,1,3>>),
 			main_loop(MasterPid, Socket);
+		{send_have, PieceIndex}->
+			gen_tcp:send(Socket,[<<5:32, 4:8,PieceIndex:32>>]),
+			main_loop(Socket,MasterPid);
+		{send_bitfield, Bitfield}->
+			BitfieldLength = byte_size(Bitfield)+1,
+			gen_tcp:send(Socket,[<<BitfieldLength:32, 5:8, Bitfield/binary>>]),
+			main_loop(Socket,MasterPid);
 		{bitfield,<<_Id,Rest1/binary>>} ->
 			MasterPid ! {client_bitfield, self(), Rest1},
 			main_loop(Socket,MasterPid);
-		{piece, Index, Offset, Length} ->
+		{request, Index, Offset, Length} ->
 			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
 			HoleBlock = process_block(MasterPid, Length, <<>>),
 			MasterPid ! {got_block, Offset,Length,HoleBlock}, 
 			main_loop(Socket,MasterPid);
-		{have,_From,<<5:32, 4:8, PieceIndex:32>>} ->
+		{send_piece,Index, Offset, Block}->
+			MessageLength = byte_size(Block)+9,
+			gen_tcp:send(Socket, [<<MessageLength:32,7:8,Index:32,Offset:32,Block/binary>>]),
+			main_loop(Socket,MasterPid);
+		{send_cancel,Index,Offset,Length}->
+			gen_tcp:send(Socket,[<<13:32,8:8,Index:32,Offset:32,Length:32>>]),
+			main_loop(Socket,MasterPid);
+		{send_port, Port}->
+			gen_tcp:send(Socket,[<<3:32,9:8,Port:32>>]),
+			main_loop(Socket,MasterPid);
+		{tcp,_From,<<5:32, 4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
+		{tcp,_,<<0,0,0,1,0>>} ->
+			MasterPid ! {got_choked, self()},
+			main_loop(Socket, MasterPid);
+		{tcp,_,<<0,0,0,1,2>>}->
+			MasterPid ! {got_interested,self()},
+			main_loop(Socket, MasterPid);
+		{tcp,_,<<0,0,0,1,3>>}->
+			MasterPid ! {got_not_interested, self()},
+			main_loop(Socket, MasterPid);
 		{tcp,_,<<0,0,0,0>>}-> 
-			MasterPid ! got_keep_alive, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
+			MasterPid ! {got_keep_alive, self()}, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
 			main_loop(Socket, MasterPid); %% in this case <<>> actually means keep_alive message
 		{tcp,_,<<1:32,1:8>>}-> 
-			MasterPid ! got_unchoked, %% process an unchoked message
+			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
+		{tcp,_,<<13:32,6:8, Index:32, Offset:32, Length:32>>}->
+			MasterPid ! {got_request, self(), Index, Offset, Length},
+			main_loop(Socket, MasterPid);
+		{tcp,_,<<13:32,8:8, Index:32, Offset:32, Length:32>>}->
+			MasterPid ! {got_cancel, self(), Index, Offset, Length},
+			main_loop(Socket,MasterPid);
+		{tcp,_,<<3:32,9:8,Port:16>>}->
+			MasterPid ! {got_port,self(),Port},
+			main_loop(Socket,MasterPid);
 		stop ->
 			MasterPid ! stopping; %% this is made to stop the slave process. The loop is not being called again here.
 		Smth ->
