@@ -43,3 +43,14 @@ flip_bit(Index, <<Bitfield/bitstring>>) ->
 	<<OrBitString:BitSize>> = math:pow(2, Index),
 	<<BitfieldInt:BitSize>> = Bitfield,
 	OrBitString bxor BitfieldInt.
+
+%% Test Code:
+-include_lib("eunit/include/eunit.hrl").
+
+zero_count_test_()->
+    [
+     ?_assert(bitfield:has_one_zero(<<2#10111111>>) == true),
+     ?_assert(bitfield:count_zeros(<<2#10101010>>) == 4),
+     ?_assert(bitfield:to_indexlist(<<2#11001011>>, normal) == [{2},{3},{5}]),
+     ?_assert(bitfield:to_indexlist(<<2#11001011>>, invert) == [{0},{1},{4}, {6}, {7}])
+    ].
