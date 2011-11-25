@@ -61,18 +61,18 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize) 
 		    loop(NewPiece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PieceSize)
 	    end;
 	{connectionsRequest,Pid} ->
-		io:fwrite("got the request for conns!~n"),
 	    Pid ! {connection_list,PeerPids},
 	    loop(Piece,PieceIndex,PeerPids,BlockStatus,TorrentPid,PieceSize);
 	{new_net_pid,AssignerPid,NetPid} ->
 		{Wanted, _Downloading, _Finished} = BlockStatus,
+		io:fwrite("Wanted: ~p~n", [Wanted]),
 		case Wanted of
 			[] ->
 				AssignerPid ! {not_needed},
 				NewBlockStatus = BlockStatus;
 			_ ->
 			    {Result, NewBlockStatus} = request_block(BlockStatus,PieceIndex,NetPid),
-				AssignerPid ! {Result}
+				AssignerPid ! Result
 		end,
 	    loop(Piece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PieceSize)
     end.

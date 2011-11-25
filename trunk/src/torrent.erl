@@ -155,7 +155,6 @@ getConnections([],ResultList) ->
     ResultList;
 
 getConnections([{_Index,Pid}|Tail],ResultList) ->
-	io:fwrite("sent the request for conns!~p~n", [self()]),
     Pid ! {connectionsRequest,self()},
     receive
 	{connection_list,ConnectionList} ->
@@ -165,19 +164,23 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
     end.
 
 setConnections([],_) ->
+	io:fwrite("haha~n"),
     not_needed;
 setConnections([{Pid,List,_}|T],NetPid) ->
 	Result = lists:member(NetPid, List),
 	if 
 		Result ->
-    		Pid ! {new_net_pid,NetPid},
+    		Pid ! {new_net_pid,self(),NetPid},
 			receive
 				{starting_download} ->
+					io:fwrite("Downloading~n"),
 					downloading;
 				{not_needed} ->
+					io:fwrite("not needed~n"),
 		    		setConnections(T,NetPid);
 				{is_busy} ->
 					%%connection was busy so continue!!
+					io:fwrite("is busy!~n"),
 		    		was_busy
 				after 500 ->
 			    	setConnections(T,NetPid)
