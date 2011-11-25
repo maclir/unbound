@@ -20,7 +20,7 @@ write_to_file([{BinaryPath, StartPos, Length}|[]], Data, TempPath, Records) ->
 	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
 	file:pwrite(Index, StartPos + 1, Data),
 	file:close(Index),
-	change_length_db(Length, Path, Records),
+%% 	change_length_db(Length, BinaryPath, Records),
 	{ok, done};
 write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	{Name, Path} = path_create(BinaryPath, ""),
@@ -30,7 +30,7 @@ write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
 	file:pwrite(Index, StartPos + 1, Data),
 	file:close(Index),
-	change_length_db(Length, Path, Records),
+%% 	change_length_db(Length, BinaryPath, Records),
 	write_to_file(T, Rest, TempPath, Records).
 
 %% Function to change the binary data into Strings and create the path for saving the data on the HD
@@ -59,7 +59,7 @@ merge_data(TorrentPath, [{Path, Name, StartPos, Length}|T], BinaryData) ->
 
 %% Updating the downloaded file's length in the db
 change_length_db(Length, Path, Records) ->
-	Torrent = torrent_db:find_by_SHA1(Records#torrent.info_sha),
+	[Torrent|_] = torrent_db:find_by_SHA1(Records#torrent.info_sha),
 	Files = Torrent#torrent.info#info.files,
 	Tuple = lists:keyfind(Path, 4, Files),
 	{file, FileLength, MD5, Path, LengthComplete} = Tuple,
@@ -72,29 +72,23 @@ change_length_db(Length, Path, Records) ->
 												
 %% co-author: Alireza Pazirandeh
 %% The function for calculating the positions of of the pieces inside the files
-%% the startPos < startFilePos, it is over
-calc_files(StartPos, Length, _, StartFilePos, Files)
-	when (StartPos + Length =< StartFilePos) ->
+calc_files(_, 0, _, _, Files) ->
 		lists:reverse(Files);
-%% the startPos and endPos < endFilePos, all the block belongs here
-calc_files(StartPos, Length, [H|_], StartFilePos, Files)
-	when ((StartPos < StartFilePos + H#file.length) and (StartPos + Length =< StartFilePos + H#file.length)) ->
-		NewFile = {H#file.path, StartPos - StartFilePos, Length},
-		[NewFile|Files];
-%% the startPos < endFilePos but endPos > endFilePos, starts in this file but still continues
+%% the startPos < startFilePos and endPos < endFilePos, this is the last piece
 calc_files(StartPos, Length, [H|T], StartFilePos, Files)
-	when ((StartPos < StartFilePos + H#file.length) and (StartPos + Length > StartFilePos + H#file.length)) ->
-		NewFile = {H#file.path, StartPos - StartFilePos, StartFilePos + H#file.length - StartPos},
-		calc_files(StartPos, Length, T, StartFilePos + H#file.length, [NewFile|Files]);
-%% the endPos > endFilePos, started before and it ends later
-calc_files(StartPos, Length, [H|T], StartFilePos, Files)
-	when (StartPos + Length > StartFilePos + H#file.length) ->
-		NewFile = {H#file.path, 0, H#file.length},
-		calc_files(StartPos, Length, T, StartFilePos + H#file.length, [NewFile|Files]);
-%% the endPos < endFilePos, started before and it ends here
-calc_files(StartPos, Length, [H|_], StartFilePos, Files)
-	when (StartPos + Length =< StartFilePos + H#file.length) ->
-		NewFile = {H#file.path, 0, StartPos + Length - StartFilePos},
-		[NewFile|Files];
+	when ((StartPos < StartFilePos + H#file.length) and (StartPos >= StartFilePos)) ->
+		MaxAllowedLength = StartFilePos + H#file.length - StartPos,
+		if 
+			(Length > MaxAllowedLength) ->
+				NewLength = Length - MaxAllowedLength,
+				FileLength = MaxAllowedLength,
+				NewStartPos = StartPos + MaxAllowedLength;
+			true ->
+				NewLength = 0,
+				FileLength = Length,
+				NewStartPos = StartPos
+		end,
+		NewFile = {H#file.path, StartPos - StartFilePos, FileLength},
+		calc_files(NewStartPos, NewLength, T, StartFilePos + H#file.length, [NewFile|Files]);
 calc_files(StartPos, Length, [H|T], StartFilePos, Files) ->
 	calc_files(StartPos, Length, T, StartFilePos + H#file.length, Files).

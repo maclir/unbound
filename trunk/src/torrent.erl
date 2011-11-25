@@ -63,13 +63,9 @@ init({Id,Record}) ->
     loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
-    case whereis(assigner) of
-	undefined ->
-	    register(assigner,spawn(torrent,recalculateConnections,[PidIndexList,Record#torrent.info#info.piece_length div 16384]));
-	_ ->
-	    ok
-    end,
     receive
+	{im_free, NetPid} ->
+		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]);
 	{peer_list,FromPid,ReceivedPeerList} ->
 	    io:fwrite("Got Peer List\n"),
 	    NewTrackerList = lists:merge(TrackerList,[FromPid]),
@@ -141,38 +137,53 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
 spawn_connections([],_InfoHash,_Id) ->
     [].
 
-recalculateConnections(PidIndexList,BlockCount) ->
+recalculateConnections(PidIndexList, NetPid) ->
     ConnectionList = getConnections(PidIndexList,[]),
     SortedConnections = lists:keysort(3,ConnectionList),
-    setConnections(SortedConnections,[],BlockCount).
+    Result = setConnections(SortedConnections,NetPid),
+	case Result of
+		downloading ->
+			ok;
+		busy ->
+			ok;
+		not_needed ->
+			NetPid ! {continue}
+	end.
 
 getConnections([],ResultList) ->
     ResultList;
 
 getConnections([{_Index,Pid}|Tail],ResultList) ->
+	io:fwrite("sent the request for conns!~p~n", [self()]),
     Pid ! {connectionsRequest,self()},
     receive
 	{connection_list,ConnectionList} ->
 	    getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
-
-% Should be added back when done testing
-%   after 500 ->
-%	    getConnections(Tail,ResultList)
+	after 50 ->
+	    getConnections(Tail,ResultList)
     end.
 
-setConnections([],_,_) ->
-    ok;
-
-setConnections([{Pid,List,_}|T],Assigned,BlockCount) ->
-    TempPidList = List --Assigned,
-    if 
-	length(TempPidList) > BlockCount ->
-	    {PidList,_} = lists:split(BlockCount,TempPidList);
-	true ->
-	    PidList = TempPidList
-    end,
-    Pid ! {assignedConnections,PidList},
-    setConnections(T,Assigned ++ PidList,BlockCount).
+setConnections([],_) ->
+    not_needed;
+setConnections([{Pid,List,_}|T],NetPid) ->
+	Result = lists:member(NetPid, List),
+	if 
+		Result ->
+    		Pid ! {new_net_pid,NetPid},
+			receive
+				{starting_download} ->
+					downloading;
+				{not_needed} ->
+		    		setConnections(T,NetPid);
+				{is_busy} ->
+					%%connection was busy so continue!!
+		    		was_busy
+				after 500 ->
+			    	setConnections(T,NetPid)
+			end;
+		true ->
+    		setConnections(T,NetPid)
+    end.
 
 %% Functions for registering and removing peer processes from peer list
 unregister_peer_process(FromPid,[{_Index,ToPid}|T]) ->

@@ -4,5 +4,7 @@
 
 start() ->
 	{ok, File} = file:read_file("M3_TestCar.torrent"),
-	spawn(com_central,start_link,[]),
-	com_central:add_new_torrent_file(File).
+	{ok, Record} = parser:decode(File),
+	torrent_db:init(),
+	
+	torrent_db:add(Record).
