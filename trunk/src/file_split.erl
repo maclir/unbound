@@ -18,7 +18,7 @@ write_to_file([{BinaryPath, StartPos, Length}|[]], Data, TempPath, Records) ->
 	FilePath = TempPath ++ Path,
 	filelib:ensure_dir(FilePath),
 	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
-	file:pwrite(Index, StartPos + 1, Data),
+	file:pwrite(Index, StartPos, Data),
 	file:close(Index),
 %% 	change_length_db(Length, BinaryPath, Records),
 	{ok, done};
@@ -28,7 +28,7 @@ write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	FilePath = TempPath ++ Path,
 	filelib:ensure_dir(FilePath),
 	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
-	file:pwrite(Index, StartPos + 1, Data),
+	file:pwrite(Index, StartPos, Data),
 	file:close(Index),
 %% 	change_length_db(Length, BinaryPath, Records),
 	write_to_file(T, Rest, TempPath, Records).
