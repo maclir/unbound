@@ -65,7 +65,8 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
     receive
 	{im_free, NetPid} ->
-		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]);
+		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
+		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{peer_list,FromPid,ReceivedPeerList} ->
 	    io:fwrite("Got Peer List\n"),
 	    NewTrackerList = lists:merge(TrackerList,[FromPid]),
