@@ -67,7 +67,7 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePee
 		_ ->
 		    TempBlockStatus = {Wanted,NewDownloading,NewFinished},
 		    {NewBlockStatus,NewBusyPrivatePeerPids} = request_block(PrivatePeerPids -- TempBusyPrivatePeerPids,TempBlockStatus,PieceIndex),
-		    loop(Piece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PrivatePeerPids,NewBusyPrivatePeerPids,PieceSize)
+		    loop(NewPiece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PrivatePeerPids,NewBusyPrivatePeerPids,PieceSize)
 	    end;
 	{connectionsRequest,Pid} ->
 	    Pid ! {connection_list,PeerPids},

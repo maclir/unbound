@@ -6,8 +6,8 @@
 -include("torrent_db_records.hrl").
 
 write(PieceId, Data, Records, Done) ->
-	case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
-		true ->
+    case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
+	true ->
 			%%TODO get the TempFolder from settings db
 			{ok, Dir} = file:get_cwd(),
 			TempFolder = Dir ++ "/Unbound_Test/" ,
@@ -30,12 +30,13 @@ write(PieceId, Data, Records, Done) ->
 
 %% Validating the piece's SHA1 
 check_sha(Shas, PieceId, Data) ->
-	hashcheck:compare(shas_split(Shas, PieceId), Data).
+    Sha = shas_split(Shas, PieceId),
+	hashcheck:compare(Sha, Data).
 
 %% Split sha1 String into 20-bit piece for exact piece of Data
 shas_split(Shas, Index) ->
-    Start = (20 * Index),
-    <<_Head:Start/binary,Sha:20/binary,_Tail/binary>> = Shas,
+    Start = (20 * 8 * Index),
+    <<_Head:Start,Sha:160,_Tail/binary>> = Shas,
     Sha.
 
 %% Move the downloaded data from temporary folder into destination folder
