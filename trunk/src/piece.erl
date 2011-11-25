@@ -10,7 +10,6 @@
 
 init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
     <<Piece/binary>> = <<0:(PieceLength*8)>>,
-    Y = size(Piece),
     BlockSize = 16384,
     NumBlocks = PieceLength div BlockSize,
     PeerPids = [],
@@ -53,7 +52,6 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid, PrivatePee
 
 	    case Wanted ++ NewDownloading of
 		[] ->
-		    X = size(NewPiece),
 		    <<FinalPiece:PieceSize/binary,_Rest/binary>> = NewPiece,
 		    TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 		    receive
@@ -107,6 +105,6 @@ request_block([Pid|T],{Wanted,Downloading,Finished},PieceIndex,BusyPids) ->
 	{busy,_Pid,_Offset} ->
 	    receive
 	    after 500 ->
-		    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex, BusyPids),
+		    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex, BusyPids)
 	    end
     end.
