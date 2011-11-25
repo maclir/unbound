@@ -42,8 +42,7 @@ flip_bit(Index, <<Bitfield/bitstring>>) ->
 	BitSize = bit_size(Bitfield),
 	<<OrBitString:BitSize>> = <<(trunc(math:pow(2, ((BitSize-1)-Index)))):BitSize>>,
 	<<BitfieldInt:BitSize>> = Bitfield,
-	<<BitResult:BitSize>> = <<(OrBitString bxor BitfieldInt):BitSize>>,
-	BitResult.
+	<<(OrBitString bxor BitfieldInt):BitSize>>.
 
 %% Test Code:
 -include_lib("eunit/include/eunit.hrl").
