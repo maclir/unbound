@@ -65,12 +65,12 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize) 
 	    loop(Piece,PieceIndex,PeerPids,BlockStatus,TorrentPid,PieceSize);
 	{new_net_pid,AssignerPid,NetPid} ->
 		{Wanted, _Downloading, _Finished} = BlockStatus,
-		io:fwrite("Wanted: ~p~n", [Wanted]),
 		case Wanted of
 			[] ->
 				AssignerPid ! {not_needed},
 				NewBlockStatus = BlockStatus;
 			_ ->
+				io:fwrite("~p : ~p~n", [PieceIndex,Wanted]),
 			    {Result, NewBlockStatus} = request_block(BlockStatus,PieceIndex,NetPid),
 				AssignerPid ! Result
 		end,
