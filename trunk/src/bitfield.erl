@@ -52,5 +52,7 @@ zero_count_test_()->
      ?_assert(bitfield:has_one_zero(<<2#10111111>>) == true),
      ?_assert(bitfield:count_zeros(<<2#10101010>>) == 4),
      ?_assert(bitfield:to_indexlist(<<2#11001011>>, normal) == [{2},{3},{5}]),
-     ?_assert(bitfield:to_indexlist(<<2#11001011>>, invert) == [{0},{1},{4}, {6}, {7}])
+     ?_assert(bitfield:to_indexlist(<<2#11001011>>, invert) == [{0},{1},{4}, {6}, {7}]),
+     ?_assert(bitfield:compare(<<2#10110101>>, <<2#11011001>>) == {result, [7,6,3,0]}),
+     ?_assert(bitfield:flip_bit(2, <<2#11001100>>) == <<2#11101100>>)
     ].
