@@ -22,8 +22,7 @@ store(Key,Value,Record) ->
 	    NewRecord = Record#info{piece_length=Value};
 	<<"pieces">> ->
 	    NumberOfPieces = byte_size(Value) div 20,
-	    Bitfield = <<0:NumberOfPieces>>,
-	    NewRecord = Record#info{pieces=Value,bitfield = <<Bitfield/bitstring>>};
+	    NewRecord = Record#info{pieces=Value,bitfield = <<0:NumberOfPieces>>};
 	<<"private">> ->
 	    NewRecord = Record#info{private=Value};
 	<<"name">> ->

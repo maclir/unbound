@@ -105,6 +105,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    register_peer_process(FromPid,[{Index}],PidIndexList),
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{dowloaded,SenderPid,PieceIndex,Data} ->
+				io:fwrite("id: ~p~n", [PieceIndex]),
 		Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
 		case write_to_file:write(PieceIndex,Data,Record,Done) of
 			{ok,done} ->
@@ -172,15 +173,12 @@ setConnections([{Pid,List,_}|T],NetPid) ->
 		Result ->
     		Pid ! {new_net_pid,self(),NetPid},
 			receive
-				{starting_download} ->
-					io:fwrite("Downloading~n"),
+				starting_download ->
 					downloading;
-				{not_needed} ->
-					io:fwrite("not needed~n"),
+				not_needed ->
 		    		setConnections(T,NetPid);
-				{is_busy} ->
+				is_busy ->
 					%%connection was busy so continue!!
-					io:fwrite("is busy!~n"),
 		    		was_busy
 %% 				after 10000 ->
 %% 			    	setConnections(T,NetPid)
