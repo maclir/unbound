@@ -122,7 +122,7 @@ handshake_loop(MasterPid,HandshakeResponse)->
 	receive
 		{tcp,_,Msg} ->
 			handshake_loop(MasterPid,<<HandshakeResponse/binary,Msg/binary>>)
-		after 1000 ->
+		after 3000 ->
 			process_handshake(MasterPid, HandshakeResponse)%% stop the loop after 5 seconds
 			
 	end.
