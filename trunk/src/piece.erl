@@ -105,5 +105,8 @@ request_block([Pid|T],{Wanted,Downloading,Finished},PieceIndex,BusyPids) ->
 	{ok,downloading} ->
 	    request_block(T,{tl(Wanted),[{hd(Wanted),Pid}|Downloading],Finished},PieceIndex, [Pid|BusyPids]);
 	{busy,_Pid,_Offset} ->
-	    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex, BusyPids)
+	    receive
+	    after 500 ->
+		    request_block(T++[Pid],{Wanted,Downloading,Finished},PieceIndex, BusyPids),
+	    end
     end.
