@@ -23,8 +23,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->
 			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
 		{continue} ->
 			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,idle)
-		after 500 ->
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free)
 	end;
 loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
     receive

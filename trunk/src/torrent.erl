@@ -182,8 +182,8 @@ setConnections([{Pid,List,_}|T],NetPid) ->
 					%%connection was busy so continue!!
 					io:fwrite("is busy!~n"),
 		    		was_busy
-				after 10000 ->
-			    	setConnections(T,NetPid)
+%% 				after 10000 ->
+%% 			    	setConnections(T,NetPid)
 			end;
 		true ->
     		setConnections(T,NetPid)
