@@ -11,23 +11,14 @@ start(Data, StartPos, PieceLength, TempPath, Records) ->
 	write_to_file(Files, Data, TempPath, Records).
 
 %% Function to write the data to the file
-write_to_file([], _, _, _) ->
-	{error, no_file_match};
-write_to_file([{BinaryPath, StartPos, Length}|[]], Data, TempPath, Records) ->
-	{Name, Path} = path_create(BinaryPath, ""),
-	FilePath = TempPath ++ Path,
-	filelib:ensure_dir(FilePath),
-	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
-	file:pwrite(Index, StartPos, Data),
-	file:close(Index),
-%% 	change_length_db(Length, BinaryPath, Records),
+write_to_file(_, <<>>, _, _) ->
 	{ok, done};
 write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	{Name, Path} = path_create(BinaryPath, ""),
 	<<Data:Length/binary, Rest/binary>> = AllData,
 	FilePath = TempPath ++ Path,
 	filelib:ensure_dir(FilePath),
-	{ok, Index} = file:open(FilePath ++ Name, [read, write]),	
+	{ok, Index} = file:open(FilePath ++ Name, [read, write, raw]),	
 	file:pwrite(Index, StartPos, Data),
 	file:close(Index),
 %% 	change_length_db(Length, BinaryPath, Records),
@@ -50,7 +41,7 @@ merge_data(StartPos, Length, Files, TorrentPath) ->
 merge_data(_, [], Data) ->
 	Data;
 merge_data(TorrentPath, [{Path, Name, StartPos, Length}|T], BinaryData) ->
-	{ok, File} = file:open(TorrentPath ++ Path ++ Name, [read]),
+	{ok, File} = file:open(TorrentPath ++ Path ++ Name, [read, binary]),
 	{ok, Data} = file:pread(File, StartPos, Length),
 	file:close(File),
 	NewData = <<BinaryData, Data>>,
