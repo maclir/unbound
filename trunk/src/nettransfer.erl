@@ -16,6 +16,7 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
 
 
 loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->    
+	io:fwrite("~p: downloading!~n", [self()]),
 	TorrentPid ! {im_free, self()},
 	receive
 		{download_block,FromPid,Index,Offset,Length} ->
@@ -64,13 +65,19 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 		
 		{got_unchoked, _FromPid} ->
+			io:fwrite("~p: unchocked!~n", [self()]),
 			case Status of
 				{_,true}->
 					NewStatus= {false,true};
 				{_,false} ->
 					NewStatus = {false,false}
 			end,
-			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+			case PiecePid of
+				idle ->
+					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
+				_ ->
+					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
+			end;
 		
 		{got_choked, _FromPid} ->
 			case Status of

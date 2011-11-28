@@ -85,11 +85,9 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			Intrested = is_intrested(PeerIndexList, PidIndexList),
 			if 
 				Intrested ->
-					io:fwrite("Sent Interested\n"),
 					FromPid ! is_interested,
 					FromPid ! check_free;
 				true ->
-					io:fwrite("Sent not interested\n"),
 					FromPid ! not_interested
 			end,
 			register_peer_process(FromPid,PeerIndexList,PidIndexList),
@@ -99,11 +97,10 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			Intrested = is_intrested([{Index}], PidIndexList),
 			if 
 				Intrested ->
-					io:fwrite("Sent interested (have)\n"),
 					FromPid ! is_interested,
+					io:fwrite("~p: checking free~n", [FromPid]),
 					FromPid ! check_free;
 				true ->
-					io:fwrite("Sent not interested (have)\n"),
 					FromPid ! not_interested
 			end,
 			register_peer_process(FromPid,[{Index}],PidIndexList),

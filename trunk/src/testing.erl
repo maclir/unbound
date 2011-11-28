@@ -6,5 +6,5 @@ start() ->
 	{ok, File} = file:read_file("M3_TestCar.torrent"),
 	{ok, Record} = parser:decode(File),
 	torrent_db:init(),
-	
-	torrent_db:add(Record).
+	torrent_db:add(Record),
+	app_sup:start_link().
