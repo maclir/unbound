@@ -13,7 +13,6 @@ init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
     BlockSize = 16384,
     TempNumBlocks = PieceSize div BlockSize,
 	LastBlockSize = PieceSize rem BlockSize,
-	io:fwrite("PieceSize:~p~n", [PieceSize]),
 	if
 		(LastBlockSize /= 0) ->
 			NumBlocks = TempNumBlocks + 1;
@@ -51,9 +50,9 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,L
 	    NewFinished = [OurOffset|Finished],
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
-
 	    case Wanted ++ NewDownloading of
 		[] ->
+			io:fwrite("~p done~n", [PieceIndex]),
 		    <<FinalPiece:PieceSize/binary,_Rest/binary>> = NewPiece,
 		    TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 		    receive
@@ -90,18 +89,18 @@ create_blocklist(NumBlocks) ->
     [NumBlocks|create_blocklist(NumBlocks-1)].
 
 request_block({Wanted,Downloading,Finished},PieceIndex,NetPid,{LastBlockIndex,LastBlockSize}) ->
-		io:fwrite("Offset:~p~n", [hd(Wanted)*16384]),
+	[HeadWanted|TailWanted] = Wanted,
+	io:fwrite("LastBlock: ~p, HeadWanted: ~p, Log: ~p~n",[LastBlockIndex, HeadWanted, (HeadWanted == LastBlockIndex)]),
 	if
-		hd(Wanted) == LastBlockIndex ->
+		(HeadWanted == LastBlockIndex) ->
 			BlockSize = LastBlockSize;
 		true ->
 			BlockSize = 16384
 	end,
-		io:fwrite("BlockSize:~p~n", [BlockSize]),
-    NetPid ! {download_block,self(),PieceIndex,hd(Wanted)*16384,BlockSize},
+    NetPid ! {download_block,self(),PieceIndex,HeadWanted*16384,BlockSize},
     receive
 	{ok,downloading} ->
-	    {starting_download,{tl(Wanted),[{hd(Wanted), NetPid}|Downloading],Finished}};
+	    {starting_download,{TailWanted,[{HeadWanted, NetPid}|Downloading],Finished}};
 	{busy,_Pid,_Offset} ->
 	    {is_busy,{Wanted,Downloading,Finished}}
     end.
