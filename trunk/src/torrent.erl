@@ -113,6 +113,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 				NewRecord = Record#torrent{info = (Record#torrent.info)#info{bitfield = NewBitField}},
 				torrent_db:delete_by_SHA1(Record#torrent.info_sha),
 				torrent_db:add(NewRecord),
+			lists:keydelete(PieceIndex,1,PidIndexList),
 				SenderPid ! {ok, done},
 	    		loop(NewRecord,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 			{error, _Reason} ->

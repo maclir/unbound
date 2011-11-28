@@ -49,9 +49,7 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,L
 		OurOffset = (Offset div 16384),
 	    NewDownloading = Downloading -- [{OurOffset,SenderPid}],
 	    NewFinished = [OurOffset|Finished],
-	    CalcOffset = Offset,
-	    CalcLength = Length,
-	    <<HeadBytes:CalcOffset/binary,_Block:CalcLength/binary,Rest/binary>> = Piece,
+	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
 	    NewPiece = <<HeadBytes/binary,BlockBinary/binary,Rest/binary>>,
 
 	    case Wanted ++ NewDownloading of
