@@ -226,7 +226,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_port,self(),Port},
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
-			MasterPid ! {'EXIT',"port_closed"};
+			exit(self(), "port_closed");
 		stop ->
 			MasterPid ! stopping; %% this is made to stop the slave process. The loop is not being called again here.
 		Smth ->
@@ -238,7 +238,8 @@ process_block(MasterPid, Length, Result)->
 	if byte_size(Result)==0 ->
 		receive
 		{tcp_closed,_}->
-			MasterPid ! {'EXIT',"port_closed"};
+			io:fwrite("IM CLOSING~n"),
+			exit(self(), "port_closed");
 		{tcp,_,<<_LengthPrefix:32,
 				7:8, %% pattern matching the response, when we requested a piece
 				_PieceIndex:32,	%% variables names speak for themselves

@@ -12,12 +12,14 @@ init(PieceIndex,PieceLength,TorrentPid,PieceSize) ->
     <<Piece/binary>> = <<0:(PieceLength*8)>>,
     BlockSize = 16384,
     TempNumBlocks = PieceSize div BlockSize,
-	LastBlockSize = PieceSize rem BlockSize,
+	TempLastBlockSize = PieceSize rem BlockSize,
 	if
-		(LastBlockSize /= 0) ->
-			NumBlocks = TempNumBlocks + 1;
+		(TempLastBlockSize /= 0) ->
+			NumBlocks = TempNumBlocks + 1,
+			LastBlockSize = TempLastBlockSize;
 		true ->
-			NumBlocks = TempNumBlocks
+			NumBlocks = TempNumBlocks,
+			LastBlockSize = 16384
 	end,	
 	PeerPids = [],
     Wanted = create_blocklist(NumBlocks-1),

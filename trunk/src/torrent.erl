@@ -98,7 +98,6 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			if 
 				Intrested ->
 					FromPid ! is_interested,
-					io:fwrite("~p: checking free~n", [FromPid]),
 					FromPid ! check_free;
 				true ->
 					FromPid ! not_interested

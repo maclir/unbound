@@ -16,7 +16,6 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
 
 
 loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->    
-	io:fwrite("~p: downloading!~n", [self()]),
 	TorrentPid ! {im_free, self()},
 	receive
 		{download_block,FromPid,Index,Offset,Length} ->
