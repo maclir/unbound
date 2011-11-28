@@ -7,7 +7,12 @@
 
 %% Starting function
 start(Data, StartPos, PieceLength, TempPath, Records) ->
-	Files = calc_files(StartPos, PieceLength, Records#torrent.info#info.files, 0, []),
+	if
+		is_record(Records#torrent.info#info.files, file) ->
+			Files = calc_files(StartPos, PieceLength, Records#torrent.info#info.files, 0, []);
+		true ->
+			Files = [{[Records#torrent.info#info.name], StartPos, PieceLength}]
+	end,
 	write_to_file(Files, Data, TempPath, Records).
 
 %% Function to write the data to the file

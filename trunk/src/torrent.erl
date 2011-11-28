@@ -78,7 +78,6 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList,Id);
 		
 		{bitfield,FromPid,ReceivedBitfield} ->
-			io:fwrite("Got Bitfield\n"),
 			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 			<<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
 			PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
@@ -93,7 +92,6 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			register_peer_process(FromPid,PeerIndexList,PidIndexList),
 			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 		{have,FromPid,Index} ->
-			io:fwrite("Got have\n"),
 			Intrested = is_intrested([{Index}], PidIndexList),
 			if 
 				Intrested ->
@@ -109,6 +107,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok,done} ->
 					NewBitField = bitfield:flip_bit(PieceIndex, Record#torrent.info#info.bitfield),
+					io:fwrite("~p~n", [NewBitField]),
 					NewRecord = Record#torrent{info = (Record#torrent.info)#info{bitfield = NewBitField}},
 					torrent_db:delete_by_SHA1(Record#torrent.info_sha),
 					torrent_db:add(NewRecord),

@@ -47,7 +47,6 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,L
 	{block,SenderPid,Offset,Length,BlockBinary} ->
 	    {Wanted, Downloading, Finished} = BlockStatus,
 		OurOffset = (Offset div 16384),
-		io:fwrite("~p: ~p,~p done~n", [SenderPid,PieceIndex,OurOffset]),
 	    NewDownloading = Downloading -- [{OurOffset,SenderPid}],
 	    NewFinished = [OurOffset|Finished],
 	    <<HeadBytes:Offset/binary,_Block:Length/binary,Rest/binary>> = Piece,
@@ -58,7 +57,6 @@ loop(<<Piece/binary>>, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,L
 		    TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 		    receive
 			{ok, done} ->
-				io:fwrite("~p done~n", [PieceIndex]),
 			    ok;
 			{error,_Reason} ->
 			    NewBlockStatus = {NewFinished,[],[]},

@@ -24,7 +24,7 @@ compare(Sha1 , ReceivedData) ->
 is_equal(Sha1 , Sha1) ->
     true;
 is_equal(_,_) ->
-    true.
+    false.
 
 
 
