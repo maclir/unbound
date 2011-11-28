@@ -244,7 +244,7 @@ process_block(MasterPid, Length, Result)->
 				process_block(MasterPid, Length, <<Result/binary,PieceOfTheBlock/binary>>)
 				end
 		after 10000 ->
-			exit(self(),{'EXIT',"no_message_received_after_10_seconds"})
+			exit(self(),{'EXIT',"no_response"})
 		end;
 	true ->
 	receive
