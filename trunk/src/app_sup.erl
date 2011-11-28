@@ -11,10 +11,15 @@
 -export([init/1]).
 
 start_link() ->
-    inets:start(),
-    torrent_db:init(),
-    Id = clientId(),
-    supervisor:start_link(?MODULE,[Id]).
+    case whereis(unbound_torrent) of
+	undefined ->
+	    inets:start(),
+	    torrent_db:init(),
+	    Id = clientId(),
+	    supervisor:start_link({local,unbound_torrent},?MODULE,[Id]);
+	Pid ->
+	    io:fwrite("The Unbound Torrent client is already started!")
+    end.
 
 
 init([Id]) ->
@@ -30,7 +35,10 @@ init([Id]) ->
 	   permanent, brutal_kill, worker,[com_central]}
 	 ]
 	}
-    }.    
+    }.
+
+stop() ->    
+    io:format("The stopping of the application is not implemented...").
 
 %% Function for generating a random number with desired length
 gen_random(0) ->

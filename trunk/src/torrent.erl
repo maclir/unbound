@@ -64,9 +64,11 @@ init({Id,Record}) ->
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
     receive
+	{choked, _NetPid} ->
+	  loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{im_free, NetPid} ->
-		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
-		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+	    spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
+	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	{peer_list,FromPid,ReceivedPeerList} ->
 	    io:fwrite("Got Peer List\n"),
 	    NewTrackerList = lists:merge(TrackerList,[FromPid]),
@@ -120,7 +122,6 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 				SenderPid ! {error, corrupt_data},
 	    		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 		end;
-	    
 	{'EXIT',FromPid,_Reason} ->
 	    io:fwrite("Got EXIT\n"),
 	    unregister_peer_process(FromPid,PidIndexList),
@@ -144,13 +145,13 @@ recalculateConnections(PidIndexList, NetPid) ->
     ConnectionList = getConnections(PidIndexList,[]),
     SortedConnections = lists:keysort(3,ConnectionList),
     Result = setConnections(SortedConnections,NetPid),
-	case Result of
-		downloading ->
-			ok;
-		busy ->
-			ok;
-		not_needed ->
-			NetPid ! {continue}
+    case Result of
+	    downloading ->
+		ok;
+	    busy ->
+		ok;
+	    not_needed ->
+		NetPid ! {continue}
 	end.
 
 getConnections([],ResultList) ->
@@ -181,8 +182,6 @@ setConnections([{Pid,List,_}|T],NetPid) ->
 				is_busy ->
 					%%connection was busy so continue!!
 		    		was_busy
-%% 				after 10000 ->
-%% 			    	setConnections(T,NetPid)
 			end;
 		true ->
     		setConnections(T,NetPid)

@@ -14,31 +14,34 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
     loop(Status,TcpPid,{0,0,0},TorrentPid,0,idle).
 
 
-loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->
+loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->    
 	TorrentPid ! {im_free, self()},
     receive
-		{download_block,FromPid,Index,Offset,Length} ->
-			FromPid ! {ok, downloading},
-			TcpPid ! {request, Index,Offset,Length},
-			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
-		{continue} ->
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,idle)
-	end;
+	{download_block,FromPid,Index,Offset,Length} ->
+		    FromPid ! {ok, downloading},
+		    TcpPid ! {request, Index,Offset,Length},
+		    loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
+	{continue} ->
+	    loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,idle)
+    after 2000 ->
+	    loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free)
+    end;
 loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
     receive
 		check_free ->
 			case PiecePid of
-				idle ->
+				idle when not element(1,Status) ->
 					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
-				_ ->
-					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
+				_ when element(1,Status) ->
+				TorrentPid ! {choked,self()},
+				loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+			    _ ->
+				loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
  			end;
 					
         got_unchoked ->
             case Status of
                 {_,true}->
-%                    {_Index,_Offset,_Length} = NextBlock,
-                    TorrentPid ! {get_block,StoredBitfield},
                     NewStatus= {false,true};
                 {_,false} ->
                     NewStatus = {false,false}
@@ -61,7 +64,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
                     NewStatus = {true,true};
                 {false, _} ->
                     TorrentPid ! interested,
-                    TorrentPid ! {get_block,StoredBitfield},
                     NewStatus = {false,true}
             end,
             loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
@@ -101,7 +103,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 	{download_block,FromPid,Index,Offset,Length} ->
 		FromPid ! {busy, self(),Offset},
 		loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
-
     after 120000 ->
 		TcpPid ! keep_alive
     end.

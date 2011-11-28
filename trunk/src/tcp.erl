@@ -104,7 +104,7 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 
 open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
-	spawn(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]).
+	spawn_link(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
