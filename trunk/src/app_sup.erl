@@ -7,10 +7,11 @@
 
 -module(app_sup).
 -behaviour(supervisor).
--export([start_link/0,gen_random/1,clientId/0]).
+-export([start_link/0,gen_random/1,clientId/0,stop/0]).
 -export([init/1]).
 
 start_link() ->
+    random:seed(erlang:now()),
     case whereis(unbound_torrent) of
 	undefined ->
 	    inets:start(),
@@ -18,7 +19,7 @@ start_link() ->
 	    Id = clientId(),
 	    supervisor:start_link({local,unbound_torrent},?MODULE,[Id]);
 	Pid ->
-	    io:fwrite("The Unbound Torrent client is already started!")
+	    io:fwrite("The Unbound Torrent client is already started with Pid ~p!",[Pid])
     end.
 
 
@@ -38,7 +39,8 @@ init([Id]) ->
     }.
 
 stop() ->    
-    io:format("The stopping of the application is not implemented...").
+    lists:foreach(fun({Id,_,_,_})-> supervisor:terminate_child(unbound_torrent,Id) end,supervisor:which_children(unbound_torrent)),
+    exit(unbound_torrent,shutdown).
 
 %% Function for generating a random number with desired length
 gen_random(0) ->
