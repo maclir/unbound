@@ -135,6 +135,8 @@ process_handshake(MasterPid, << 19, "BitTorrent protocol",
 						 Rest/binary >>)->
 		MasterPid ! "peer accepted handshake~n",
 		process_bitfield(Rest).
+process_bitfield(<<>>)->
+		MasterPid ! "got_empty_bitfield";
 process_bitfield(<<_BitFieldLengthPrefix:4/binary, Rest/binary>>)->
 		 BitFieldLengthPrefix = lists:nth(length(binary_to_list(_BitFieldLengthPrefix)),binary_to_list(_BitFieldLengthPrefix)),
 		 process_bitfield_payload(BitFieldLengthPrefix, Rest).
@@ -223,6 +225,8 @@ main_loop(Socket, MasterPid)->
 		{tcp,_,<<3:32,9:8,Port:16>>}->
 			MasterPid ! {got_port,self(),Port},
 			main_loop(Socket,MasterPid);
+		{tcp_closed,_}->
+			MasterPid ! {'EXIT',"port_closed"};
 		stop ->
 			MasterPid ! stopping; %% this is made to stop the slave process. The loop is not being called again here.
 		Smth ->
@@ -233,6 +237,8 @@ main_loop(Socket, MasterPid)->
 process_block(MasterPid, Length, Result)->
 	if byte_size(Result)==0 ->
 		receive
+		{tcp_closed,_}->
+			MasterPid ! {'EXIT',"port_closed"};
 		{tcp,_,<<_LengthPrefix:32,
 				7:8, %% pattern matching the response, when we requested a piece
 				_PieceIndex:32,	%% variables names speak for themselves
