@@ -62,15 +62,15 @@ merge_data(TorrentPath, [{BinPath, StartPos, Length}|T], BinaryData) ->
 
 
 %% Updating the downloaded file's length in the db
-alter_record(Length, Path, Records) ->
-	[Torrent|_] = torrent_db:find_by_SHA1(Records#torrent.info_sha),
-	Files = Torrent#torrent.info#info.files,
+alter_record(Length, Path, Record) ->
+	Files = Record#torrent.info#info.files,
 	Tuple = lists:keyfind(Path, 4, Files),
 	{file, FileLength, MD5, Path, LengthComplete} = Tuple,
 	NewLength = LengthComplete + Length,
 	NewTuple = {file, FileLength, MD5, Path, NewLength},
 	NewList = lists:keyreplace(Path, 4, Files, NewTuple),
-	Records#torrent{info = (Records#torrent.info)#info{files = NewList}}.
+	NewRecord = Record#torrent{info = (Record#torrent.info)#info{files = NewList}},
+	NewRecord.
 												
 %% co-author: Alireza Pazirandeh
 %% The function for calculating the positions of of the pieces inside the files

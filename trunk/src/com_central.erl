@@ -18,6 +18,7 @@ start_link() ->
     gen_server:start_link({local,?MODULE},?MODULE,[],[]).
 
 init(_Args) ->
+	io:fwrite("Com central started~n"),
     {ok,[]}.
 
 start_download() ->

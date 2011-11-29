@@ -7,6 +7,7 @@
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
+	io:fwrite("Nettransfer started~n"),
 	TcpPid=tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId),
 	io:format("~p:~p~n", [self(),DestinationIp]),
 	Choked = true,
@@ -19,7 +20,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->
 	TorrentPid ! {im_free, self()},
 	receive
 		{download_block,FromPid,Index,Offset,Length} ->
-			io:fwrite("~p im downloading~n", [self()]),
 			FromPid ! {ok, downloading},
 			TcpPid ! {request, Index,Offset,Length},
 			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);

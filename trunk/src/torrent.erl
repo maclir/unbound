@@ -56,7 +56,13 @@ init({Id,Record}) ->
 	IndexList = bitfield:to_indexlist(OurBitfield,normal),
 	PieceLength = Record#torrent.info#info.piece_length,
 	Length = Record#torrent.info#info.length,
-	LastPieceSize = Length rem PieceLength,
+	TempLastPieceSize = Length rem PieceLength,
+	case TempLastPieceSize of
+		0 ->
+			LastPieceSize = PieceLength;
+		_ ->
+			LastPieceSize = TempLastPieceSize
+	end,
 	PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
 	Announce = lists:merge(Record#torrent.announce_list,[Record#torrent.announce]),
 	spawn_trackers(Announce,Record#torrent.info_sha,Id),
@@ -107,6 +113,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok, TempRecord} ->
 					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
+					io:fwrite("....~p~n....~n",[NewBitField]),
 					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
 					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
 					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
@@ -203,11 +210,11 @@ register_peer_process(FromPid,[{H}|T],PidIndexList) ->
 register_peer_process(_PeerPid,[],_PidIndexList) ->
 	ok.
 
-bind_pid_to_index([{H}|[]],PieceLength,LastPieceSize) ->
-	[{H,spawn(piece,init,[H,PieceLength,self(), LastPieceSize])}];
+bind_pid_to_index([{H}|[]],_PieceLength,LastPieceSize) ->
+	[{H,spawn(piece,init,[H,self(), LastPieceSize])}];
 
 bind_pid_to_index([{H}|T],PieceLength, LastPieceSize) ->
-	[{H,spawn(piece,init,[H,PieceLength,self(), PieceLength])}|bind_pid_to_index(T,PieceLength, LastPieceSize)].
+	[{H,spawn(piece,init,[H,self(), PieceLength])}|bind_pid_to_index(T,PieceLength, LastPieceSize)].
 
 is_intrested(PeerIndexList, PidIndexList) ->
 	length([Index1 || {Index1} <- PeerIndexList, {Index2, _Pid} <- PidIndexList, Index1 == Index2]) > 0.

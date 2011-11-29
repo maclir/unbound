@@ -16,10 +16,9 @@ write(PieceId, Data, Records, Done) ->
 			StartPos = (PieceId * Records#torrent.info#info.piece_length),
 			PieceLength = byte_size(Data),		
 			Result = file_split:start(Data, StartPos, PieceLength, TempFolder, Records),
-			
 			if 
 				Done == true ->
-					move_to_folder(Records#torrent.info#info.files, TempFolder, DestFolder);
+					move_to_folder(Records#torrent.info#info.files, TempFolder, DestFolder),
 					Result;
 				Done == false ->	
 					Result

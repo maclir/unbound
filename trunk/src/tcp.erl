@@ -137,8 +137,8 @@ process_handshake(MasterPid, << 19, "BitTorrent protocol",
 		process_bitfield(Rest).
 process_bitfield(<<>>)->
 		exit(self(),"Empty bitfield");
-process_bitfield(<<_BitFieldLengthPrefix:4/binary, Rest/binary>>)->
-		 BitFieldLengthPrefix = lists:nth(length(binary_to_list(_BitFieldLengthPrefix)),binary_to_list(_BitFieldLengthPrefix)),
+process_bitfield(<<BitFieldLengthPrefix:32, Rest/binary>>)->
+%% 		 BitFieldLengthPrefix = lists:nth(length(binary_to_list(_BitFieldLengthPrefix)),binary_to_list(_BitFieldLengthPrefix)),
 		 process_bitfield_payload(BitFieldLengthPrefix, Rest).
 process_bitfield_payload(BitFieldLengthPrefix, Rest)->
 		<<BitField:BitFieldLengthPrefix/binary,Rest1/binary>> = Rest,
