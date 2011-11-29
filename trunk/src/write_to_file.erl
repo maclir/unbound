@@ -19,7 +19,7 @@ write(PieceId, Data, Records, Done) ->
 			
 			if 
 				Done == true ->
-%% 					move_to_folder(Records#torrent.info#info.files, TempFolder, DestFolder);
+					move_to_folder(Records#torrent.info#info.files, TempFolder, DestFolder);
 					Result;
 				Done == false ->	
 					Result

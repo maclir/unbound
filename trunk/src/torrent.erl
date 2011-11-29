@@ -105,11 +105,11 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 		{dowloaded,SenderPid,PieceIndex,Data} ->
 			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
-				{ok,done} ->
-					NewBitField = bitfield:flip_bit(PieceIndex, Record#torrent.info#info.bitfield),
-					io:fwrite("~p~n", [NewBitField]),
-					NewRecord = Record#torrent{info = (Record#torrent.info)#info{bitfield = NewBitField}},
-					torrent_db:delete_by_SHA1(Record#torrent.info_sha),
+				{ok, TempRecord} ->
+					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
+					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
+					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
+					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
 					lists:keydelete(PieceIndex,1,PidIndexList),
 					SenderPid ! {ok, done},
@@ -119,7 +119,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 					loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 			end;
 		{'EXIT',FromPid,Reason} ->
-			io:fwrite("Got EXIT: ~p\n", [Reason]),
+			io:fwrite("~p Got EXIT: ~p\n", [FromPid, Reason]),
 			unregister_peer_process(FromPid,PidIndexList),
 			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 	end.

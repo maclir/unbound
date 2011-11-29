@@ -238,7 +238,6 @@ process_block(MasterPid, Length, Result)->
 	if byte_size(Result)==0 ->
 		receive
 		{tcp_closed,_}->
-			io:fwrite("IM CLOSING~n"),
 			exit(self(), "port_closed");
 		{tcp,_,<<_LengthPrefix:32,
 				7:8, %% pattern matching the response, when we requested a piece

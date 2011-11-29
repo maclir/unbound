@@ -39,10 +39,14 @@ compare(Index,<<_FirstBit:1,Rest1/bitstring>>,<<_SecondtBit:1,Rest2/bitstring>>,
 	compare(Index+1, Rest1, Rest2, List).
 
 flip_bit(Index, <<Bitfield/bitstring>>) ->
-	BitSize = bit_size(Bitfield),
-	<<OrBitString:BitSize>> = <<(trunc(math:pow(2, ((BitSize-1)-Index)))):BitSize>>,
-	<<BitfieldInt:BitSize>> = Bitfield,
-	<<(OrBitString bxor BitfieldInt):BitSize>>.
+	<<Header:Index/bitstring, FlipBit:1/bitstring, Rest/bitstring>> = Bitfield,
+	case FlipBit of
+		<<0:1>> ->
+			NewFlipBit = <<1:1>>;
+		<<1:1>> ->
+			NewFlipBit = <<0:1>>
+	end,
+	<<Header/bitstring, NewFlipBit/bitstring, Rest/bitstring>>.
 
 %% Test Code:
 -include_lib("eunit/include/eunit.hrl").

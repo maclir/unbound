@@ -19,6 +19,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->
 	TorrentPid ! {im_free, self()},
 	receive
 		{download_block,FromPid,Index,Offset,Length} ->
+			io:fwrite("~p im downloading~n", [self()]),
 			FromPid ! {ok, downloading},
 			TcpPid ! {request, Index,Offset,Length},
 			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
@@ -31,7 +32,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 	receive
 		check_free ->
 			case PiecePid of
-				idle when not element(1,Status) ->
+				idle when (not element(1,Status) and element(2,Status)) ->
 					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
 				_ when element(1,Status) ->
 					TorrentPid ! {choked,self()},
@@ -72,7 +73,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 					NewStatus = {false,false}
 			end,
 			case PiecePid of
-				idle ->
+				idle when (element(2, NewStatus))->
 					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
 				_ ->
 					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
