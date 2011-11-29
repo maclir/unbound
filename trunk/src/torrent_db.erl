@@ -1,6 +1,7 @@
 -module(torrent_db).
 -export([init/0, init_table/1, add/1, add/8, get_torrent_by_id/1, create_info_record/7, 
-	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, delete_by_SHA1/1, find_by_SHA1/1]).
+	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, 
+	 delete_by_SHA1/1, find_by_SHA1/1, get_all_torrents/0]).
 -import(utils_yavor).
 -include("torrent_db_records.hrl").
 -include_lib("stdlib/include/qlc.hrl").
@@ -156,6 +157,10 @@ find_by_SHA1(SHA)->
     mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
 							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}).
 
+get_all_torrents()->
+    mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
+							creation_date='_', comment='_', created_by='_', info_sha='_', dir='_', status='_'}).
+
 %% Test Code:
 -include_lib("eunit/include/eunit.hrl").
 
@@ -191,6 +196,7 @@ manipulation_test_()->
      ?_assert(delete(1)==ok), %% Delete torrent entry with id==1 (the one added second).
      ?_assert(num_torrents()==2),
      ?_assert(delete_by_SHA1("first_sha")==ok),
-     ?_assert(num_torrents()==1)
+     ?_assert(num_torrents()==1),
+     ?_assertMatch([_], get_all_torrents())
     ]. 
      
