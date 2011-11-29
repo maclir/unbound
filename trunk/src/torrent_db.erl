@@ -51,12 +51,12 @@ add(Info, InfoSHA, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Enc
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 add(Torrent) -> 
    % Torrent#torrent.id = num_torrents(),
-    Result = mnesia:dirty_write(Torrent#torrent{id=get_last()+1}),
+    {atomic, Result} = mnesia:transaction(fun()-> mnesia:write(Torrent#torrent{id=get_last()+1}) end),
     Result.
     
 %% Returns the #torrent with the specified id.
 get_torrent_by_id(Id) ->
-    [Result] = mnesia:dirty_read(torrent, Id),
+    {atomic, [Result]} = mnesia:transaction(fun()-> mnesia:read(torrent, Id) end),
     Result.
     
 
@@ -82,12 +82,12 @@ create_file_record(Length, Md5, Path)->
 num_torrents()->
     num_torrents(0, -1).
 num_torrents(Num, Prev)->
-    case mnesia:dirty_next(torrent, Prev) of
-	'$end_of_table'->
+    case mnesia:transaction(fun()-> mnesia:next(torrent, Prev) end) of
+	{atomic, '$end_of_table'}->
 	    Num;
-	Next when Next =/= Prev ->
+	{atomic, Next} when Next =/= Prev ->
 	    num_torrents(Num+1, Next);
-	Next ->
+	{atomic, Next} ->
 	    num_torrents(Num, Next)
     end.
 %% Returns the last id in the table.
@@ -145,21 +145,28 @@ delete([H|T])->
 delete([])->
     ok;
 delete(Id) ->
-    mnesia:dirty_delete({torrent, Id}),
-    ok.
+    {atomic, Result} = mnesia:transaction(fun()-> mnesia:delete({torrent, Id}) end),
+    Result.
 
 delete_by_SHA1(SHA)->
-    Match = mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
-							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}),
+    {atomic, Match} = mnesia:transaction(fun()-> mnesia:match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
+							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}, read) end),
     delete(Match).
 
 find_by_SHA1(SHA)->
-    mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
-							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}).
+    {atomic, Match} = mnesia:transaction(fun()-> mnesia:match_object(torrent, 
+									   #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
+										    creation_date='_', comment='_', created_by='_', info_sha=SHA, 
+										    dir='_', status='_'}, read) end),
+    
+    Match.
 
 get_all_torrents()->
-    mnesia:dirty_match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
-							creation_date='_', comment='_', created_by='_', info_sha='_', dir='_', status='_'}).
+    {atomic, Match} = mnesia:transaction(fun()-> mnesia:match_object(torrent, 
+									   #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
+										    creation_date='_', comment='_', created_by='_', info_sha='_', 
+										    dir='_', status='_'}, read) end),
+    Match.
 
 %% Test Code:
 -include_lib("eunit/include/eunit.hrl").
@@ -177,7 +184,7 @@ manipulation_test_()->
 			    "date", "comment", "created by", "encoding")== ok), %% Add a single-file entry to torrent table, id is 0. 
      ?_assert(num_torrents()==1), %% Get the number of torrent entries currently in the table.
      ?_assertMatch(#torrent{info=#info{name="first_torrent"}}, get_torrent_by_id(0)), %% Get torrent with id=0, should match the one that was added.
-     ?_assertException(error, {badmatch,[]}, get_torrent_by_id(1)), %% Trying to access torrent which doesn't exist. Crashes with badmatch error.
+     ?_assertException(error, {badmatch,_}, get_torrent_by_id(1)), %% Trying to access torrent which doesn't exist. Crashes with badmatch error.
      ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="second_torrent", length=0, md5sum="md5sum", 
 			 files=[#file{path="filepath1", length=2500}, #file{path="filepath2", length=4500}, #file{path="filepath3", length=13500}]}, 
 		   "second_sha", "announce", ["announce", "list"], 
@@ -185,7 +192,7 @@ manipulation_test_()->
      ?_assert(num_torrents()==2), %% Get the number of torrent entries currently in the table.
      ?_assert(get_size_by_id(0)==10000), %% Get correct size of single file entry.
      ?_assert(get_size_by_id(1)==20500), %% Get correct size of multi-file entry.
-     ?_assertException(error, {badmatch,[]}, get_size_by_id(2)), %% Trying to get the size of a torrent which doesn't exist.
+     ?_assertException(error, {badmatch,_}, get_size_by_id(2)), %% Trying to get the size of a torrent which doesn't exist.
      ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="third_torrent", length=5000, md5sum="md5sum", files=[]}, 
 			    "third_sha", "announce", ["announce", "list"], 
 			    "date", "comment", "created by", "encoding")== ok), %% Add another single-file entry to the torrent table, id is 2.
