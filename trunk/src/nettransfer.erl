@@ -112,7 +112,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
 				_ ->
 					FromPid ! {busy, self(),Offset},
-					io:fwrite("~p: busy~n" ,[self()]),
+					io:fwrite("~p: ~p  busy~n" ,[PiecePid, self()]),
 					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
 			end	
 		after 120000 ->
