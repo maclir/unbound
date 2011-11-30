@@ -57,9 +57,12 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function
     Left = "left=" ++ "0" ++ "&",
     Compact = "compact=" ++ "0" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
-    Event = "event=" ++ Eventt,
-    RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event,
-
+	if Eventt /= "none" ->
+		Event = "event=" ++ Eventt,
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event;
+	true->
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId
+	end,
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
@@ -153,7 +156,7 @@ process_have_messages(<<>>)->
 process_have_messages(<<HaveMessage:9/binary, Rest/binary>>)->
 		self() ! {tcp, self(), HaveMessage},
 		process_have_messages(Rest);
-process_have_messages(<<MessageWhichIsLessThan9Bytes>>)->
+process_have_messages(<<MessageWhichIsLessThan9Bytes/binary>>)->
 		self() ! {tcp, self(), MessageWhichIsLessThan9Bytes}.
 	
 %% this loop processes ALL messages. The ones it gets from the peer AND the ones we send to it, from the parent process
