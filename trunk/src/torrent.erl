@@ -71,7 +71,8 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	receive
 	    {get_statistics,Pid} ->
-		Pid ! {statistics,0,0,0};
+		Pid ! {statistics,0,0,0},
+	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {choked, _NetPid} ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {im_free, NetPid} ->
@@ -137,7 +138,8 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 spawn_trackers([],_,_) ->
 	ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
-	spawn(tracker,init,[self(),Announce,InfoHash,Id]),
+    Self = self(),
+	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
 	spawn_trackers(AnnounceList,InfoHash,Id).
 
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->

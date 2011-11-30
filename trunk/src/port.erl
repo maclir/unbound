@@ -38,7 +38,5 @@ init() ->
     accept(ListenSocket).
 
 accept(ListenSocket) ->
-    {ok,_Socket} = gen_tcp:accept(ListenSocket),
-    spawn_link(request_handler,start_link,[self()]),
     accept(ListenSocket).
 
