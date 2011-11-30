@@ -72,7 +72,7 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	receive
 	    {get_statistics,Pid} ->
-		Pid ! {statistics,0,0,0}
+		Pid ! {statistics,0,0,0},
 		    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {choked, _NetPid} ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
