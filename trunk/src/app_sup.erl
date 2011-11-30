@@ -30,7 +30,7 @@ init([Id]) ->
 	   permanent, brutal_kill, worker,[torrent_mapper]},
 	  {torrent_loader,{torrent,start_link_loader,[Id]},
 	   transient, brutal_kill, worker,[torrent_loader]},
-	  {port_sup,{port_sup,start_link,[]},
+	  {port_sup,{port_sup,start_link,[Id]},
 	   permanent, infinity, supervisor,[port_sup]},
 	  {com_central,{com_central,start_link,[]},
 	   permanent, brutal_kill, worker,[com_central]}

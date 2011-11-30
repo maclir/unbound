@@ -34,12 +34,11 @@ start_link()->
     {ok,spawn_link(?MODULE,init,[])}.
 
 init() ->
-    io:fwrite("Port opened\n"),
-    loop().
+    {ok, ListenSocket} = gen_tcp:listen(6769, [binary, {active, false}]),
+    accept(ListenSocket).
 
-loop()->
-    receive
-	{test} ->
-	    ok
-    end.
+accept(ListenSocket) ->
+    {ok,_Socket} = gen_tcp:accept(ListenSocket),
+    spawn_link(request_handler,start_link,[self()]),
+    accept(ListenSocket).
 

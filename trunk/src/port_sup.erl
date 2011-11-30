@@ -9,17 +9,17 @@
 -module(port_sup).
 -behaviour(supervisor).
 
--export([start_link/0]).
+-export([start_link/1]).
 -export([init/1]).
 
-start_link() ->
-    supervisor:start_link(?MODULE,[]).
+start_link(ClientId) ->
+    supervisor:start_link(?MODULE,init,[ClientId]).
 
-init(_Args) ->
+init(_ClientId) ->
     io:fwrite("Port Supervisor started\n"),
     {ok,{{one_for_one,1,10},
-	 [{port_loader,{port,start_link_loader,[]},
-	   transient,brutal_kill,worker,[port_loader]}
+	 [{port,{port,start_link,[]},
+	   transient,brutal_kill,worker,[port]}
 	 ]
 	}
     }.
