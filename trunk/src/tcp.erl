@@ -152,7 +152,9 @@ process_have_messages(<<>>)->
 		ok;
 process_have_messages(<<HaveMessage:9/binary, Rest/binary>>)->
 		self() ! {tcp, self(), HaveMessage},
-		process_have_messages(Rest).
+		process_have_messages(Rest);
+process_have_messages(<<MessageWhichIsLessThan9Bytes>>)->
+		self() ! {tcp, self(), MessageWhichIsLessThan9Bytes}.
 	
 %% this loop processes ALL messages. The ones it gets from the peer AND the ones we send to it, from the parent process
 %% to send a message from the parent process, as a common structure: <process name> ! <message body>, for example: slave ! keep_alive.	
