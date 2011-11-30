@@ -13,7 +13,7 @@
 -export([init/1]).
 
 start_link(ClientId) ->
-    supervisor:start_link(?MODULE,init,[ClientId]).
+    supervisor:start_link(?MODULE,[ClientId]).
 
 init(_ClientId) ->
     io:fwrite("Port Supervisor started\n"),

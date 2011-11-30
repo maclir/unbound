@@ -64,72 +64,74 @@ init({Id,Record}) ->
 			LastPieceSize = TempLastPieceSize
 	end,
 	PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
-	Announce = lists:merge(Record#torrent.announce_list,[Record#torrent.announce]),
+	Announce = lists:merge(lists:flatten(Record#torrent.announce_list),[Record#torrent.announce]),
 	spawn_trackers(Announce,Record#torrent.info_sha,Id),
 	loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	receive
-		{choked, _NetPid} ->
+	    {get_statistics,Pid} ->
+		Pid ! {statistics,0,0,0};
+	    {choked, _NetPid} ->
+		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+	    {im_free, NetPid} ->
+		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
+		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+	    {peer_list,FromPid,ReceivedPeerList} ->
+		io:fwrite("Got Peer List\n"),
+		NewTrackerList = lists:merge(TrackerList,[FromPid]),
+		NewPeers = ReceivedPeerList -- PeerList,
+		NewPeerList = NewPeers ++ PeerList,
+		spawn_connections(NewPeers,Record#torrent.info_sha,Id),
+		loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList,Id);
+	    
+	    {bitfield,FromPid,ReceivedBitfield} ->
+		NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
+		<<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
+		PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
+		Intrested = is_intrested(PeerIndexList, PidIndexList),
+		if 
+		    Intrested ->
+			FromPid ! is_interested,
+			FromPid ! check_free;
+		    true ->
+			FromPid ! not_interested
+		end,
+		register_peer_process(FromPid,PeerIndexList,PidIndexList),
+		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+	    {have,FromPid,Index} ->
+		Intrested = is_intrested([{Index}], PidIndexList),
+		if 
+		    Intrested ->
+			FromPid ! is_interested,
+			FromPid ! check_free;
+		    true ->
+			FromPid ! not_interested
+		end,
+		register_peer_process(FromPid,[{Index}],PidIndexList),
 			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-		{im_free, NetPid} ->
-			spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
-			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-		{peer_list,FromPid,ReceivedPeerList} ->
-			io:fwrite("Got Peer List\n"),
-			NewTrackerList = lists:merge(TrackerList,[FromPid]),
-			NewPeers = ReceivedPeerList -- PeerList,
-			NewPeerList = NewPeers ++ PeerList,
-			spawn_connections(NewPeers,Record#torrent.info_sha,Id),
-			loop(Record,StatusRecord,PidIndexList,NewTrackerList,NewPeerList,Id);
-		
-		{bitfield,FromPid,ReceivedBitfield} ->
-			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-			<<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
-			PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
-			Intrested = is_intrested(PeerIndexList, PidIndexList),
-			if 
-				Intrested ->
-					FromPid ! is_interested,
-					FromPid ! check_free;
-				true ->
-					FromPid ! not_interested
-			end,
-			register_peer_process(FromPid,PeerIndexList,PidIndexList),
-			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-		{have,FromPid,Index} ->
-			Intrested = is_intrested([{Index}], PidIndexList),
-			if 
-				Intrested ->
-					FromPid ! is_interested,
-					FromPid ! check_free;
-				true ->
-					FromPid ! not_interested
-			end,
-			register_peer_process(FromPid,[{Index}],PidIndexList),
-			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-		{dowloaded,SenderPid,PieceIndex,Data} ->
-			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
-			case write_to_file:write(PieceIndex,Data,Record,Done) of
-				{ok, TempRecord} ->
-					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
-					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
-%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
-%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
-					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
-					torrent_db:add(NewRecord),
-					lists:keydelete(PieceIndex,1,PidIndexList),
-					SenderPid ! {ok, done},
-					loop(NewRecord,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
-				{error, _Reason} ->
+	    {dowloaded,SenderPid,PieceIndex,Data} ->
+		Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
+		case write_to_file:write(PieceIndex,Data,Record,Done) of
+		    {ok, TempRecord} ->
+			NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
+			NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
+			%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
+			%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
+			NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
+			torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+			torrent_db:add(NewRecord),
+			lists:keydelete(PieceIndex,1,PidIndexList),
+			SenderPid ! {ok, done},
+			loop(NewRecord,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+		    {error, _Reason} ->
 					SenderPid ! {error, corrupt_data},
-					loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
-			end;
-		{'EXIT',FromPid,_Reason} ->
-%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
-			unregister_peer_process(FromPid,PidIndexList),
 			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
+		end;
+	    {'EXIT',FromPid,_Reason} ->
+		%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
+		unregister_peer_process(FromPid,PidIndexList),
+		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 	end.
 
 spawn_trackers([],_,_) ->
