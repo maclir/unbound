@@ -10,7 +10,7 @@ write(PieceId, Data, Records, Done) ->
 		true ->
 			%%TODO get the TempFolder from settings db
 			{ok, Dir} = file:get_cwd(),
-			TempFolder = Dir ++ "/Unbound_Test/" ,
+			TempFolder = Dir ++ "/Unbound_Test/" ++ info_hash:to_hex(Records#torrent.info_sha) ++ "/" ,
 			DestFolder = Dir ++ "/Unbound_Dest/",
 			
 			StartPos = (PieceId * Records#torrent.info#info.piece_length),
@@ -39,7 +39,8 @@ shas_split(Shas, Index) ->
 		NeededSha.
 
 %% Move the downloaded data from temporary folder into destination folder
-move_to_folder([], _, _) ->
+move_to_folder([], TempFolder, _) ->
+	delete_files(["/"], TempFolder),
 	{ok, done};
 move_to_folder([H|T], TempFolder, DestFolder) ->
 	{Name, FilePath}  = file_split:path_create(H#file.path, ""), 
@@ -48,3 +49,16 @@ move_to_folder([H|T], TempFolder, DestFolder) ->
 	filelib:ensure_dir(DestFolder ++ FilePath),
 	file:rename(TempFilePath, DestFilePath),
 	move_to_folder(T, TempFolder, DestFolder).
+
+delete_files([], _) ->
+	{ok, done};
+delete_files([File|T],Path) ->
+	case file:delete(Path ++ File) of
+		ok ->
+			delete_files(T, Path);
+		{error, _Reason} ->
+			{ok, Files} = file:list_dir(Path ++ File),
+			delete_files(Files, Path ++ File ++ "/"),
+			file:del_dir(Path ++ File),
+			delete_files(T, Path)
+	end.
