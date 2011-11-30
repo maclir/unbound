@@ -23,6 +23,9 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->
 			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
 		{continue} ->
 			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,idle)
+		after 10000 ->
+			io:fwrite("~p:saying im free again~n" ,[self()]),
+			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free)
 	end;
 loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 	receive
@@ -110,7 +113,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
 				_ ->
 					FromPid ! {busy, self(),Offset},
-					io:fwrite("~p: ~p  busy~n" ,[PiecePid, self()]),
+					io:fwrite("~p:is busy to ~p because it is occupied by ~p~n" ,[self(), FromPid,PiecePid]),
 					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
 			end	
 		after 120000 ->

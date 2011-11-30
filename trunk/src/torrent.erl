@@ -8,7 +8,7 @@
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
 -export([start_link/2,init/1]).
--export([recalculateConnections/2]).
+-export([recalculateConnections/3]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -77,7 +77,7 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	    {choked, _NetPid} ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {im_free, NetPid} ->
-		spawn(torrent,recalculateConnections,[PidIndexList,NetPid]),
+		spawn(torrent,recalculateConnections,[PidIndexList,NetPid,0]),
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {peer_list,FromPid,ReceivedPeerList} ->
 		io:fwrite("Got Peer List\n"),
@@ -151,20 +151,27 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id) ->
 spawn_connections([],_InfoHash,_Id) ->
 	[].
 
-recalculateConnections(PidIndexList, NetPid) ->
-	ConnectionList = getConnections(PidIndexList,[],10),
-	SortedConnections = lists:keysort(3,ConnectionList),
-	Result = setConnections(SortedConnections,NetPid),
-	case Result of
-		downloading ->
-			ok;
-		was_busy ->
-			ok;
-		not_needed ->
-			io:fwrite("not needed~n"),			
+recalculateConnections(PidIndexList, NetPid, Start) ->
+	if
+		length(PidIndexList) > Start ->
+			ConnectionList = getConnections(lists:nthtail(Start, PidIndexList),[],40),
+			SortedConnections = lists:keysort(3,ConnectionList),
+			Result = setConnections(SortedConnections,NetPid),
+			case Result of
+				downloading ->
+					ok;
+				was_busy ->
+					ok;
+				not_needed ->
+					recalculateConnections(PidIndexList, NetPid, Start + 1)
+			end;
+		true ->
+			io:fwrite("haha~n"),
 			NetPid ! {continue}
 	end.
 
+getConnections([],ResultList,_) ->
+	ResultList;
 getConnections(_,ResultList,0) ->
 	ResultList;
 
@@ -180,7 +187,6 @@ getConnections([{_Index,Pid}|Tail],ResultList,GetCount) ->
 	end.
 
 setConnections([],_) ->
-	io:fwrite("haha~n"),
 	not_needed;
 setConnections([{Pid,List,_}|T],NetPid) ->
 	Result = lists:member(NetPid, List),
