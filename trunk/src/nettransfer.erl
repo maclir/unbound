@@ -7,9 +7,7 @@
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
-	io:fwrite("Nettransfer started~n"),
 	TcpPid=tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId),
-	io:format("~p:~p~n", [self(),DestinationIp]),
 	Choked = true,
 	Interested = false,
 	Status= {Choked,Interested},
@@ -45,7 +43,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 		is_interested ->
 			{OldChoked, OldInterested} = Status,
 			if not OldInterested ->
-				io:fwrite("~p: sending interested!~n", [self()]),
 				TcpPid ! interested;
 			   true ->
 				   ok
@@ -65,7 +62,6 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
 		
 		{got_unchoked, _FromPid} ->
-			io:fwrite("~p: unchocked!~n", [self()]),
 			case Status of
 				{_,true}->
 					NewStatus= {false,true};
@@ -110,6 +106,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
 		{download_block,FromPid,Index,Offset,Length} ->
 			FromPid ! {busy, self(),Offset},
+			io:fwrite("~p: busy~n" ,[self()]),
 			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
 		after 120000 ->
 			TcpPid ! keep_alive

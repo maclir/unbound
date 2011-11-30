@@ -2,21 +2,21 @@
 %% Created: Nov 18, 2011
 
 -module(file_split).
--export([start/5, path_create/2, request_data/3, test/0]).
+-export([start/5, path_create/2, request_data/3]).
 -include("torrent_db_records.hrl").
 
 
-test() ->
-	io:fwrite("~p~n" ,[torrent_db:get_all_torrents()]).
 
 %% Starting function
 start(Data, StartPos, PieceLength, TempPath, Records) ->
 	if
-		is_list(Records#torrent.info#info.files) ->
+		(is_list(Records#torrent.info#info.files) and Records#torrent.info#info.files /= [] and is_record(Records#torrent.info#info.files, file)) ->
 			Files = calc_files(StartPos, PieceLength, Records#torrent.info#info.files, 0, []);
 		true ->
 			Files = [{[Records#torrent.info#info.name], StartPos, PieceLength}]
 	end,
+	
+
 	write_to_file(Files, Data, TempPath, Records).
 
 %% Function to write the data to the file
@@ -30,7 +30,12 @@ write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	{ok, Index} = file:open(FilePath ++ Name, [read, write, raw]),	
 	file:pwrite(Index, StartPos, Data),
 	file:close(Index),
-	NewRecord = alter_record(Length, BinaryPath, Records),
+	if
+		(is_list(Records#torrent.info#info.files) and Records#torrent.info#info.files /= [] and is_record(Records#torrent.info#info.files, file)) ->
+			NewRecord = alter_record(Length, BinaryPath, Records);
+		true ->
+			NewRecord = Records
+	end,
 	write_to_file(T, Rest, TempPath, NewRecord).
 
 %% Function to change the binary data into Strings and create the path for saving the data on the HD

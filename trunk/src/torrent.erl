@@ -113,8 +113,9 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok, TempRecord} ->
 					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
-					io:fwrite("....~p~n....~n",[NewBitField]),
 					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
+%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
+%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
 					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
 					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
@@ -125,8 +126,8 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 					SenderPid ! {error, corrupt_data},
 					loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 			end;
-		{'EXIT',FromPid,Reason} ->
-			io:fwrite("~p Got EXIT: ~p\n", [FromPid, Reason]),
+		{'EXIT',FromPid,_Reason} ->
+%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			unregister_peer_process(FromPid,PidIndexList),
 			loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id)
 	end.
@@ -154,6 +155,7 @@ recalculateConnections(PidIndexList, NetPid) ->
 		was_busy ->
 			ok;
 		not_needed ->
+			io:fwrite("not needed~n"),			
 			NetPid ! {continue}
 	end.
 
@@ -164,7 +166,9 @@ getConnections([{_Index,Pid}|Tail],ResultList) ->
 	Pid ! {connectionsRequest,self()},
 	receive
 		{connection_list,ConnectionList} ->
-			getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList])
+			getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList]);
+		{not_needed} ->
+			getConnections(Tail,ResultList)	
 		after 50 ->
 			getConnections(Tail,ResultList)
 	end.

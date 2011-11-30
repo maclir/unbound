@@ -52,7 +52,6 @@ loop(Piece, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,LastBlockSiz
 			NewPiece = [{OurOffset, FinalBlock}|Piece],
 			case Wanted ++ NewDownloading of
 				[] ->
-					io:fwrite("~p~n", [length(lists:keysort(1,NewPiece))]),
 					<<FinalPiece/binary>> = construct_piece(lists:keysort(1,NewPiece), <<>>),
 					TorrentPid ! {dowloaded,self(),PieceIndex,FinalPiece},
 					receive
@@ -67,7 +66,13 @@ loop(Piece, PieceIndex, PeerPids, BlockStatus, TorrentPid,PieceSize,LastBlockSiz
 					loop(NewPiece,PieceIndex,PeerPids,NewBlockStatus,TorrentPid,PieceSize,LastBlockSize)
 			end;
 		{connectionsRequest,Pid} ->
-			Pid ! {connection_list,PeerPids},
+			{Wanted, _Downloading, _Finished} = BlockStatus,
+			case Wanted of
+				[] ->
+					Pid ! {not_needed};
+				_ ->
+					Pid ! {connection_list,PeerPids}
+			end,
 			loop(Piece,PieceIndex,PeerPids,BlockStatus,TorrentPid,PieceSize,LastBlockSize);
 		{new_net_pid,AssignerPid,NetPid} ->
 			{Wanted, _Downloading, _Finished} = BlockStatus,
