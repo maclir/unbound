@@ -105,9 +105,16 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 			PiecePid ! {block,self(),Offset,Length,Data},
 			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
 		{download_block,FromPid,Index,Offset,Length} ->
-			FromPid ! {busy, self(),Offset},
-			io:fwrite("~p: busy~n" ,[self()]),
-			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
+			case PiecePid of
+				idle ->
+					FromPid ! {ok, downloading},
+					TcpPid ! {request, Index,Offset,Length},
+					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
+				_ ->
+					FromPid ! {busy, self(),Offset},
+					io:fwrite("~p: busy~n" ,[self()]),
+					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
+			end	
 		after 120000 ->
 			TcpPid ! keep_alive
 	end.
