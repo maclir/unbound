@@ -28,7 +28,7 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed");
 	    {get_peers} ->
 		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none")
-	after Interval*1000 ->
+	after Interval*10 ->
 		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none")
 	end.
 

@@ -152,7 +152,7 @@ spawn_connections([],_InfoHash,_Id) ->
 	[].
 
 recalculateConnections(PidIndexList, NetPid) ->
-	ConnectionList = getConnections(PidIndexList,[]),
+	ConnectionList = getConnections(PidIndexList,[],10),
 	SortedConnections = lists:keysort(3,ConnectionList),
 	Result = setConnections(SortedConnections,NetPid),
 	case Result of
@@ -165,18 +165,18 @@ recalculateConnections(PidIndexList, NetPid) ->
 			NetPid ! {continue}
 	end.
 
-getConnections([],ResultList) ->
+getConnections(_,ResultList,0) ->
 	ResultList;
 
-getConnections([{_Index,Pid}|Tail],ResultList) ->
+getConnections([{_Index,Pid}|Tail],ResultList,GetCount) ->
 	Pid ! {connectionsRequest,self()},
 	receive
 		{connection_list,ConnectionList} ->
-			getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList]);
+			getConnections(Tail,[{Pid,ConnectionList,length(ConnectionList)}|ResultList],GetCount-1);
 		{not_needed} ->
-			getConnections(Tail,ResultList)	
+			getConnections(Tail,ResultList,GetCount)	
 		after 50 ->
-			getConnections(Tail,ResultList)
+			getConnections(Tail,ResultList,GetCount)
 	end.
 
 setConnections([],_) ->
