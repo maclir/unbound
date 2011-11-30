@@ -48,32 +48,32 @@ start_torrent(_Pid,[],_) ->
 %% Regular torrent functions
 
 start_link(Id,Record) ->
-	{ok,spawn_link(torrent,init,[{Id,Record}])}.
+    {ok,spawn_link(torrent,init,[{Id,Record}])}.
 
 init({Id,Record}) ->
-	process_flag(trap_exit,true),
-	OurBitfield = <<(Record#torrent.info#info.bitfield)/bitstring>>,
-	IndexList = bitfield:to_indexlist(OurBitfield,normal),
-	PieceLength = Record#torrent.info#info.piece_length,
-	Length = Record#torrent.info#info.length,
-	TempLastPieceSize = Length rem PieceLength,
-	case TempLastPieceSize of
-		0 ->
-			LastPieceSize = PieceLength;
-		_ ->
-			LastPieceSize = TempLastPieceSize
-	end,
-	PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
-	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
+    process_flag(trap_exit,true),
+    OurBitfield = <<(Record#torrent.info#info.bitfield)/bitstring>>,
+    IndexList = bitfield:to_indexlist(OurBitfield,normal),
+    PieceLength = Record#torrent.info#info.piece_length,
+    Length = Record#torrent.info#info.length,
+    TempLastPieceSize = Length rem PieceLength,
+    case TempLastPieceSize of
+	0 ->
+	    LastPieceSize = PieceLength;
+	_ ->
+	    LastPieceSize = TempLastPieceSize
+    end,
+    PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
+    AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
     Announce = AnnounceList ++ [Record#torrent.announce],
-	spawn_trackers(Announce,Record#torrent.info_sha,Id),
-	loop(Record,#torrent_status{},PidIndexList,[],[],Id).
+    spawn_trackers(Announce,Record#torrent.info_sha,Id),
+    loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	receive
 	    {get_statistics,Pid} ->
 		Pid ! {statistics,0,0,0}
-	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
+		    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {choked, _NetPid} ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {im_free, NetPid} ->
@@ -81,7 +81,8 @@ loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {peer_list,FromPid,ReceivedPeerList} ->
 		io:fwrite("Got Peer List\n"),
-		NewTrackerList = lists:merge(TrackerList,[FromPid]),
+		TempTrackerList = TrackerList -- [FromPid],
+		NewTrackerList = TempTrackerList ++ [FromPid],
 		NewPeers = ReceivedPeerList -- PeerList,
 		NewPeerList = NewPeers ++ PeerList,
 		spawn_connections(NewPeers,Record#torrent.info_sha,Id),
