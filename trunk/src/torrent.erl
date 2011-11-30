@@ -64,14 +64,15 @@ init({Id,Record}) ->
 			LastPieceSize = TempLastPieceSize
 	end,
 	PidIndexList = bind_pid_to_index(IndexList,PieceLength, LastPieceSize),
-	Announce = lists:merge(lists:flatten(Record#torrent.announce_list),[Record#torrent.announce]),
+	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
+    Announce = AnnounceList ++ [Record#torrent.announce],
 	spawn_trackers(Announce,Record#torrent.info_sha,Id),
 	loop(Record,#torrent_status{},PidIndexList,[],[],Id).
 
 loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id) ->
 	receive
 	    {get_statistics,Pid} ->
-		Pid ! {statistics,0,0,0},
+		Pid ! {statistics,0,0,0}
 	    loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
 	    {choked, _NetPid} ->
 		loop(Record,StatusRecord,PidIndexList,TrackerList,PeerList,Id);
