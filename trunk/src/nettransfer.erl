@@ -3,20 +3,22 @@
 
 -module(nettransfer).
 
--export([init/5,init_upload/2]).
+-export([init/6,init_upload/3]).
 
 
-init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
-    TcpPid=tcp:open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId),
+init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitstring>>)->
+    TcpPid = spawn_link(tcp,open_a_socket[DestinationIp, DestinationPort,InfoHash,ClientId,self()]),
+    TcpPid ! {send_bitfield,Bitfield},
     Choked = true,
     Interested = false,
     DownloadStatus= {Choked,Interested},
     UploadStatus = {Choked,Interested},
     loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
 
-init_upload(TorrentPid,TcpPid) ->
+init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
     TorrentPid ! {ok,self()},
     TcpPid ! {register_master, self()},
+    TcpPid ! {send_bitfield,Bitfield}
     Choked = true,
     Interested = false,
     DownloadStatus = {Choked,Interested},

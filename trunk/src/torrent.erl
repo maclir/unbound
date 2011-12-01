@@ -60,12 +60,10 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
     receive
 	{new_upload,TcpPid, IpPort} ->
-	    spawn_link(nettransfere,init_upload,[self(),TcpPid]),
-	    receive
-		{ok, NetPid} ->
-		    NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
-		    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers)
-	    end;
+	    NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
+	    NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers);
+
 	{get_statistics,Pid} ->
 	    Pid ! {statistics,0,0,0},
 	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
@@ -79,7 +77,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    NewTrackerList = [FromPid|TempTrackerList],
 	    TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
 	    NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
-	    TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
+	    TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList),Record),
 	    case length(TempActiveNetList) >= length(NewUnusedPeers) of
 		true ->
 		    FinalUnusedPeers = [];
@@ -170,10 +168,10 @@ screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
 	    screen_peers(PeerList, ActiveNetList, [IpPort|List])
     end.
 
-spawn_connections(_,_InfoHash,_Id,NetList,Count) when Count < 1->
+spawn_connections(_,_InfoHash,_Id,NetList,Count,Record) when Count < 1->
     NetList;
-spawn_connections([],_InfoHash,_Id,NetList,_) ->
+spawn_connections([],_InfoHash,_Id,NetList,_,Record) ->
     NetList;
-spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count) ->
-    Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
+spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
+    Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
     spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1).
