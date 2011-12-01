@@ -29,7 +29,7 @@ loop(Que, Downloading, TorrentPid) ->
 				done ->
 					{NewQue, NewDownloading} = {Que, Downloading};
 				spawn_more ->
-					{NewQue, NewDownloading} = spawn_more(Que, Downloading, NetPid, Que, TorrentPid)
+					{NewQue, NewDownloading} = spawn_piece(Que, Downloading, NetPid, Que, TorrentPid)
 			end,
 			loop(NewQue,NewDownloading, TorrentPid);
 		{net_index_list, NetPid, IndexList} ->
@@ -95,9 +95,10 @@ allocate_net([{_PieceIndex, NetPidList, PiecePid}|Downloading], NetPid) ->
 			allocate_net(Downloading, NetPid)
 	end.
 
-spawn_more([], Downloading, _NetPid, RawQue, _TorrentPid) ->
+spawn_piece([], Downloading, NetPid, RawQue, _TorrentPid) ->
+	NetPid ! not_interested,
 	{RawQue, Downloading};
-spawn_more([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, RawQue, TorrentPid) ->
+spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, RawQue, TorrentPid) ->
 	case lists:member(NetPid, NetPidList) of
 		true ->
 			PiecePid = spawn(piece,init,[PieceIndex, TorrentPid, PieceLength]),
@@ -107,10 +108,10 @@ spawn_more([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Raw
 				done ->
 					{NewQue, NewDownloading};
 				spawn_more ->
-					spawn_more(NewQue, NewDownloading, NetPid, RawQue, TorrentPid)
+					spawn_piece(NewQue, NewDownloading, NetPid, RawQue, TorrentPid)
 			end;
 		false ->
-			spawn_more(Que, Downloading, NetPid, RawQue, TorrentPid)
+			spawn_piece(Que, Downloading, NetPid, RawQue, TorrentPid)
 	end.
 
 sort([]) ->

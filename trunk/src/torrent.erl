@@ -62,8 +62,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList) -
 		{get_statistics,Pid} ->
 			Pid ! {statistics,0,0,0},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList);
-		{choked, _NetPid} ->
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList);
 		{im_free, NetPid} ->
 			DownloadPid ! {new_free, NetPid},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList);
@@ -79,9 +77,20 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList) -
 			loop(Record,StatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList);
 		{bitfield,FromPid,ReceivedBitfield} ->
 			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-			<<Bitfield:NumPieces/bitstring,_Rest/bitstring>> = ReceivedBitfield,
-			PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
-			DownloadPid ! {net_index_list, FromPid, PeerIndexList},
+			case (bit_size(ReceivedBitfield) > NumPieces) of
+				true ->
+					<<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
+					RestSize = bit_size(Rest),
+					if
+						Rest == <<0:RestSize>> ->
+							PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
+							DownloadPid ! {net_index_list, FromPid, PeerIndexList};
+						true ->
+							FromPid ! bad_bitfield
+					end;
+				false ->
+					FromPid ! bad_bitfield
+			end,
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList);
 		{have,FromPid,Index} ->
 			DownloadPid ! {net_index_list, FromPid, [{Index}]},
@@ -107,12 +116,16 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList) -
 			end;
 		{'EXIT',FromPid,_Reason} ->
 			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
-			BadNet = lists:keyfind(FromPid,1,ActiveNetList),
-			NewActiveNetList = lists:delete(BadNet, ActiveNetList),
-			NewLowPeerList = [element(2,BadNet)|LowPeerList],
-			DownloadPid ! {net_exited, FromPid},
+			{NewActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
 			loop(Record,StatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,NewActiveNetList)
 	end.
+
+ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid) ->
+	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
+	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
+	NewLowPeerList = [element(2,BadNet)|LowPeerList],
+	DownloadPid ! {net_exited, FromPid},
+	{NewActiveNetList ,NewLowPeerList}.
 
 spawn_trackers([],_,_) ->
 	ok;
