@@ -158,7 +158,7 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
             loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 
         {piece,Index,Offset,Length,Binary} ->
-            TcpPid ! {send_piece,Index,Offset,Binary},
+            TcpPid ! {send_piece,Index,Offset,Length,Binary},
             loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
 
 	after 120000 ->
