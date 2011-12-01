@@ -32,15 +32,15 @@ from_hex([C1,C2|[]]) ->
 	    Char1 = C1-55;
 	C1=<$9,C1>=$0 ->
 	    Char1 = C1-48;
-	C1>=$a,C1=<$z ->
+	C1>=$a,C1=<$f ->
 	    Char1 = C1-87
     end,
     if
-	C2>=$A ->
+	C2>=$A,C2=<$F ->
 	    Char2 = C2-55;
-	C2=<$9 ->
+	C2=<$9,C2>=$0 ->
 	    Char2 = C2-48;
-	C2>=$a,C2=<$z ->
+	C2>=$a,C2=<$f ->
 	    Char2 = C2-87
     end,
     Return = <<Char1:4,Char2:4>>,
