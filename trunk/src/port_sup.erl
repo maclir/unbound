@@ -15,10 +15,10 @@
 start_link(ClientId) ->
     supervisor:start_link(?MODULE,[ClientId]).
 
-init(_ClientId) ->
+init(ClientId) ->
     io:fwrite("Port Supervisor started\n"),
     {ok,{{one_for_one,1,10},
-	 [{port,{port,start_link,[]},
+	 [{port,{tcp,start_listening,[6991,ClientId]},
 	   transient,brutal_kill,worker,[port]}
 	 ]
 	}

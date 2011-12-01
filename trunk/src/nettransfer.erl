@@ -3,7 +3,7 @@
 
 -module(nettransfer).
 
--export([init/5]).
+-export([init/5,init_upload/2]).
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
@@ -14,6 +14,15 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
     UploadStatus = {Choked,Interested},
     loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
 
+init_upload(TorrentPid,TcpPid) ->
+    TorrentPid ! {ok,self()},
+    TcpPid ! {register_master, self()},
+    Choked = true,
+    Interested = false,
+    DownloadStatus = {Choked,Interested},
+    UploadStatus = {Choked,Interested},
+    loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
+	
 
 loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
     receive

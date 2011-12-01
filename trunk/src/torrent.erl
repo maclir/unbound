@@ -58,115 +58,122 @@ init({Id,Record}) ->
 	loop(Record,#torrent_status{},[],[],DownloadPid,Id,[],[]).
 
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
-	receive
-		{get_statistics,Pid} ->
-			Pid ! {statistics,0,0,0},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{im_free, NetPid} ->
-			DownloadPid ! {new_free, NetPid},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{peer_list,FromPid,ReceivedPeerList} ->
-			io:fwrite("Got Peer List\n"),
-			%% why do we need the tracker list?
-			TempTrackerList = lists:delete(FromPid, TrackerList),
-			NewTrackerList = [FromPid|TempTrackerList],
-			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
-			NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
-			TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
-			case length(TempActiveNetList) >= length(NewUnusedPeers) of
-				true ->
-					FinalUnusedPeers = [];
-				false ->
-					FinalUnusedPeers = lists:nthtail(length(TempActiveNetList), NewUnusedPeers)
-			end,
-			NewActiveNetList = TempActiveNetList ++ ActiveNetList,
-			loop(Record,StatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers);
-		{bitfield,FromPid,ReceivedBitfield} ->
-			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-			case (bit_size(ReceivedBitfield) > NumPieces) of
-				true ->
-					<<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
-					RestSize = bit_size(Rest),
-					if
-						Rest == <<0:RestSize>> ->
-							PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
-							DownloadPid ! {net_index_list, FromPid, PeerIndexList};
-						true ->
-							FromPid ! bad_bitfield
-					end;
-				false ->
-					FromPid ! bad_bitfield
-			end,
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{have,FromPid,Index} ->
-			DownloadPid ! {net_index_list, FromPid, [{Index}]},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{dowloaded,SenderPid,PieceIndex,Data} ->
-			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
-			case write_to_file:write(PieceIndex,Data,Record,Done) of
-				{ok, TempRecord} ->
-					SenderPid ! {ok, done},
-					DownloadPid ! {piece_done, PieceIndex},
-					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
-					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
-					%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
-					%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
-					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
-					torrent_db:add(NewRecord),
-					io:fwrite("done:~p~n", [PieceIndex]),
-					loop(NewRecord,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-				{error, _Reason} ->
-					SenderPid ! {error, corrupt_data},
-					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
-			end;
+    receive
+	{new_upload,TcpPid, IpPort} ->
+	    spawn_link(nettransfere,init_upload,[self(),TcpPid]),
+	    receive
+		{ok, NetPid} ->
+		    NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
+		    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers)
+	    end;
+	{get_statistics,Pid} ->
+	    Pid ! {statistics,0,0,0},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{im_free, NetPid} ->
+	    DownloadPid ! {new_free, NetPid},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{peer_list,FromPid,ReceivedPeerList} ->
+	    io:fwrite("Got Peer List\n"),
+	    %% why do we need the tracker list?
+	    TempTrackerList = lists:delete(FromPid, TrackerList),
+	    NewTrackerList = [FromPid|TempTrackerList],
+	    TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
+	    NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
+	    TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
+	    case length(TempActiveNetList) >= length(NewUnusedPeers) of
+		true ->
+		    FinalUnusedPeers = [];
+		false ->
+		    FinalUnusedPeers = lists:nthtail(length(TempActiveNetList), NewUnusedPeers)
+	    end,
+	    NewActiveNetList = TempActiveNetList ++ ActiveNetList,
+	    loop(Record,StatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers);
+	{bitfield,FromPid,ReceivedBitfield} ->
+	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
+	    case (bit_size(ReceivedBitfield) > NumPieces) of
+		true ->
+		    <<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
+		    RestSize = bit_size(Rest),
+		    if
+			Rest == <<0:RestSize>> ->
+			    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
+			    DownloadPid ! {net_index_list, FromPid, PeerIndexList};
+			true ->
+			    FromPid ! bad_bitfield
+		    end;
+		false ->
+		    FromPid ! bad_bitfield
+	    end,
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{have,FromPid,Index} ->
+	    DownloadPid ! {net_index_list, FromPid, [{Index}]},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{dowloaded,SenderPid,PieceIndex,Data} ->
+	    Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
+	    case write_to_file:write(PieceIndex,Data,Record,Done) of
+		{ok, TempRecord} ->
+		    SenderPid ! {ok, done},
+		    DownloadPid ! {piece_done, PieceIndex},
+		    NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
+		    NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
+		    %% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
+		    %% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
+		    NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
+		    torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+		    torrent_db:add(NewRecord),
+		    io:fwrite("done:~p~n", [PieceIndex]),
+		    loop(NewRecord,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+		{error, _Reason} ->
+		    SenderPid ! {error, corrupt_data},
+		    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
+	    end;
         {upload,SenderPid,PieceIndex,Offset,Length} ->
-          File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
-           SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
+	    File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
+	    SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
             loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-
-		{'EXIT',FromPid,_Reason} ->
-			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
-			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
-			NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
-			case length(NewActiveNetList) >= length(UnusedPeers) of
-				true ->
-					NewUnusedPeers = [];
-				false ->
-					NewUnusedPeers = lists:nthtail(length(NewActiveNetList), UnusedPeers)
-			end,
-			FinalActiveNetList = NewActiveNetList ++ TempActiveNetList,
-			loop(Record,StatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers)
-	end.
+	
+	{'EXIT',FromPid,_Reason} ->
+	    %% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
+	    {TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
+	    NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
+	    case length(NewActiveNetList) >= length(UnusedPeers) of
+		true ->
+		    NewUnusedPeers = [];
+		false ->
+		    NewUnusedPeers = lists:nthtail(length(NewActiveNetList), UnusedPeers)
+	    end,
+	    FinalActiveNetList = NewActiveNetList ++ TempActiveNetList,
+	    loop(Record,StatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers)
+    end.
 
 ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid) ->
-	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
-	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
-	NewLowPeerList = [element(2,BadNet)|LowPeerList],
-	DownloadPid ! {net_exited, FromPid},
-	{NewActiveNetList ,NewLowPeerList}.
+    BadNet = lists:keyfind(FromPid,1,ActiveNetList),
+    NewActiveNetList = lists:delete(BadNet, ActiveNetList),
+    NewLowPeerList = [element(2,BadNet)|LowPeerList],
+    DownloadPid ! {net_exited, FromPid},
+    {NewActiveNetList ,NewLowPeerList}.
 
 spawn_trackers([],_,_) ->
-	ok;
+    ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
-	Self = self(),
-	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
-	spawn_trackers(AnnounceList,InfoHash,Id).
+    Self = self(),
+    spawn(tracker,init,[Self,Announce,InfoHash,Id]),
+    spawn_trackers(AnnounceList,InfoHash,Id).
 
 screen_peers([] ,_ActiveNetList, List) ->
-	List;
+    List;
 screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
-	case lists:keymember(IpPort, 2, ActiveNetList) of
-		true ->
-			screen_peers(PeerList, ActiveNetList, List);
-		false ->
-			screen_peers(PeerList, ActiveNetList, [IpPort|List])
-	end.
+    case lists:keymember(IpPort, 2, ActiveNetList) of
+	true ->
+	    screen_peers(PeerList, ActiveNetList, List);
+	false ->
+	    screen_peers(PeerList, ActiveNetList, [IpPort|List])
+    end.
 
 spawn_connections(_,_InfoHash,_Id,NetList,Count) when Count < 1->
-	NetList;
+    NetList;
 spawn_connections([],_InfoHash,_Id,NetList,_) ->
-	NetList;
+    NetList;
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count) ->
-	Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
-	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1).
+    Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id]),
+    spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1).
