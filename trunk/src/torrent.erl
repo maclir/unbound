@@ -121,8 +121,10 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
 			end;
         {upload,SenderPid,PieceIndex,Offset,Length} ->
-            %% should ask which  function we need
-            ok;
+          File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
+           SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
+            loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+
 		{'EXIT',FromPid,_Reason} ->
 			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
