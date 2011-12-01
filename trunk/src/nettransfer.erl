@@ -7,7 +7,7 @@
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitstring>>)->
-    TcpPid = spawn_link(tcp,open_a_socket[DestinationIp, DestinationPort,InfoHash,ClientId,self()]),
+    TcpPid = spawn_link(tcp,open_a_socket,[DestinationIp, DestinationPort,InfoHash,ClientId,self()]),
     TcpPid ! {send_bitfield,Bitfield},
     Choked = true,
     Interested = false,
@@ -18,7 +18,7 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitst
 init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
     TorrentPid ! {ok,self()},
     TcpPid ! {register_master, self()},
-    TcpPid ! {send_bitfield,Bitfield}
+    TcpPid ! {send_bitfield,Bitfield},
     Choked = true,
     Interested = false,
     DownloadStatus = {Choked,Interested},

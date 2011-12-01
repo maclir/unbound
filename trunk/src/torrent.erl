@@ -133,7 +133,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	{'EXIT',FromPid,_Reason} ->
 	    %% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 	    {TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
-	    NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
+	    NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList),Record),
 	    case length(NewActiveNetList) >= length(UnusedPeers) of
 		true ->
 		    NewUnusedPeers = [];
@@ -168,10 +168,10 @@ screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
 	    screen_peers(PeerList, ActiveNetList, [IpPort|List])
     end.
 
-spawn_connections(_,_InfoHash,_Id,NetList,Count,Record) when Count < 1->
+spawn_connections(_,_InfoHash,_Id,NetList,Count,_Record) when Count < 1->
     NetList;
-spawn_connections([],_InfoHash,_Id,NetList,_,Record) ->
+spawn_connections([],_InfoHash,_Id,NetList,_,_Record) ->
     NetList;
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
     Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
-    spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1).
+    spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
