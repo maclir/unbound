@@ -70,7 +70,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			%% why do we need the tracker list?
 			TempTrackerList = lists:delete(FromPid, TrackerList),
 			NewTrackerList = [FromPid|TempTrackerList],
-			io:fwrite("Low:~p\n", [LowPeerList]),
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
 			NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
 			TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList)),
@@ -149,7 +148,7 @@ spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
 	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
 	spawn_trackers(AnnounceList,InfoHash,Id).
 
-screen_peers([] ,ActiveNetList, List) ->
+screen_peers([] ,_ActiveNetList, List) ->
 	List;
 screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
 	case lists:keymember(IpPort, 2, ActiveNetList) of
