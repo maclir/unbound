@@ -1,13 +1,32 @@
 
 -module(bitfield).
 
--export([to_indexlist/2, compare/2, count_zeros/1, has_one_zero/1, flip_bit/2]).
+-export([to_indexlist_que/3, to_indexlist/2, compare/2, count_zeros/1, has_one_zero/1, flip_bit/2]).
 
 has_one_zero(Bitfield) ->
 	count_zeros(Bitfield) == 1.
 
 count_zeros(BitField) ->
 	length(to_indexlist(BitField, normal)).
+
+to_indexlist_que(<<Bitfield/bitstring>>, PieceLength, LastPieceLentgh) ->
+	to_indexlist_que(0,Bitfield, PieceLength, LastPieceLentgh).
+
+to_indexlist_que(_Index, <<>>, _PieceLength, _LastPieceLentgh) ->
+    [];
+to_indexlist_que(Index, <<H:1,Rest/bitstring>>, PieceLength, LastPieceLentgh) ->
+    case Rest of
+		<<>> ->
+			Length = LastPieceLentgh;
+		_ ->
+			Length = PieceLength
+	end,
+	case H of
+		0 ->
+			[{Index,[], Length}|to_indexlist_que(Index+1,Rest, PieceLength, LastPieceLentgh)];
+		1 ->
+			to_indexlist_que(Index+1,Rest, PieceLength, LastPieceLentgh)
+    end.
 
 to_indexlist(<<Bitfield/bitstring>>, invert) ->
     to_indexlist(0,Bitfield, true);
@@ -19,7 +38,7 @@ to_indexlist(_Index, <<>>, _) ->
 to_indexlist(Index, <<H:1,Rest/bitstring>>, Invert) ->
     case H of
 		0 when not(Invert) ->
-			[{Index}|to_indexlist(Index+1,Rest,Invert)];
+			[{Index,[]}|to_indexlist(Index+1,Rest,Invert)];
 		1 when not(Invert)->
 			to_indexlist(Index+1,Rest,Invert);
 		0 when Invert ->

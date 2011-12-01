@@ -3,7 +3,7 @@
 
 -module(nettransfer).
 
--export([init/5,loop/6]).
+-export([init/5]).
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
@@ -11,36 +11,29 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId)->
 	Choked = true,
 	Interested = false,
 	Status= {Choked,Interested},
-	loop(Status,TcpPid,{0,0,0},TorrentPid,0,idle).
+	loop(Status,TcpPid,TorrentPid,0,[],idle).
 
 
-loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free) ->    
+loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,free) ->
 	TorrentPid ! {im_free, self()},
 	receive
 		{download_block,FromPid,Index,Offset,Length} ->
-			FromPid ! {ok, downloading},
 			TcpPid ! {request, Index,Offset,Length},
-			loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
+			loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,FromPid);
 		{continue} ->
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,idle)
-		after 10000 ->
-			io:fwrite("~p:saying im free again~n" ,[self()]),
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free)
+			loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,idle)
+		after 2000 ->
+			loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,free)
 	end;
-loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
+loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid) ->
 	receive
 		check_free ->
 			case PiecePid of
 				idle when (not element(1,Status) and element(2,Status)) ->
-					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
-				_ when element(1,Status) ->
-					TorrentPid ! {choked,self()},
-					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+					loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,free);
 				_ ->
-					loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
+					loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid)
 			end;
-		
-		
 		is_interested ->
 			{OldChoked, OldInterested} = Status,
 			if not OldInterested ->
@@ -49,8 +42,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 				   ok
 			end,
 			NewStatus = {OldChoked,true},
-			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
-		
+			loop(NewStatus,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid);
 		not_interested ->
 			case Status of
 				{true,_} ->
@@ -60,7 +52,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 					TcpPid ! not_interested,
 					NewStatus = {false,false}
 			end,
-			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+			loop(NewStatus,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid);
 		
 		{got_unchoked, _FromPid} ->
 			case Status of
@@ -69,12 +61,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 				{_,false} ->
 					NewStatus = {false,false}
 			end,
-			case PiecePid of
-				idle when (element(2, NewStatus))->
-					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
-				_ ->
-					loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid)
-			end;
+			loop(NewStatus,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid);
 		
 		{got_choked, _FromPid} ->
 			case Status of
@@ -83,7 +70,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 				{_,false} ->
 					NewStatus = {true,false}
 			end,
-			loop(NewStatus,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+			loop(NewStatus,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid);
 		{have,SenderPid,Piece_Index} ->
 			case SenderPid of
 				TcpPid ->
@@ -91,7 +78,7 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 				TorrentPid ->
 					TcpPid ! { have,self(), Piece_Index}
 			end,
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid);
+			loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,PiecePid);
 		
 		{client_bitfield,SenderPid, Bitfield} ->
 			case SenderPid of
@@ -100,22 +87,20 @@ loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,PiecePid) ->
 				TorrentPid ->
 					TcpPid ! {bitfield,Bitfield}
 			end,
-			loop(Status,TcpPid,NextBlock,TorrentPid,Bitfield,PiecePid);
+			loop(Status,TcpPid,TorrentPid,Bitfield,Que,PiecePid);
 		
 		{got_block,Offset,Length,Data} ->
 			PiecePid ! {block,self(),Offset,Length,Data},
-			loop(Status,TcpPid,NextBlock,TorrentPid,StoredBitfield,free);
+			case Que of
+				[] ->
+					loop(Status,TcpPid,TorrentPid,StoredBitfield,Que,free);
+				[{FromPid,Index,Offset,Length}|T] ->
+					TcpPid ! {request, Index,Offset,Length},	
+					loop(Status,TcpPid,TorrentPid,StoredBitfield,T,FromPid)
+			end;
 		{download_block,FromPid,Index,Offset,Length} ->
-			case PiecePid of
-				idle ->
-					FromPid ! {ok, downloading},
-					TcpPid ! {request, Index,Offset,Length},
-					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,FromPid);
-				_ ->
-					FromPid ! {busy, self(),Offset},
-					io:fwrite("~p:is busy to ~p because it is occupied by ~p~n" ,[self(), FromPid,PiecePid]),
-					loop(Status,TcpPid,{Index,Offset,Length},TorrentPid,StoredBitfield,PiecePid)
-			end	
+			loop(Status,TcpPid,TorrentPid,StoredBitfield,Que ++ [{FromPid,Index,Offset,Length}],PiecePid)
 		after 120000 ->
+			%% shouldnt there be a loop after this line??
 			TcpPid ! keep_alive
 	end.

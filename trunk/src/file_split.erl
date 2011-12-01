@@ -10,7 +10,7 @@
 %% Starting function
 start(Data, StartPos, PieceLength, TempPath, Records) ->
 	if
-		(is_list(Records#torrent.info#info.files) and Records#torrent.info#info.files /= [] and is_record(Records#torrent.info#info.files, file)) ->
+		(is_list(Records#torrent.info#info.files) and (Records#torrent.info#info.files /= []) and is_record(hd(Records#torrent.info#info.files), file)) ->
 			Files = calc_files(StartPos, PieceLength, Records#torrent.info#info.files, 0, []);
 		true ->
 			Files = [{[Records#torrent.info#info.name], StartPos, PieceLength}]
