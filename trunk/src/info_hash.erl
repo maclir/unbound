@@ -25,7 +25,7 @@ to_hex(<<C1:4,C2:4,Rest/binary>>) ->
 
 to_hex(<<>>) ->
     [].
-
+%% Crashes when given an empty string (list). Intentional?
 from_hex([C1,C2|[]]) ->
     if
 	C1>=$A,C1=<$F ->
@@ -51,7 +51,7 @@ from_hex([C1,C2|Tail]) ->
     Bin = from_hex([C1,C2]),
     list_to_binary(lists:flatten([Bin|[BinTail]])).
 
-    
+%% Fails when given an empty binary.
 url_encode(<<Byte:8,Rest/binary>>) ->
     if
 	Byte>=$0,Byte=<$9 ->
@@ -74,7 +74,7 @@ url_encode(<<Byte:8,Rest/binary>>) ->
 	    EncRest = url_encode(Rest),
 	    <<Enc/binary,EncRest/binary>>
     end.
-
+%% Fails when given an empty binary or binary has one element(?).
 url_decode(<<String/binary>>) ->
     list_to_binary(url_decode(String,false)).
 
@@ -101,7 +101,17 @@ url_decode(<<V1/binary>>,false) ->
 -include_lib("eunit/include/eunit.hrl").
 
 hash_test_()->
-    [?_assert(info_hash:from_hex("6791797158D372E100021189CC76002531745038") == 
-		 <<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>),
-    ?_assert(info_hash:to_hex(<<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>) == "6791797158d372e100021189cc76002531745038" )].
+    [?_assert(from_hex("6791797158d372E100021189cc76002531745038") == 
+		 from_hex("6791797158D372E100021189CC76002531745038")),
+     ?_assert(from_hex("6791797158D372E100021189CC76002531745038") == <<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>),
+     ?_assert(to_hex(<<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>) == "6791797158D372E100021189CC76002531745038" ),
+     ?_assert(to_hex(<<>>)==""),
+     ?_assert(from_hex("")==<<>>), %% Fails
+     ?_assert(url_encode(<<"a">>) == <<"a">>),
+     ?_assert(url_decode(<<"a">>) == <<"a">>), %% Fails
+     ?_assert(url_encode(<<>>) == <<>>), %% Fails
+     ?_assert(url_decode(<<>>) == <<>>),%% Fails
+     ?_assert(url_encode(<<"Hello, world!">>) == <<"Hello%2C%20world%21">>),
+     ?_assert(url_decode(<<"Hello%2C%20world%21">> ) == <<"Hello, world!">>)
+    ].
 	     
