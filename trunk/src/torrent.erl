@@ -106,7 +106,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok, TempRecord} ->
 					SenderPid ! {ok, done},
-					DownloadPid ! {piece_done, PieceIndex},					
+					DownloadPid ! {piece_done, PieceIndex},
 					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
 					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
 					%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
@@ -120,6 +120,9 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					SenderPid ! {error, corrupt_data},
 					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
 			end;
+        {upload,SenderPid,PieceIndex,Offset,Length} ->
+            %% should ask which  function we need
+            ok;
 		{'EXIT',FromPid,_Reason} ->
 			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
