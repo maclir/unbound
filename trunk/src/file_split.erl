@@ -2,7 +2,7 @@
 %% Created: Nov 18, 2011
 
 -module(file_split).
--export([start/5, path_create/2, request_data/3]).
+-export([start/5, path_create/2, request_data/4]).
 -include("torrent_db_records.hrl").
 
 
@@ -48,10 +48,11 @@ path_create([H|T], String) ->
 
 %% Merging the binary data from the files
 %% Files = Records#torrent.info#info.files(
-request_data(StartPos, Length, Record) ->
-	request_data(StartPos, Length, Record#torrent.info#info.files, Record#torrent.dir).
+request_data(PieceIndex, Offset, Length, Record) ->
+	StartPos = PieceIndex * Record#torrent.info#info.piece_length + Offset,
+	request_data_start(StartPos, Length, Record#torrent.info#info.files, Record#torrent.dir).
 
-request_data(StartPos, Length, Files, TorrentPath) ->
+request_data_start(StartPos, Length, Files, TorrentPath) ->
 	FileMap = calc_files(StartPos, Length, Files, 0, []),
 	merge_data(TorrentPath, FileMap, <<>>).
 
