@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, server/0, wait_connect/2, get_request/4, handle/1, client/1, send/2, connect_to_server/4, open_a_socket/4, connect_to_client/4]).
+-export([scrape/2, connect_to_server/4, open_a_socket/4, connect_to_client/4, check_handshake/2, send_a_block/4]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -222,7 +222,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<13:32,6:8, Index:32, Offset:32, Length:32>>}->
-			MasterPid ! {got_request, self(), Index, Offset, Length},
+			send_a_block(Socket,Index, Offset, Length),
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<13:32,8:8, Index:32, Offset:32, Length:32>>}->
 			MasterPid ! {got_cancel, self(), Index, Offset, Length},
@@ -232,8 +232,9 @@ main_loop(Socket, MasterPid)->
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
 			exit(self(), "port_closed");
-		stop ->
-			MasterPid ! stopping; %% this is made to stop the slave process. The loop is not being called again here.
+		{stop,Reason} ->
+			gen_tcp:close(Socket),
+			exit(self(), Reason);	
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
@@ -268,47 +269,46 @@ process_block(MasterPid, Length, Result)->
 		end
 	end.
 
-%%
-%% File transferring from one computer to another
-%%	
+start_listening(PortNumber)->
+	{ok, Socket} = gen_tcp:listen(PortNumber, [binary, {packet,0}]),
+	accepting(self(), Socket).
+	
+accepting(MasterPid,Socket)->
+	{ok, ListenSocket} = gen_tcp:accept(Socket),
+	spawn_link(?MODULE, check_handshake,[MasterPid,ListenSocket]),
+	accepting(MasterPid,Socket).
+	
+check_handshake(MasterPid, Socket)->
+	erlang:port_connect(Socket, self()),
+	receive
+		{tcp,_,<< 19, "BitTorrent protocol", 
+						 ReservedBytes:8/binary, 
+						 InfoHash:20/binary, 
+						 PeerID:20/binary>>} ->
+							check_infohash(InfoHash),
+							send_handshake(Socket),
+							send_bitfield(Socket),
+							main_loop(Socket, MasterPid);
+		{tcp_closed,_}->
+			exit(self(), "remote peer closed connection");
+		{tcp,_,Msg} ->
+			exit(self(), {"remote peer sent this",Msg})				
+	end.
+	
+send_a_block(Socket, PieceIndex,Offset,Length)->
+	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
+	ok.
 
-server()->
-	{ok, ListenSocket} = gen_tcp:listen(6769, [binary, {active, false}]),
-	%%inet:setopts(ListenSocket, [recbuf,1000]),
-	wait_connect(ListenSocket,0).
+send_bitfield(Socket)->
+	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
+	ok.
 	
-wait_connect(ListenSocket, Count)->
-	{ok, Socket} = gen_tcp:accept(ListenSocket),
-	spawn(?MODULE, wait_connect, [ListenSocket,Count]),
-	get_request(Socket, [], Count, 0).
+send_handshake(Socket)->
+	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
+	ok.
 	
-get_request(Socket, BinaryList, Count, TotalSize) ->
-	case gen_tcp:recv(Socket, 0) of
-		{ok, Binary} ->
-			%%io:fwrite("~b bytes recieved ~n",[byte_size(Binary)]),
-			get_request(Socket, [Binary|BinaryList], Count+1, TotalSize+byte_size(Binary));
-		{error, closed} ->
-			io:fwrite("got ~b bytes in ~b packages ~n",[TotalSize, Count]),
-			handle(lists:reverse(BinaryList))
-	end.	
-	
-handle(Binary) ->
-	{ok, Fd} = file:open("D:\\how_do_i_send_a_filename", write),
-	file:write(Fd,Binary),
-	file:close(Fd).
-	
-%% Here starts the client part.
-	
-client(Host) ->
-	{ok, Socket} = gen_tcp:connect(Host, 1234, [binary, {packet, 0}]),
-	{ok, File} = file:read_file("a.jpg"),
-	send(Socket, File).
-	
-send(Socket, <<Chunk:1000/binary, Rest/binary>>) ->	
-	%%io:fwrite("~b~n",[byte_size(Chunk)]),
-	gen_tcp:send(Socket, Chunk),
-	send(Socket, Rest);
-send(Socket, Rest) ->
-io:fwrite("~b~n",[byte_size(Rest)]),
-	gen_tcp:send(Socket, Rest),
-	ok = gen_tcp:close(Socket).
+check_infohash(InfoHashFromPeer)->
+	case torrent_mapper:req(InfoHashFromPeer) of
+		{error,not_found} -> exit(self(), "remote peer sent wrong infohash");
+		{ok,_} -> ok
+	end.
