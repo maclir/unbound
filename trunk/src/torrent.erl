@@ -149,6 +149,8 @@ spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
 	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
 	spawn_trackers(AnnounceList,InfoHash,Id).
 
+screen_peers([] ,ActiveNetList, List) ->
+	List;
 screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
 	case lists:keymember(IpPort, 2, ActiveNetList) of
 		true ->
