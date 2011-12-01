@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/4, open_a_socket/4, connect_to_client/4, check_handshake/2, send_a_block/4]).
+-export([scrape/2, connect_to_server/4, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/2]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -105,9 +105,9 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %% Peer Communication
 %%
 
-open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId)->
+open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
 	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0}]),
-	spawn_link(?MODULE, connect_to_client,[self(), Socket,InfoHash,ClientId]).
+	connect_to_client(MasterPid, Socket,InfoHash,ClientId).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
     erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
@@ -269,24 +269,24 @@ process_block(MasterPid, Length, Result)->
 		end
 	end.
 
-start_listening(PortNumber)->
+start_listening(PortNumber, ClientId)->
 	{ok, Socket} = gen_tcp:listen(PortNumber, [binary, {packet,0}]),
-	accepting(self(), Socket).
+	accepting(Socket, ClientId).
 	
-accepting(MasterPid,Socket)->
+accepting(Socket, ClientId)->
 	{ok, ListenSocket} = gen_tcp:accept(Socket),
-	spawn_link(?MODULE, check_handshake,[MasterPid,ListenSocket]),
-	accepting(MasterPid,Socket).
+	spawn_link(?MODULE, check_handshake,[ListenSocket,ClientId]),
+	accepting(Socket,ClientId).
 	
-check_handshake(MasterPid, Socket)->
+check_handshake(Socket,ClientId)->
 	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
 						 ReservedBytes:8/binary, 
 						 InfoHash:20/binary, 
 						 PeerID:20/binary>>} ->
-							check_infohash(InfoHash),
-							send_handshake(Socket),
+							MasterPid = check_infohash(Socket,InfoHash),
+							send_handshake(Socket,InfoHash,ClientId),
 							send_bitfield(Socket),
 							main_loop(Socket, MasterPid);
 		{tcp_closed,_}->
@@ -303,12 +303,23 @@ send_bitfield(Socket)->
 	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
 	ok.
 	
-send_handshake(Socket)->
-	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
-	ok.
+send_handshake(Socket, InfoHash, ClientId)->
+	gen_tcp:send(Socket,[
+			   19,
+			   "BitTorrent protocol",
+			   <<0,0,0,0,0,0,0,0>>,
+			   InfoHash,
+			   ClientId
+						]).
 	
-check_infohash(InfoHashFromPeer)->
+check_infohash(Socket,InfoHashFromPeer)->
 	case torrent_mapper:req(InfoHashFromPeer) of
 		{error,not_found} -> exit(self(), "remote peer sent wrong infohash");
-		{ok,_} -> ok
-	end.
+		{ok,TorrentPid} ->
+			{ok, IpPort} = inet:peername(Socket),
+			TorrentPid ! {new_upload,self(),IpPort}
+	end,
+		receive
+			{new_master_pid, Pid} -> 
+				Pid
+		end.
