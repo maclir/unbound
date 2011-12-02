@@ -1,6 +1,6 @@
 -module(download).
 
--export([init/2]).
+-export([init/2, sort/1]).
 -include("torrent_db_records.hrl").
 
 init(Record, TorrentPid)->
@@ -114,9 +114,7 @@ spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Ra
 			spawn_piece(Que, Downloading, NetPid, RawQue, TorrentPid)
 	end.
 
-sort([]) ->
-   [];
-sort([H | T]) -> 
-	[H|T].
-
-%%    sort([ X || X <- T, length(element(2, X)) < length(element(2, H))]) ++ [H] ++ sort([ X || X <- T, length(element(2, X)) >= length(element(2, H)) ]).
+sort(List) ->
+	List.
+%% 	SortFun = fun(X, Y) -> length(element(2, X)) < length(element(2, Y)) end,
+%% 	lists:sort(SortFun, List).

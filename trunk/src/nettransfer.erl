@@ -127,6 +127,12 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			end;
 
 	    {download_block,FromPid,Index,Offset,Length} ->
+			case Que of
+				[] ->
+					TorrentPid ! {im_free,self()};
+				_ ->
+					ok
+			end,
             loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que ++ [{FromPid,Index,Offset,Length}],UploadStatus);
 
         bad_bitfield ->

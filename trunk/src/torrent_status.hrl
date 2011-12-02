@@ -1,1 +1,4 @@
--record(torrent_status,{info_hash, priority, name, size, percent, status, seeds, peers, downspeed, upspeed, eta, uploaded, db_bitfield,temp_bitfield,num_pieces,blocklist,num_blocks}).
+-record(torrent_status,{info_hash, priority, name, size, status,
+						downloaded, downspeed, eta,
+						uploaded, upspeed,
+						peers, connected_peers}).
