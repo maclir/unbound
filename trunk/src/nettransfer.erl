@@ -7,8 +7,9 @@
 
 
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitstring>>)->
+    ZeroPaddedBitfield = pad_bitfield(Bitfield),
     TcpPid = spawn_link(tcp,open_a_socket,[DestinationIp, DestinationPort,InfoHash,ClientId,self()]),
-    TcpPid ! {send_bitfield,Bitfield},
+    TcpPid ! {send_bitfield,ZeroPaddedBitfield},
     Choked = true,
     Interested = false,
     DownloadStatus= {Choked,Interested},
@@ -16,15 +17,25 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitst
     loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
 
 init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
+    <<ZeroPaddedBitfield/bitstring>> = pad_bitfield(Bitfield),
     TorrentPid ! {ok,self()},
     TcpPid ! {register_master, self()},
-    TcpPid ! {send_bitfield,Bitfield},
+    TcpPid ! {send_bitfield,ZeroPaddedBitfield},
     Choked = true,
     Interested = false,
     DownloadStatus = {Choked,Interested},
     UploadStatus = {Choked,Interested},
     loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
 	
+pad_bitfield(<<Bitfield/bitstring>>) ->
+    BitLength = bit_size(Bitfield),
+    case BitLength rem 8 of
+	0 ->
+	    Bitfield;
+	Rem ->
+	    Padding = 8 - Rem,
+	    <<Bitfield/bitstring,0:Padding>>
+    end.
 
 loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
     receive

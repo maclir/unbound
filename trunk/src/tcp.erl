@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/4, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/2]).
+-export([scrape/2, connect_to_server/4, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -181,7 +181,7 @@ main_loop(Socket, MasterPid)->
 		{send_have, PieceIndex}->
 			gen_tcp:send(Socket,[<<5:32, 4:8,PieceIndex:32>>]),
 			main_loop(Socket,MasterPid);
-		{send_bitfield, Bitfield}->
+		{send_bitfield, <<Bitfield/binary>>}->
 			BitfieldLength = byte_size(Bitfield)+1,
 			gen_tcp:send(Socket,[<<BitfieldLength:32, 5:8, Bitfield/binary>>]),
 			main_loop(Socket,MasterPid);
@@ -269,9 +269,21 @@ process_block(MasterPid, Length, Result)->
 		end
 	end.
 
-start_listening(PortNumber, ClientId)->
-	{ok, Socket} = gen_tcp:listen(PortNumber, [binary, {packet,0}]),
-	accepting(Socket, ClientId).
+init_listening(PortNumber,ClientId) ->
+    ListeningSocket = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
+    receive 
+	{ok, _Socket} ->
+	    {ok, ListeningSocket};
+	{error, _ } ->
+	    {error, error_opening_socket}
+    end.
+
+start_listening(InitPid, PortNumber, ClientId)->
+    case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
+	 {ok, Socket} ->
+	    InitPid ! {ok, Socket},
+	    accepting(Socket, ClientId)
+    end.
 	
 accepting(Socket, ClientId)->
 	{ok, ListenSocket} = gen_tcp:accept(Socket),
