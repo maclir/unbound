@@ -51,15 +51,22 @@ start_link(Id,Record) ->
 
 %%TODO Status record should also come from here
 init({Id,Record}) ->
-	process_flag(trap_exit,true),
-	DownloadPid = spawn(download,init,[Record,self()]),
-	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
-	Announce = AnnounceList ++ [Record#torrent.announce],
-	spawn_trackers(Announce,Record#torrent.info_sha,Id),
-	loop(Record,[],[],[],DownloadPid,Id,[],[]).
+    process_flag(trap_exit,true),
+    DownloadPid = spawn(download,init,[Record,self()]),
+    AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
+    Announce = AnnounceList ++ [Record#torrent.announce],
+    StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
+%				   priority = Record#torrent.priority,
+				   name = Record#torrent.info#info.name,
+				   size = Record#torrent.info#info.length,
+				   status = Record#torrent.status,
+				   download_timer = erlang:now(),
+				   upload_timer = erlang:now()},   
+    spawn_trackers(Announce,Record#torrent.info_sha,Id),
+    loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[]).
 %%TODO status
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
-	receive
+    receive
 		{new_upload,TcpPid, IpPort} ->
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
@@ -67,13 +74,13 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{get_statistics,Pid} ->
 			Pid ! {statistics,StatusRecord#torrent_status.uploaded
 				  , StatusRecord#torrent_status.downloaded
-				  , StatusRecord#torrent_status.size - StatusRecord#torrent_status.downloaded},
+				  , Record#torrent.info#info.length - Record#torrent.info#info.length_complete},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{im_free, NetPid} ->
 			DownloadPid ! {new_free, NetPid},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{peer_list,FromPid,ReceivedPeerList} ->
-%%TODO peers connected_peers
+
 			io:fwrite("Got Peer List\n"),
 			%% why do we need the tracker list?
 			TempTrackerList = lists:delete(FromPid, TrackerList),
@@ -88,40 +95,48 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					FinalUnusedPeers = lists:nthtail(length(TempActiveNetList), NewUnusedPeers)
 			end,
 			NewActiveNetList = TempActiveNetList ++ ActiveNetList,
-			loop(Record,StatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers);
-		{bitfield,FromPid,ReceivedBitfield} ->
-			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
-			case (bit_size(ReceivedBitfield) > NumPieces) of
-				true ->
-					<<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
-					RestSize = bit_size(Rest),
-					if
-						Rest == <<0:RestSize>> ->
-							PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
-							DownloadPid ! {net_index_list, FromPid, PeerIndexList};
-						true ->
-							FromPid ! bad_bitfield
-					end;
-				false ->
-					FromPid ! bad_bitfield
-			end,
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{have,FromPid,Index} ->
-			DownloadPid ! {net_index_list, FromPid, [{Index}]},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{dowloaded,SenderPid,PieceIndex,Data} ->
-%%TODO downspeed downloaded eta 
-			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
-			case write_to_file:write(PieceIndex,Data,Record,Done) of
-				{ok, TempRecord} ->
-					SenderPid ! {ok, done},
-					DownloadPid ! {piece_done, PieceIndex},
-					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
-					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
-					%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
-					%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
-					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+	    Peers = length(FinalUnusedPeers ++ NewActiveNetList),
+	    NewStatusRecord = StatusRecord#torrent_status{peers=Peers,connected_peers=NewActiveNetList},
+	    loop(Record,NewStatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers);
+	{bitfield,FromPid,ReceivedBitfield} ->
+	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
+	    case (bit_size(ReceivedBitfield) > NumPieces) of
+		true ->
+		    <<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
+		    RestSize = bit_size(Rest),
+		    if
+			Rest == <<0:RestSize>> ->
+			    PeerIndexList = bitfield:to_indexlist(Bitfield,invert),
+			    DownloadPid ! {net_index_list, FromPid, PeerIndexList};
+			true ->
+			    FromPid ! bad_bitfield
+		    end;
+		false ->
+		    FromPid ! bad_bitfield
+	    end,
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{have,FromPid,Index} ->
+	    DownloadPid ! {net_index_list, FromPid, [{Index}]},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{dowloaded,SenderPid,PieceIndex,Data} ->
+	    Now = erlang:now(),
+	    Elapsed = Now -StatusRecord#torrent_status.download_timer,
+	    Speed = size(Data)/(Elapsed/1000),
+	    TotalDownload = StatusRecord#torrent_status.downloaded + size(Data),
+	    NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload,
+							  downspeed = Speed},
+	    %%TODO eta
+	    Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
+	    case write_to_file:write(PieceIndex,Data,Record,Done) of
+		{ok, TempRecord} ->
+		    SenderPid ! {ok, done},
+		    DownloadPid ! {piece_done, PieceIndex},
+		    NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
+		    NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
+		    %% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
+		    %% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
+		    NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
+		    torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
 					io:fwrite("done:~p~n", [PieceIndex]),
 					loop(NewRecord,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
