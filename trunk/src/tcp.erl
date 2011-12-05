@@ -183,6 +183,9 @@ main_loop(Socket, MasterPid)->
 		{tcp,_,<<2>>}->
 			MasterPid ! {got_interested,self()},
 			main_loop(Socket, MasterPid);
+		{tcp,<<5:8, Bitfield>>}->
+			MasterPid ! {client_bitfield, self(), Bitfield},
+			main_loop(Socket,MasterPid);
 		{tcp,_,<<3>>}->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
@@ -215,8 +218,6 @@ main_loop(Socket, MasterPid)->
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
-		after 5000 ->
-			exit(self(), "Main loop Timed Out")	
 	end.
 
 init_listening(PortNumber,ClientId) ->
