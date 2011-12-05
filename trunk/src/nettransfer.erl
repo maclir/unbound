@@ -124,9 +124,9 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 		{client_bitfield,SenderPid, Bitfield} ->
 			case SenderPid of
 				TcpPid ->
-					TorrentPid ! {send_bitfield,Bitfield};
+					TorrentPid ! {bitfield,Bitfield};
 				TorrentPid ->
-					TcpPid ! {bitfield,Bitfield}
+					TcpPid ! {send_bitfield,Bitfield}
 			end,
 			loop(DownloadStatus,TcpPid,TorrentPid,Bitfield,Que,UploadStatus);
 		
