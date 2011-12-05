@@ -130,7 +130,9 @@ case gen_tcp:recv(Socket,68) of
 						 _PeerID:20/binary
 						 >>}->
 
-		MasterPid ! "peer accepted handshake"
+		MasterPid ! "peer accepted handshake";
+	Msg -> 
+		MasterPid ! Msg
 end.
 
 	
