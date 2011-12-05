@@ -137,7 +137,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 %%TODO peers connected_peers
 			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
-			NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],10 - length(ActiveNetList),Record),
+			NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],100 - length(ActiveNetList),Record),
 			case length(NewActiveNetList) >= length(UnusedPeers) of
 				true ->
 					NewUnusedPeers = [];

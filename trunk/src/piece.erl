@@ -27,13 +27,7 @@ init(PieceIndex,TorrentPid,PieceSize) ->
 loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 	receive
 		{unregister, PeerPid} ->
-			{Wanted,Downloading,Finished} = BlockStatus,
-			case lists:keyfind(PeerPid,2,Downloading) of
-				{Block,Pid} ->
-					NewBlockStatus = {[Block|Wanted],lists:delete({Block,Pid}, Downloading),Finished};
-				false ->
-					NewBlockStatus = BlockStatus
-			end,
+			NewBlockStatus = unregister_pid(PeerPid, BlockStatus),
 			loop(Piece,PieceIndex,NewBlockStatus,TorrentPid,PieceSize,LastBlockInfo);
 		
 		{block,SenderPid,Offset,Length,BlockBinary} ->
@@ -69,6 +63,14 @@ loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 					NewBlockStatus = request_block(BlockStatus,PieceIndex,NetPid,LastBlockInfo)
 			end,
 			loop(Piece,PieceIndex,NewBlockStatus,TorrentPid,PieceSize,LastBlockInfo)
+	end.
+
+unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
+	case lists:keyfind(PeerPid,2,Downloading) of
+		{Block,Pid} ->
+			unregister_pid(PeerPid, {[Block|Wanted],lists:delete({Block,Pid}, Downloading),Finished});
+		false ->
+			{Wanted, Downloading, Finished}
 	end.
 
 construct_piece([],<<Piece/binary>>) ->
