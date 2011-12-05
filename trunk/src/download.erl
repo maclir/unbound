@@ -115,6 +115,6 @@ spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Ra
 	end.
 
 sort(List) ->
-	List.
-%% 	SortFun = fun(X, Y) -> length(element(2, X)) < length(element(2, Y)) end,
-%% 	lists:sort(SortFun, List).
+%% 	List.
+	SortFun = fun(X, Y) -> length(element(2, X)) < length(element(2, Y)) end,
+	lists:sort(SortFun, List).

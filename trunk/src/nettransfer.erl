@@ -18,7 +18,7 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitst
 init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
 	ZeroPaddedBitfield = pad_bitfield(Bitfield),
 	TorrentPid ! {ok,self()},
-	TcpPid ! {register_master, self()},
+	TcpPid ! {new_master_pid, self()},
 	TcpPid ! {send_bitfield,ZeroPaddedBitfield},
 	Choked = true,
 	Interested = false,

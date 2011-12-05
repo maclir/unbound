@@ -61,12 +61,13 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
 	receive
 		{new_upload,TcpPid, IpPort} ->
-%%TODO upspeed uploaded
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers);
 		{get_statistics,Pid} ->
-			Pid ! {statistics,0,0,0},
+			Pid ! {statistics,StatusRecord#torrent_status.uploaded
+				  , StatusRecord#torrent_status.downloaded
+				  , StatusRecord#torrent_status.size - StatusRecord#torrent_status.downloaded},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{im_free, NetPid} ->
 			DownloadPid ! {new_free, NetPid},
@@ -129,6 +130,8 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
 			end;
 		{upload,SenderPid,PieceIndex,Offset,Length} ->
+%%TODO upspeed uploaded
+			io:fwrite("im uploading!!! ~n"),
 			File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
 			SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);

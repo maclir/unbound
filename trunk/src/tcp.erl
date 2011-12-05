@@ -238,6 +238,8 @@ main_loop(Socket, MasterPid)->
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
+		after 5000 ->
+			exit(self(), "Main loop Timed Out")	
 	end.
 	
 process_block(MasterPid, Length, Result)->
@@ -291,6 +293,7 @@ accepting(Socket, ClientId)->
 	accepting(Socket,ClientId).
 	
 check_handshake(Socket,ClientId)->
+	io:fwrite("accepting new connection ~n"),
 	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
