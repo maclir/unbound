@@ -118,120 +118,95 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 			   InfoHash,
 			   ClientId
 						]),
-	handshake_loop(MasterPid,<<>>), %% starting a loop for handling handshaking
+	handshake_loop(MasterPid,Socket),
+	inet:setopts(Socket, [{packet, 4}]),
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
-handshake_loop(MasterPid,HandshakeResponse)->
-	receive
-		{tcp,_,Msg} ->
-			handshake_loop(MasterPid,<<HandshakeResponse/binary,Msg/binary>>)
-		after 3000 ->
-			process_handshake(MasterPid, HandshakeResponse)%% stop the loop after 5 seconds
-			
-	end.
-process_handshake(MasterPid, <<>>)->
-	MasterPid ! "some wierd shit happened";
-process_handshake(MasterPid, << 19, "BitTorrent protocol", 
+handshake_loop(MasterPid, Socket)->
+case gen_tcp:recv(Socket,68) of
+	{ok,<< 19, "BitTorrent protocol", 
 						 _ReservedBytes:8/binary, 
 						 _InfoHash:20/binary, 
-						 _PeerID:20/binary,
-						 Rest/binary >>)->
-		MasterPid ! "peer accepted handshake~n",
-		process_bitfield(Rest).
-process_bitfield(<<>>)->
-		exit(self(),"Empty bitfield");
-process_bitfield(<<BitFieldLengthPrefix:32, Rest/binary>>)->
-%% 		 BitFieldLengthPrefix = lists:nth(length(binary_to_list(_BitFieldLengthPrefix)),binary_to_list(_BitFieldLengthPrefix)),
-		 process_bitfield_payload(BitFieldLengthPrefix, Rest).
-process_bitfield_payload(BitFieldLengthPrefix, Rest)->
-		<<BitField:BitFieldLengthPrefix/binary,Rest1/binary>> = Rest,
-		if byte_size(Rest1) >= 9 ->
-			process_have_messages(Rest1);
-		true ->
-			self() ! {bitfield,BitField},
-			self() ! {tcp,icannotputanunderscorehere,Rest1}
-		end.
-process_have_messages(<<>>)->
-		ok;
-process_have_messages(<<HaveMessage:9/binary, Rest/binary>>)->
-		self() ! {tcp, self(), HaveMessage},
-		process_have_messages(Rest);
-process_have_messages(<<MessageWhichIsLessThan9Bytes/binary>>)->
-		self() ! {tcp, self(), MessageWhichIsLessThan9Bytes}.
+						 _PeerID:20/binary
+						 >>}->
+
+		MasterPid ! "peer accepted handshake"
+end.
+
 	
-%% this loop processes ALL messages. The ones it gets from the peer AND the ones we send to it, from the parent process
-%% to send a message from the parent process, as a common structure: <process name> ! <message body>, for example: slave ! keep_alive.	
 main_loop(Socket, MasterPid)->
 	receive
 		choke ->
-			gen_tcp:send(Socket,<<0,0,0,1,0>>), 
+			gen_tcp:send(Socket,<<0>>), 
 			main_loop(Socket,MasterPid); 
 		unchoke ->
-			gen_tcp:send(Socket,<<0,0,0,1,1>>), 
+			gen_tcp:send(Socket,<<1>>), 
 			main_loop(Socket,MasterPid); 
 		keep_alive ->	%% when we send keep_alive message to the slave
-			gen_tcp:send(Socket,<<0,0,0,0>>), %% it sends the appropriate message to the peer
+			gen_tcp:send(Socket,<<0>>), %% it sends the appropriate message to the peer
 			main_loop(Socket,MasterPid); %% starts the loop again
 		interested ->
-			gen_tcp:send(Socket,<<1:32,2:8>>), %% send a message, to say you are interested. for more info see bittorrent specification
+			gen_tcp:send(Socket,<<2>>), %% send a message, to say you are interested. for more info see bittorrent specification
 			main_loop(Socket,MasterPid);
 		not_interested ->
-			gen_tcp:send(Socket,<<0,0,0,1,3>>),
+			gen_tcp:send(Socket,<<3>>),
 			main_loop(MasterPid, Socket);
 		{send_have, PieceIndex}->
-			gen_tcp:send(Socket,[<<5:32, 4:8,PieceIndex:32>>]),
+			gen_tcp:send(Socket,[<<4:8,PieceIndex:32>>]),
 			main_loop(Socket,MasterPid);
 		{send_bitfield, <<Bitfield/binary>>}->
-			BitfieldLength = byte_size(Bitfield)+1,
-			gen_tcp:send(Socket,[<<BitfieldLength:32, 5:8, Bitfield/binary>>]),
+			gen_tcp:send(Socket,[<<5:8, Bitfield/binary>>]),
 			main_loop(Socket,MasterPid);
-		{bitfield,<<_Id,Rest1/binary>>} ->
-			MasterPid ! {client_bitfield, self(), Rest1},
+		{tcp,_,<<5:8,Bitfield/binary>>} ->
+			MasterPid ! {client_bitfield, self(), Bitfield},
 			main_loop(Socket,MasterPid);
 		{request, Index, Offset, Length} ->
-			gen_tcp:send(Socket, [<<13:32,6:8, Index:32, Offset:32, Length:32>>]),
-			HoleBlock = process_block(MasterPid, Length, <<>>),
-			MasterPid ! {got_block, Offset,Length,HoleBlock}, 
+			gen_tcp:send(Socket, [<<6:8, Index:32, Offset:32, Length:32>>]),
 			main_loop(Socket,MasterPid);
 		{send_piece,Index, Offset, Block}->
-			MessageLength = byte_size(Block)+9,
-			gen_tcp:send(Socket, [<<MessageLength:32,7:8,Index:32,Offset:32,Block/binary>>]),
+			gen_tcp:send(Socket, [<<7:8,Index:32,Offset:32,Block/binary>>]),
 			main_loop(Socket,MasterPid);
 		{send_cancel,Index,Offset,Length}->
-			gen_tcp:send(Socket,[<<13:32,8:8,Index:32,Offset:32,Length:32>>]),
+			gen_tcp:send(Socket,[<<8:8,Index:32,Offset:32,Length:32>>]),
 			main_loop(Socket,MasterPid);
 		{send_port, Port}->
-			gen_tcp:send(Socket,[<<3:32,9:8,Port:32>>]),
+			gen_tcp:send(Socket,[<<9:8,Port:32>>]),
 			main_loop(Socket,MasterPid);
-		{tcp,_From,<<5:32, 4:8, PieceIndex:32>>} ->
+		{tcp,_From,<<4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
-		{tcp,_,<<0,0,0,1,0>>} ->
+		{tcp,_,<<0>>} ->
 			MasterPid ! {got_choked, self()},
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<0,0,0,1,2>>}->
+		{tcp,_,<<2>>}->
 			MasterPid ! {got_interested,self()},
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<0,0,0,1,3>>}->
+		{tcp,_,<<3>>}->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<0,0,0,0>>}-> 
+		{tcp,_,<<>>}-> 
 			MasterPid ! {got_keep_alive, self()}, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
 			main_loop(Socket, MasterPid); %% in this case <<>> actually means keep_alive message
-		{tcp,_,<<1:32,1:8>>}-> 
+		{tcp,_,<<1>>}-> 
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<13:32,6:8, Index:32, Offset:32, Length:32>>}->
+		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
 			send_a_block(Socket,Index, Offset, Length),
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<13:32,8:8, Index:32, Offset:32, Length:32>>}->
+		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
 			MasterPid ! {got_cancel, self(), Index, Offset, Length},
 			main_loop(Socket,MasterPid);
-		{tcp,_,<<3:32,9:8,Port:16>>}->
+		{tcp,_,<<9:8,Port:16>>}->
 			MasterPid ! {got_port,self(),Port},
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
 			exit(self(), "port_closed");
+		{tcp,_,<<7:8, 
+				_PieceIndex:32,
+				Offset:32,
+				Block/binary>>}->
+				MasterPid ! {got_block, Offset,byte_size(Block),Block},
+				main_loop(Socket, MasterPid);
 		{stop,Reason} ->
 			gen_tcp:close(Socket),
 			exit(self(), Reason);	
@@ -240,35 +215,6 @@ main_loop(Socket, MasterPid)->
 			main_loop(Socket, MasterPid)
 		after 5000 ->
 			exit(self(), "Main loop Timed Out")	
-	end.
-	
-process_block(MasterPid, Length, Result)->
-	if byte_size(Result)==0 ->
-		receive
-		{tcp_closed,_}->
-			exit(self(), "port_closed");
-		{tcp,_,<<_LengthPrefix:32,
-				7:8, %% pattern matching the response, when we requested a piece
-				_PieceIndex:32,	%% variables names speak for themselves
-				_Offset:32,		%% for more info see the specification
-				PieceOfTheBlock/binary>>}->
-				if Length == byte_size(<<Result/binary, PieceOfTheBlock/binary>>)->
-					<<Result/binary, PieceOfTheBlock/binary>>;
-				true->
-				process_block(MasterPid, Length, <<Result/binary,PieceOfTheBlock/binary>>)
-				end
-		after 10000 ->
-			exit(self(),{'EXIT',"no_response"})
-		end;
-	true ->
-	receive
-		{tcp,_,<<PieceOfTheBlock/binary>>}->
-				if Length == byte_size(<<Result/binary, PieceOfTheBlock/binary>>)->
-					<<Result/binary, PieceOfTheBlock/binary>>;
-				true->
-				process_block(MasterPid, Length, <<Result/binary,PieceOfTheBlock/binary>>)
-				end
-		end
 	end.
 
 init_listening(PortNumber,ClientId) ->
