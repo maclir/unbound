@@ -205,6 +205,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_port,self(),Port},
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
+			gen_tcp:close(Socket),
 			exit(self(), "port_closed");
 		{ok,<<7:8, 
 				_PieceIndex:32,
@@ -214,7 +215,10 @@ main_loop(Socket, MasterPid)->
 				main_loop(Socket, MasterPid);
 		{stop,Reason} ->
 			gen_tcp:close(Socket),
-			exit(self(), Reason);	
+			exit(self(), Reason);
+		{error, Reason}->
+			gen_tcp:close(Socket),
+			exit(self(), Reason);
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
