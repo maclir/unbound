@@ -106,8 +106,12 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 %%
 
 open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
-	{ok,Socket}=gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0},{active,false}]),
-	connect_to_client(MasterPid, Socket,InfoHash,ClientId).
+	case gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0},{active,false}]) of
+		{ok,Socket} -> 
+			connect_to_client(MasterPid, Socket,InfoHash,ClientId);
+		{error, Reason} ->
+			exit(self(), Reason)
+	end.
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
 %    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
