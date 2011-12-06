@@ -152,7 +152,7 @@ main_loop(Socket, MasterPid)->
 			main_loop(Socket,MasterPid);
 		not_interested ->
 			gen_tcp:send(Socket,<<3>>),
-			main_loop(MasterPid, Socket);
+			main_loop(Socket,MasterPid);
 		{send_have, PieceIndex}->
 			gen_tcp:send(Socket,[<<4:8,PieceIndex:32>>]),
 			main_loop(Socket,MasterPid);
