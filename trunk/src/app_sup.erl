@@ -50,4 +50,4 @@ gen_random(Num)->
 
 %% Function for generating a 20 charachter unique id client
 clientId() ->
- list_to_binary(["-","U","T","0","0","0","1","-"|gen_random(12)]).
+ list_to_binary(["-","U","B","0","0","0","1","-"|gen_random(12)]).
