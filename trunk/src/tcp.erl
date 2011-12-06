@@ -227,6 +227,9 @@ main_loop(Socket, MasterPid)->
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
+		after 10000 ->
+			gen_tcp:close(Socket),
+			exit(self(), main_loop_timeout)
 	end.
 
 init_listening(PortNumber,ClientId) ->

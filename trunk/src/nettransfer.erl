@@ -111,9 +111,9 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 					NewDownloadStatus ={true,true},
 					loop(NewDownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 				{_,false} ->
-					TcpPid !stop
+					TcpPid ! {stop, got_choked},
+					loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
 			end;
-		
 		
 		{have,SenderPid,Piece_Index} ->
 			case SenderPid of
@@ -155,7 +155,8 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			end;
 		
 		bad_bitfield ->
-			TcpPid ! stop;
+			TcpPid ! {stop, bad_bitfield},
+			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 		
 		{got_interested ,TcpPid} ->
 			case UploadStatus of
@@ -174,7 +175,8 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 					NewUploadStatus = {true,false},
 					case DownloadStatus of
 						{_,false} ->
-							TcpPid ! stop;
+							TcpPid ! {stop, got_not_interested},
+							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,NewUploadStatus);
 						{_,true} ->
 							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,NewUploadStatus)
 					end;
@@ -182,7 +184,8 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 					NewUploadStatus = {false,false},
 					case DownloadStatus of
 						{_,false} ->
-							TcpPid ! stop;
+							TcpPid ! {stop, got_not_interested},
+							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,NewUploadStatus);
 						{_,true} ->
 							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,NewUploadStatus)
 					end
