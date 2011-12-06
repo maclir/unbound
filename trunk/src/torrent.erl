@@ -170,7 +170,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
 	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
-	NewLowPeerList = LowPeerList ++ [element(2,BadNet)],
+	NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)],
 	DownloadPid ! {net_exited, FromPid},
 	{NewActiveNetList ,NewLowPeerList}.
 
