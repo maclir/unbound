@@ -119,7 +119,7 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 			   ClientId
 						]),
 	handshake_loop(MasterPid,Socket),
-	inet:setopts(Socket, [{packet, 4}]),
+	inet:setopts(Socket, [{packet, 4},{active, true}]),
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
 handshake_loop(MasterPid, Socket)->
@@ -137,7 +137,7 @@ end.
 
 	
 main_loop(Socket, MasterPid)->
-	case gen_tcp:recv(Socket,0) of
+	receive
 		choke ->
 			gen_tcp:send(Socket,<<0>>), 
 			main_loop(Socket,MasterPid); 
@@ -159,7 +159,7 @@ main_loop(Socket, MasterPid)->
 		{send_bitfield, <<Bitfield/binary>>}->
 			gen_tcp:send(Socket,[<<5:8, Bitfield/binary>>]),
 			main_loop(Socket,MasterPid);
-		{ok,<<5:8,Bitfield/binary>>} ->
+		{tcp,_,<<5:8,Bitfield/binary>>} ->
 			MasterPid ! {client_bitfield, self(), Bitfield},
 			main_loop(Socket,MasterPid);
 		{request, Index, Offset, Length} ->
@@ -174,40 +174,40 @@ main_loop(Socket, MasterPid)->
 		{send_port, Port}->
 			gen_tcp:send(Socket,[<<9:8,Port:32>>]),
 			main_loop(Socket,MasterPid);
-		{ok,<<4:8, PieceIndex:32>>} ->
+		{tcp,_,<<4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
-		{ok,<<0>>} ->
+		{tcp,_,<<0>>} ->
 			MasterPid ! {got_choked, self()},
 			main_loop(Socket, MasterPid);
-		{ok,<<2>>}->
+		{tcp,_,<<2>>}->
 			MasterPid ! {got_interested,self()},
 			main_loop(Socket, MasterPid);
-		{ok,<<5:8, Bitfield>>}->
+		{tcp,_,<<5:8, Bitfield>>}->
 			MasterPid ! {client_bitfield, self(), Bitfield},
 			main_loop(Socket,MasterPid);
-		{ok,<<3>>}->
+		{tcp,_,<<3>>}->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
-		{ok,<<>>}-> 
+		{tcp,_,<<>>}-> 
 			MasterPid ! {got_keep_alive, self()}, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
 			main_loop(Socket, MasterPid); %% in this case <<>> actually means keep_alive message
-		{ok,<<1>>}-> 
+		{tcp,_,<<1>>}-> 
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
-		{ok,<<6:8, Index:32, Offset:32, Length:32>>}->
+		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
 			send_a_block(Socket,Index, Offset, Length),
 			main_loop(Socket, MasterPid);
-		{ok,<<8:8, Index:32, Offset:32, Length:32>>}->
+		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
 			MasterPid ! {got_cancel, self(), Index, Offset, Length},
 			main_loop(Socket,MasterPid);
-		{ok,<<9:8,Port:16>>}->
+		{tcp,_,<<9:8,Port:16>>}->
 			MasterPid ! {got_port,self(),Port},
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
 			exit(self(), "port_closed");
-		{ok,<<7:8, 
+		{tcp,_,<<7:8, 
 				_PieceIndex:32,
 				Offset:32,
 				Block/binary>>}->
