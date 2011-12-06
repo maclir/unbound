@@ -110,7 +110,7 @@ open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
 	connect_to_client(MasterPid, Socket,InfoHash,ClientId).
 
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
-    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
+%    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
     gen_tcp:send(Socket,[  %% sending a handshake
 			   19,
 			   "BitTorrent protocol",

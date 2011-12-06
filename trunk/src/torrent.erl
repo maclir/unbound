@@ -195,5 +195,6 @@ spawn_connections(_,_InfoHash,_Id,NetList,Count,_Record) when Count < 1->
 spawn_connections([],_InfoHash,_Id,NetList,_,_Record) ->
 	NetList;
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
-	Pid = spawn_link(nettransfer,init,[self(),Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
+    Self = self(),
+	Pid = spawn_link(nettransfer,init,[Self,Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
 	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).

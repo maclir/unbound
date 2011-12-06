@@ -66,13 +66,13 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 				{true,_} ->
 					TcpPid ! not_interested,
 					NewDownloadStatus = {true,false},
-					case UploadStatus of
-						{_,false} ->
-							TcpPid ! stop;
-						{_,true} ->
-							loop(NewDownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
+%					case UploadStatus of
+%						{_,false} ->
+%							TcpPid ! stop;
+%						{_,true} ->
+							loop(NewDownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 					
-					end;
+%					end;
 				{false,_} ->
 					TcpPid ! not_interested,
 					NewDownloadStatus = {false,false},
@@ -124,7 +124,7 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 		{client_bitfield,SenderPid, Bitfield} ->
 			case SenderPid of
 				TcpPid ->
-					TorrentPid ! {bitfield,Bitfield};
+					TorrentPid ! {bitfield,self(),Bitfield};
 				TorrentPid ->
 					TcpPid ! {send_bitfield,Bitfield}
 			end,
