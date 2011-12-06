@@ -47,7 +47,8 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 							TcpPid ! {request, Index,Offset,Length},
 							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que ++ [{FromPid,Index,Offset,Length}],UploadStatus)
 						after 500 ->
-							self() ! check_free
+							self() ! check_free,
+							loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
 					end;
 				_ ->
 					loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)

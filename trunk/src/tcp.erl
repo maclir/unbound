@@ -133,7 +133,7 @@ case gen_tcp:recv(Socket,68) of
 		MasterPid ! "peer accepted handshake";
 	{error, Reason}->
 			gen_tcp:close(Socket),
-			exit(self(), Reason)
+			exit(self(), handshake)
 end.
 
 	
@@ -223,9 +223,6 @@ main_loop(Socket, MasterPid)->
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
-		after 5000 ->
-			gen_tcp:close(Socket),
-			exit(self(), "Timeout")
 	end.
 
 init_listening(PortNumber,ClientId) ->
