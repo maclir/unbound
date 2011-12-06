@@ -135,7 +135,7 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			element(1,H) ! {block,self(),Offset,Length,Data},
 			case NewQue of
 				[] ->
-					TorrentPid ! {im_free,self()},
+					self() ! check_free,
 					loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,NewQue,UploadStatus);
 				[BlockInfo| _] ->
 					TcpPid ! {request, element(2, BlockInfo), element(3, BlockInfo), element(4, BlockInfo)},

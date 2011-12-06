@@ -87,7 +87,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			NewTrackerList = [FromPid|TempTrackerList],
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
 			NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
-			TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record),
+			TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],140 - length(ActiveNetList),Record),
 			case length(TempActiveNetList) >= length(NewUnusedPeers) of
 				true ->
 					FinalUnusedPeers = [];
@@ -121,7 +121,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	{dowloaded,SenderPid,PieceIndex,Data} ->
 	    Now = erlang:now(),
 	    Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.download_timer),
-	    Speed = size(Data)/(Elapsed/1000),
+	    Speed = byte_size(Data)/(Elapsed/1000),
 		io:fwrite("speed: ~p ~n", [Speed]),
 	    TotalDownload = StatusRecord#torrent_status.downloaded + size(Data),
 	    NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload,
@@ -154,7 +154,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		
 		{'EXIT',FromPid,_Reason} ->
 %%TODO peers connected_peers
-			%% 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
+ 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
 			NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record),
 			case length(NewActiveNetList) >= length(UnusedPeers) of
