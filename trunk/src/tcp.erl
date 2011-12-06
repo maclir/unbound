@@ -223,6 +223,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
 		after 5000 ->
+			gen_tcp:close(Socket),
 			exit(self(), "Timeout")
 	end.
 
