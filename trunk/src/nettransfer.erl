@@ -56,7 +56,8 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 		is_interested ->
 			{OldChoked, OldInterested} = DownloadStatus,
 			if not OldInterested ->
-				   TcpPid ! interested;
+				   TcpPid ! interested,
+					self() ! check_free;
 			   true ->
 				   ok
 			end,
@@ -96,6 +97,7 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			case DownloadStatus of
 				{_,true}->
 					NewDownloadStatus= {false,true},
+					self() ! check_free,
 					loop(NewDownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 				{_,false} ->
 					NewDownloadStatus = {false,false},
