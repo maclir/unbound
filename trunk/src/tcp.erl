@@ -222,6 +222,8 @@ main_loop(Socket, MasterPid)->
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
+		after 5000 ->
+			exit(self(), "Timeout")
 	end.
 
 init_listening(PortNumber,ClientId) ->
