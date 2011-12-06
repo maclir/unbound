@@ -18,7 +18,13 @@ write(PieceId, Data, Records, Done) ->
 			Result = file_split:start(Data, StartPos, PieceLength, TempFolder, Records),
 			if 
 				Done == true ->
-					move_to_folder(Records#torrent.info#info.files, TempFolder, DestFolder),
+					if
+						(is_list(Records#torrent.info#info.files) and (Records#torrent.info#info.files /= []) and is_record(hd(Records#torrent.info#info.files), file)) ->
+							Files = Records#torrent.info#info.files;
+						true ->
+							Files = Records#torrent.info#info.name
+					end,
+					move_to_folder(Files, TempFolder, DestFolder),
 					Result;
 				Done == false ->	
 					Result
@@ -26,7 +32,7 @@ write(PieceId, Data, Records, Done) ->
 		_ ->
 			{error, sha_did_not_match}
 	end.
-	
+
 
 %% Validating the piece's SHA1 
 check_sha(Shas, PieceId, Data) ->
@@ -34,9 +40,9 @@ check_sha(Shas, PieceId, Data) ->
 
 %% Split sha1 String into 20-bit piece for exact piece of Data
 shas_split(Shas, Index) ->
-		Start = (20 * Index),
-		<<_ShaStart:Start/binary, NeededSha:20/binary, _Rest/binary>> = Shas,
-		NeededSha.
+	Start = (20 * Index),
+	<<_ShaStart:Start/binary, NeededSha:20/binary, _Rest/binary>> = Shas,
+	NeededSha.
 
 %% Move the downloaded data from temporary folder into destination folder
 move_to_folder([], TempFolder, _) ->
