@@ -76,12 +76,12 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 				{false,_} ->
 					TcpPid ! not_interested,
 					NewDownloadStatus = {false,false},
-					case UploadStatus of
-						{_,false} ->
-							TcpPid ! stop;
-						{_,true} ->
+%% 					case UploadStatus of
+%% 						{_,false} ->
+%% 							TcpPid ! stop;
+%% 						{_,true} ->
 							loop(NewDownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
-					end
+%% 					end
 			end;
 		
 		
