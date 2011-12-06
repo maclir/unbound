@@ -55,7 +55,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function
     Uploaded = "uploaded=" ++ "0" ++ "&",
     Downloaded = "downloaded=" ++ "0" ++ "&",
     Left = "left=" ++ "0" ++ "&",
-    Compact = "compact=" ++ "0" ++ "&",
+    Compact = "compact=" ++ "1" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
 	if Eventt /= "none" ->
 		Event = "event=" ++ Eventt,
