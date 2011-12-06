@@ -131,8 +131,9 @@ case gen_tcp:recv(Socket,68) of
 						 >>}->
 
 		MasterPid ! "peer accepted handshake";
-	Msg -> 
-		MasterPid ! Msg
+	{error, Reason}->
+			gen_tcp:close(Socket),
+			exit(self(), Reason)
 end.
 
 	
