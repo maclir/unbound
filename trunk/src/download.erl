@@ -66,16 +66,17 @@ remove_from_list([{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List)->
 alter_list([], List, _NetPid, Status) ->
 	{Status, sort(List)};
 alter_list([{Index}|IndexList], List, NetPid, Status) ->
-	{NewStatus, NewList} = add_to_list(Index, List, NetPid,[], Status),
-	alter_list(IndexList, NewList, NetPid, NewStatus).
-
-add_to_list(_Index, [], _NetPid, List, Status) ->
-	{Status, List};
-add_to_list(PieceIndex, [{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List, _Status) ->
-	add_to_list(PieceIndex, T, NetPid,[{PieceIndex, [NetPid|NetPidList], PieceInfo}|List], true);
-add_to_list(Index, [H|T], NetPid, List, Status) ->
-	add_to_list(Index, T, NetPid, [H|List], Status).
-	
+	TempTuple = lists:keyfind(Index, 1 , List),
+	case TempTuple of
+		false ->
+			NewStatus = false,
+			NewList = List;
+		{PieceIndex, NetPidList, PieceInfo} ->
+			NewStatus = true,
+			NewTuple = {PieceIndex, [NetPid | NetPidList], PieceInfo}, 
+			NewList = lists:keyreplace(Index, 1, List, NewTuple)
+	end,
+	alter_list(IndexList, NewList, NetPid, NewStatus or Status).
 
 allocate_net([], _NetPid) ->
 	spawn_more;
