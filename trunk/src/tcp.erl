@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/7, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
+-export([scrape/2, connect_to_server/8, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
