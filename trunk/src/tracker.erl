@@ -36,8 +36,8 @@ perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event) ->
     Self = self(),
     TorrentPid ! {get_statistics,Self},
     receive
-	{statistics, _Uploaded, _Downloaded, _Left} ->
-	    case tcp:connect_to_server(Announce,UrlInfoHash,Id,Event) of
+	{statistics, Uploaded, Downloaded, Left} ->
+	    case tcp:connect_to_server(Announce,UrlInfoHash,Id,Event,Uploaded,Downloaded,Left) of
 		[{"Interval",Interval},{"peers",PeerList}] ->
 		    TorrentPid ! {peer_list,self(),PeerList},
 		    loop(TorrentPid,Announce,UrlInfoHash,Id,Interval);
