@@ -173,10 +173,12 @@ ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
 	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
 	case Reason of
-		handshake ->
-			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)];
+		_ when Reason == handshake,
+			   Reason == port_closed,
+			   Reason == bad_bitfield ->
+			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList);
 		_ ->
-			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList)
+			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)]
 	end,
 	DownloadPid ! {net_exited, FromPid},
 	{NewActiveNetList ,NewLowPeerList}.
