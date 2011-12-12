@@ -136,10 +136,12 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{ok, TempRecord} ->
 		    case Done of
 			true when NewStatusRecord#torrent_status.status == downloading ->
-			    FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding};
+			    FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding},
+			    send_completed(TrackerList);
 			_Other ->
-			    FinalStatusRecord = NewStatusRecord
-		    end,
+			    FinalStatusRecord = NewStatusRecord,
+			    send_completed(TrackerList)
+			end,
 		    SenderPid ! {ok, done},
 		    DownloadPid ! {piece_done, PieceIndex},
 		    send_have(PieceIndex,ActiveNetList),
@@ -230,3 +232,10 @@ send_have(_,[]) ->
 send_have(PieceIndex, [{Pid,_}|Tail]) ->
     Pid ! {have, self(), PieceIndex},
     send_have(PieceIndex,Tail).
+
+send_completed([]) ->
+    ok;
+send_completed([Pid|Tail]) ->
+    Pid ! {completed},
+    send_completed(Tail).
+				 
