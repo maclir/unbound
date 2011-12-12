@@ -203,7 +203,7 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
 	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
 
 send_have(_,[]) ->
-    ok.
-
+    ok;
 send_have(PieceIndex, [{Pid,_}|Tail]) ->
-    Pid ! {have, self(), PieceIndex}.
+    Pid ! {have, self(), PieceIndex},
+    send_have(PieceIndex,Tail).
