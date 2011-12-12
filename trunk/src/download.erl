@@ -33,8 +33,8 @@ loop(Que, Downloading, TorrentPid) ->
 			end,
 			loop(NewQue,NewDownloading, TorrentPid);
 		{net_index_list, NetPid, IndexList} ->
-			{QueStat, NewQue} = alter_list(IndexList, Que, NetPid, false),
-			{DownloadingStat, NewDownloading} = alter_list(IndexList, Downloading, NetPid, false),
+			{QueStat, NewQue} = alter_list(IndexList, Que, NetPid, false, []),
+			{DownloadingStat, NewDownloading} = alter_list(IndexList, Downloading, NetPid, false, []),
 			if
 				(QueStat or DownloadingStat) ->
 					NetPid ! is_interested,
@@ -63,20 +63,17 @@ remove_from_list([{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List)->
 	end,
 	remove_from_list(T, NetPid, [{PieceIndex, lists:delete(NetPid, NetPidList), PieceInfo}|List]).
 
-alter_list([], List, _NetPid, Status) ->
-	{Status, sort(List)};
-alter_list([{Index}|IndexList], List, NetPid, Status) ->
-	TempTuple = lists:keyfind(Index, 1 , List),
-	case TempTuple of
+alter_list(_, [], _NetPid, Status, NewList) ->
+	{Status, sort(NewList)};
+alter_list(IndexList, [{PieceIndex, NetPidList, PieceInfo}|List], NetPid, Status, TempList) ->
+	NewStatus = lists:keymember(PieceIndex, 1 , IndexList),
+	case NewStatus of
 		false ->
-			NewStatus = false,
-			NewList = List;
-		{PieceIndex, NetPidList, PieceInfo} ->
-			NewStatus = true,
-			NewTuple = {PieceIndex, [NetPid | NetPidList], PieceInfo}, 
-			NewList = lists:keyreplace(Index, 1, List, NewTuple)
+			NewList = [{PieceIndex, NetPidList, PieceInfo}|TempList];
+		_ ->
+			NewList = [{PieceIndex, [NetPid | NetPidList], PieceInfo}|TempList]
 	end,
-	alter_list(IndexList, NewList, NetPid, NewStatus or Status).
+	alter_list(IndexList, List, NetPid, NewStatus or Status, NewList).
 
 allocate_net([], _NetPid) ->
 	spawn_more;
