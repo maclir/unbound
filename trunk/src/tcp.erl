@@ -188,9 +188,6 @@ main_loop(Socket, MasterPid)->
 		{tcp,_,<<2>>}->
 			MasterPid ! {got_interested,self()},
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<5:8, Bitfield>>}->
-			MasterPid ! {client_bitfield, self(), Bitfield},
-			main_loop(Socket,MasterPid);
 		{tcp,_,<<3>>}->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
