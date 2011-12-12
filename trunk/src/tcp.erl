@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/4, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
+-export([scrape/2, connect_to_server/7, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -46,15 +46,15 @@
 %% Tracker communiacation
 %%
 	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt)-> %% this function is used to connect to our tracker and get the peer list
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,Uploaded, Downloaded, Left)-> %% this function is used to connect to our tracker and get the peer list
     
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
     Port = "port=" ++ "6769" ++ "&",
-    Uploaded = "uploaded=" ++ "0" ++ "&",
-    Downloaded = "downloaded=" ++ "0" ++ "&",
-    Left = "left=" ++ "0" ++ "&",
+    Uploaded = "uploaded=" ++ Uploaded ++ "&",
+    Downloaded = "downloaded=" ++ Downloaded ++ "&",
+    Left = "left=" ++ Left ++ "&",
     Compact = "compact=" ++ "1" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
 	if Eventt /= "none" ->
