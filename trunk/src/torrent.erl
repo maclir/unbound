@@ -136,7 +136,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		    %% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
 		    %% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
 		    NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-			io:fwrite("left: ~p ~n", [TempRecord#torrent.info#info.length - NewLength]),
+			io:fwrite("left: ~.3f ~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
 		    torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
 					io:fwrite("done:~p~n", [PieceIndex]),
@@ -156,7 +156,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 %%TODO peers connected_peers
  			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
-			NewActiveNetList = spawn_connections(UnusedPeers ++ NewLowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record),
+			NewActiveNetList = spawn_connections(UnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record),
 			case length(NewActiveNetList) >= length(UnusedPeers) of
 				true ->
 					NewUnusedPeers = [];

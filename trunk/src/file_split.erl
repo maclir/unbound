@@ -44,16 +44,24 @@ path_create([H|[]], String) ->
  	{Name, String};
 path_create([H|T], String) ->
 	Path = String ++ binary_to_list(H) ++ "/",
-	path_create(T, Path).
+	path_create(T, Path);
+path_create(H, String) ->
+	Name = binary_to_list(H),
+ 	{Name, String}.
 
 %% Merging the binary data from the files
 %% Files = Records#torrent.info#info.files(
 request_data(PieceIndex, Offset, Length, Record) ->
 	StartPos = PieceIndex * Record#torrent.info#info.piece_length + Offset,
-	request_data_start(StartPos, Length, Record#torrent.info#info.files, Record#torrent.dir).
+	request_data_start(StartPos, Length, Record, Record#torrent.dir).
 
-request_data_start(StartPos, Length, Files, TorrentPath) ->
-	FileMap = calc_files(StartPos, Length, Files, 0, []),
+request_data_start(StartPos, Length, Record, TorrentPath) ->
+	if
+		(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
+			FileMap = calc_files(StartPos, Length, Record#torrent.info#info.files, 0, []);
+		true ->
+			FileMap = [{[Record#torrent.info#info.name], StartPos, Length}]
+	end,
 	merge_data(TorrentPath, FileMap, <<>>).
 
 merge_data(_, [], Data) ->

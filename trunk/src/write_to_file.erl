@@ -22,7 +22,7 @@ write(PieceId, Data, Records, Done) ->
 						(is_list(Records#torrent.info#info.files) and (Records#torrent.info#info.files /= []) and is_record(hd(Records#torrent.info#info.files), file)) ->
 							Files = Records#torrent.info#info.files;
 						true ->
-							Files = Records#torrent.info#info.name
+							Files = [#file{path = Records#torrent.info#info.name}]
 					end,
 					move_to_folder(Files, TempFolder, DestFolder),
 					Result;
