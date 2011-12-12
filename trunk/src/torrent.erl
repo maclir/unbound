@@ -154,10 +154,10 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    NewStatusRecord = StatusRecord#torrent_status{uploaded = StatusRecord#torrent_status.uploaded + Length},
 	    loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 	
-	{'EXIT',FromPid,_Reason} ->
+	{'EXIT',FromPid,Reason} ->
 %%TODO peers connected_peers
- 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
-			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
+ 			io:fwrite("~p Got EXIT: ~p\n", [FromPid, Reason]),
+			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 			NewActiveNetList = spawn_connections(UnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record),
 			case length(NewActiveNetList) >= length(UnusedPeers) of
 				true ->
@@ -169,10 +169,15 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,StatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers)
 	end.
 
-ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid) ->
+ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
 	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
-	NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)],
+	case Reason of
+		handshake ->
+			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)];
+		_ ->
+			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList)
+	end,
 	DownloadPid ! {net_exited, FromPid},
 	{NewActiveNetList ,NewLowPeerList}.
 
