@@ -52,9 +52,9 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,Uploaded, Downloade
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
     Port = "port=" ++ "6769" ++ "&",
-    Uploaded = "uploaded=" ++ Uploaded ++ "&",
-    Downloaded = "downloaded=" ++ Downloaded ++ "&",
-    Left = "left=" ++ Left ++ "&",
+    Uploaded = "uploaded=" ++ integer_to_list(Uploaded) ++ "&",
+    Downloaded = "downloaded=" ++ integer_to_list(Downloaded) ++ "&",
+    Left = "left=" ++ integer_to_list(Left) ++ "&",
     Compact = "compact=" ++ "1" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
 	if Eventt /= "none" ->
