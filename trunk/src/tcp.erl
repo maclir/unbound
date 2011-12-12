@@ -194,8 +194,7 @@ main_loop(Socket, MasterPid)->
 		{tcp,_,<<3>>}->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
-		{tcp,_,<<>>}-> 
-			MasterPid ! {got_keep_alive, self()}, %% messages, having a structre like this {tcp,_,_} show that they were recieved from the peer.
+		{tcp,_,<<>>}->
 			main_loop(Socket, MasterPid); %% in this case <<>> actually means keep_alive message
 		{tcp,_,<<1>>}-> 
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
