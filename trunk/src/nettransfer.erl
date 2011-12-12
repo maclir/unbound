@@ -120,7 +120,7 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 				TcpPid ->
 					TorrentPid ! {have,self(),Piece_Index};
 				TorrentPid ->
-					TcpPid ! { have,self(), Piece_Index}
+					TcpPid ! { send_have, Piece_Index}
 			end,
 			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 		

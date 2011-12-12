@@ -131,6 +131,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{ok, TempRecord} ->
 		    SenderPid ! {ok, done},
 		    DownloadPid ! {piece_done, PieceIndex},
+		    send_have(PieceIndex,ActiveNetList),
 		    NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
 		    NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
 		    %% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
@@ -145,14 +146,15 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					SenderPid ! {error, corrupt_data},
 					loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers)
 			end;
-		{upload,SenderPid,PieceIndex,Offset,Length} ->
-%%TODO upspeed uploaded
-			io:fwrite("im uploading!!! ~n"),
-			File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
-			SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		
-		{'EXIT',FromPid,_Reason} ->
+	{upload,SenderPid,PieceIndex,Offset,Length} ->
+	    %%TODO upspeed uploaded
+	    io:fwrite("im uploading!!! ~n"),
+	    File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
+	    SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
+	    NewStatusRecord = StatusRecord#torrent_status{uploaded = StatusRecord#torrent_status.uploaded + Length},
+	    loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	
+	{'EXIT',FromPid,_Reason} ->
 %%TODO peers connected_peers
  			io:fwrite("~p Got EXIT: ~p\n", [FromPid, _Reason]),
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid),
@@ -199,3 +201,9 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
     Self = self(),
 	Pid = spawn_link(nettransfer,init,[Self,Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
 	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
+
+send_have(_,[]) ->
+    ok.
+
+send_have(PieceIndex, [{Pid,_}|Tail]) ->
+    Pid ! {have, self(), PieceIndex}.
