@@ -81,7 +81,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{peer_list,FromPid,ReceivedPeerList} ->
 	    
-	    io:fwrite("Got Peer List\n"),
+	    io:fwrite("Got Peer List: ~p\n", [ReceivedPeerList]),
 	    %% why do we need the tracker list?
 	    TempTrackerList = lists:delete(FromPid, TrackerList),
 	    NewTrackerList = [FromPid|TempTrackerList],
@@ -104,7 +104,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    NewStatusRecord = StatusRecord#torrent_status{peers=Peers,connected_peers=NewActiveNetList},
 	    loop(Record,NewStatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers);
 	{bitfield,FromPid,ReceivedBitfield} ->
-	    NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
+		NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 	    case (bit_size(ReceivedBitfield) > NumPieces) of
 		true ->
 		    <<Bitfield:NumPieces/bitstring,Rest/bitstring>> = ReceivedBitfield,
