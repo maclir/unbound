@@ -46,7 +46,7 @@
 %% Tracker communiacation
 %%
 	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, DownloadedVal, LeftVal)-> %% this function is used to connect to our tracker and get the peer list
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, DownloadedVal, LeftVal,NumWantedVal)-> %% this function is used to connect to our tracker and get the peer list
     
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
@@ -55,13 +55,14 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
     Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
     Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
+    NumWanted = "numwant=" ++ integer_to_list(NumWantedVal) ++ "&", 
     Compact = "compact=" ++ "1" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0",
 	if Eventt /= "none" ->
 		Event = "&event=" ++ Eventt,
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event;
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ NoPeerId ++ Event;
 	true->
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ NoPeerId
 	end,
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
@@ -215,15 +216,18 @@ main_loop(Socket, MasterPid)->
 				MasterPid ! {got_block, Offset,byte_size(Block),Block},
 				main_loop(Socket, MasterPid);
 		{stop,Reason} ->
+		io:fwrite("TCP Stopped\n"),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		{error, Reason}->
+		io:fwrite("TCP Stopped: ~p\n",[Reason]),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		Smth ->
 			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
 			main_loop(Socket, MasterPid)
 		after 10000 ->
+			io:fwrite("TCP Closed after 10000\n"),
 			gen_tcp:close(Socket),
 			exit(self(), main_loop_timeout)
 	end.

@@ -12,7 +12,7 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 	case Announce of
 		<<"http",_Rest/binary>> ->
 			UrlInfoHash = info_hash:url_encode(InfoHash),
-			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started");
+			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started",200000);
 		<<"udp",_Rest/binary>> ->
 		TorrentPid ! {error,udp_not_supported};
 	    Var ->
@@ -23,21 +23,21 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 	    {stopped} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped");
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",50);
 	    {completed} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed");
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",50);
 	    {get_peers} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none")
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",100)
 	after Interval*10 ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none")
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50)
 	end.
 
-perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event) ->
+perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
     Self = self(),
     TorrentPid ! {get_statistics,Self},
     receive
 	{statistics, Uploaded, Downloaded, Left} ->
-	    case tcp:connect_to_server(Announce,UrlInfoHash,Id,Event,Uploaded,Downloaded,Left) of
+	    case tcp:connect_to_server(Announce,UrlInfoHash,Id,Event,Uploaded,Downloaded,Left,NumWanted) of
 		[{"Interval",Interval},{"peers",PeerList}] ->
 		    TorrentPid ! {peer_list,self(),PeerList},
 		    loop(TorrentPid,Announce,UrlInfoHash,Id,Interval);
