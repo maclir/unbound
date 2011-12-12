@@ -46,15 +46,15 @@
 %% Tracker communiacation
 %%
 	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,Uploaded, Downloaded, Left)-> %% this function is used to connect to our tracker and get the peer list
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, DownloadedVal, LeftVal)-> %% this function is used to connect to our tracker and get the peer list
     
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
     Port = "port=" ++ "6769" ++ "&",
-    Uploaded = "uploaded=" ++ integer_to_list(Uploaded) ++ "&",
-    Downloaded = "downloaded=" ++ integer_to_list(Downloaded) ++ "&",
-    Left = "left=" ++ integer_to_list(Left) ++ "&",
+    Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
+    Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
+    Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
     Compact = "compact=" ++ "1" ++ "&",
     NoPeerId = "no_peer_id=" ++ "0" ++ "&",
 	if Eventt /= "none" ->
