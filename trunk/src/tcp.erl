@@ -56,9 +56,9 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
     Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
     Compact = "compact=" ++ "1" ++ "&",
-    NoPeerId = "no_peer_id=" ++ "0" ++ "&",
+    NoPeerId = "no_peer_id=" ++ "0",
 	if Eventt /= "none" ->
-		Event = "event=" ++ Eventt,
+		Event = "&event=" ++ Eventt,
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event;
 	true->
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId
