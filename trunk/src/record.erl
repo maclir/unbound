@@ -3,8 +3,6 @@
 -include("torrent_db_records.hrl").
 
 store(Key,Value,Record) ->
-	io:fwrite("new key~n"),
-	io:fwrite("Key: ~p~n", [Key]),
 	case Key of
 		<<"announce">> ->
 			NewRecord = Record#torrent{announce=Value};
@@ -43,7 +41,6 @@ store(Key,Value,Record) ->
 		<<"path">> ->
 			NewRecord = Record#file{path=Value};
 		_K ->
-			io:fwrite("WTF: ~p~n", [_K]),
 			NewRecord = Record
 	end,
 	NewRecord.
