@@ -211,7 +211,7 @@ main_loop(Socket, MasterPid)->
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
-			exit(self(), "port_closed");
+			exit(self(), port_closed);
 		{tcp,_,<<7:8, 
 				_PieceIndex:32,
 				Offset:32,
