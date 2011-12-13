@@ -4,10 +4,10 @@
 
 start() ->
 %% 	{ok, File} = file:read_file("../torrents/Gentoo.torrent"),
-	{ok, File} = file:read_file("../torrents/Ubuntu.torrent"),
+%% 	{ok, File} = file:read_file("../torrents/Ubuntu.torrent"),
 %% 	{ok, File} = file:read_file("../torrents/oooo.torrent"),
 %%  	{ok, File} = file:read_file("../torrents/M3_TestCar.torrent"),
-%%  	{ok, File} = file:read_file("../torrents/LetterFiles.torrent"),
+ 	{ok, File} = file:read_file("../torrents/LetterFiles.torrent"),
 	{ok, Record} = parser:decode(File),
 	torrent_db:init(),
 	torrent_db:add(Record),

@@ -64,7 +64,10 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
 		io:fwrite("~p~n", [RequestString]),
-    {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
+    {ok,{_,_,Response}} = httpc:request(get, {RequestString,[	{"User-Agent", "Unbound"},
+															 	{"Accept", "*/*"},
+																{"Connection", "close"}]
+											 },[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
 	[lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)].
