@@ -49,7 +49,8 @@ get_data(Filter) ->
 	[X || X <- Data, X#torrent_status.status == binary_to_list(Filter)].
 
 temp_get_data() ->
-	Row1 = #torrent_status{info_hash = "12fe3465ef7265238767", priority = "1", name = "S01E01", size = "14 GB",  status = "Stopped", peers = "4 (98)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
-	Row2 = #torrent_status{info_hash = "12ae213465ef726523ae", priority = "2", name = "S01E02", size = "12 GB", status = "Downloading", peers = "14 (49)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
-	Row3 = #torrent_status{info_hash = "43fe34aeb4c7e654f834", priority = "3", name = "S01E03", size = "23 GB", status = "Seeding", peers = "40 (99)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
-	[Row1, Row2, Row3].
+    com_central:get_all_torrents().
+%	Row1 = #torrent_status{info_hash = "12fe3465ef7265238767", priority = "1", name = "S01E01", size = "14 GB",  status = "Stopped", peers = "4 (98)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
+%	Row2 = #torrent_status{info_hash = "12ae213465ef726523ae", priority = "2", name = "S01E02", size = "12 GB", status = "Downloading", peers = "14 (49)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
+%	Row3 = #torrent_status{info_hash = "43fe34aeb4c7e654f834", priority = "3", name = "S01E03", size = "23 GB", status = "Seeding", peers = "40 (99)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
+%	[Row1, Row2, Row3].

@@ -31,16 +31,18 @@ add_new_torrent_url(Url) ->
 
 add_new_torrent_file(Binary) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary}).
-
+get_all_torrents()->
+    gen_server:call(?MODULE, {get_all_torrents}).
+   
 handle_call({add_new_torrent,Binary},_From,State) ->
     {ok,Record} = parser:decode(Binary),
     torrent_db:init(),
     torrent_db:add(Record),
     {reply,ok,State};
-
-handle_call(Command, _From, State) ->
-    io:fwrite("~p command was received!\n",[Command]),
-    {reply,"Dummy response to download",State}.
+handle_call({get_all_torrents}, _From, State) ->
+    Torrents = [].
+    % TODO: Populate list with #torrent_status record
+    {reply, Torrents,State}.
     
 
 handle_cast(_,_) ->
