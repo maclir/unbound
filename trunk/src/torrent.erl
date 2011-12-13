@@ -83,7 +83,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{peer_list,FromPid,ReceivedPeerList} ->
 			
-			io:fwrite("Got Peer List: ~p\n", [length(ReceivedPeerList)]),
+			io:fwrite("Got Peer List: ~p\n", [ReceivedPeerList]),
 			TempTrackerList = lists:delete(FromPid, TrackerList),
 			NewTrackerList = [FromPid|TempTrackerList],
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
@@ -239,4 +239,3 @@ send_completed([]) ->
 send_completed([Pid|Tail]) ->
 	Pid ! {completed},
 	send_completed(Tail).
-
