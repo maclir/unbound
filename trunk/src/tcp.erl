@@ -1,6 +1,6 @@
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/8, open_a_socket/5, connect_to_client/4, check_handshake/2, send_a_block/4, start_listening/3, init_listening/2]).
+-export([scrape/2, connect_to_server/8, open_a_socket/5, connect_to_client/4, check_handshake/2, start_listening/3, init_listening/2]).
 
 %% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
 
@@ -124,7 +124,7 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 			   ClientId
 						]),
 	handshake_loop(MasterPid,Socket),
-%% 	inet:setopts(Socket, [{packet, 4},{active, true}]),
+ 	inet:setopts(Socket, [{packet, 4},{active, true}]),
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
 handshake_loop(MasterPid, Socket)->
@@ -143,7 +143,7 @@ end.
 
 	
 main_loop(Socket, MasterPid)->
-	inet:setopts(Socket, [{active, once}, {packet, 4}]),
+	%% inet:setopts(Socket, [{active, once}, {packet, 4}]),
 	receive
 		choke ->
 			gen_tcp:send(Socket,<<0>>), 
@@ -199,7 +199,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
-			send_a_block(Socket,Index, Offset, Length),
+			MasterPid ! {got_request,self(), Index,Offset,Length},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
 			MasterPid ! {got_cancel, self(), Index, Offset, Length},
@@ -263,7 +263,7 @@ check_handshake(Socket,ClientId)->
 						 _PeerID:20/binary>>} ->
 							MasterPid = check_infohash(Socket,InfoHash),
 							send_handshake(Socket,InfoHash,ClientId),
-							send_bitfield(Socket),
+							inet:setopts(Socket, [{packet, 4},{active, true}]),
 							main_loop(Socket, MasterPid);
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
@@ -272,14 +272,6 @@ check_handshake(Socket,ClientId)->
 			gen_tcp:close(Socket),
 			exit(self(), {"remote peer sent this",Msg})				
 	end.
-	
-send_a_block(Socket, PieceIndex,Offset,Length)->
-	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
-	ok.
-
-send_bitfield(Socket)->
-	% if smth goes wrong here, use exit(self(), "remote peer sent wrong handshake")
-	ok.
 	
 send_handshake(Socket, InfoHash, ClientId)->
 	gen_tcp:send(Socket,[
