@@ -11,7 +11,7 @@
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
--define(PeerLimit, 40).
+-define(PeerLimit, 50).
 
 %% =============================================================================
 %% Torrent loader function that is responsible for opening the persistent
@@ -230,6 +230,7 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
 send_have(_,[]) ->
 	ok;
 send_have(PieceIndex, [{Pid,_}|Tail]) ->
+	io:fwrite("."),
 	Pid ! {have, self(), PieceIndex},
 	send_have(PieceIndex,Tail).
 

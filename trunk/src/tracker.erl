@@ -23,17 +23,16 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 	    {stopped} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",51);
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",50);
 	    {completed} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",52);
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",50);
 	    {get_peers} ->
 		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",100)
 	after Interval*10 ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",53)
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50)
 	end.
 
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
-   	io:fwrite("Getting Peer List: ~p\n", [NumWanted]),
 	Self = self(),
     TorrentPid ! {get_statistics,Self},
     receive
