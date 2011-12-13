@@ -23,13 +23,13 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 	    {stopped} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",50);
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",51);
 	    {completed} ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",50);
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",52);
 	    {get_peers} ->
 		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",100)
 	after Interval*10 ->
-		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50)
+		perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",53)
 	end.
 
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->

@@ -60,9 +60,9 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     NoPeerId = "no_peer_id=" ++ "0",
 	if Eventt /= "none" ->
 		Event = "&event=" ++ Eventt,
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ NoPeerId ++ Event;
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId ++ Event;
 	true->
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ NoPeerId
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ Compact ++ NoPeerId
 	end,
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
@@ -124,7 +124,7 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 			   ClientId
 						]),
 	handshake_loop(MasterPid,Socket),
-	inet:setopts(Socket, [{packet, 4},{active, true}]),
+%% 	inet:setopts(Socket, [{packet, 4},{active, true}]),
 	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
 	
 handshake_loop(MasterPid, Socket)->
@@ -136,13 +136,14 @@ case gen_tcp:recv(Socket,68) of
 						 >>}->
 
 		MasterPid ! "peer accepted handshake";
-	{error, Reason}->
+	{error, _Reason}->
 			gen_tcp:close(Socket),
 			exit(self(), handshake)
 end.
 
 	
 main_loop(Socket, MasterPid)->
+	inet:setopts(Socket, [{active, once}, {packet, 4}]),
 	receive
 		choke ->
 			gen_tcp:send(Socket,<<0>>), 
@@ -257,16 +258,18 @@ check_handshake(Socket,ClientId)->
 	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
-						 ReservedBytes:8/binary, 
+						 _ReservedBytes:8/binary, 
 						 InfoHash:20/binary, 
-						 PeerID:20/binary>>} ->
+						 _PeerID:20/binary>>} ->
 							MasterPid = check_infohash(Socket,InfoHash),
 							send_handshake(Socket,InfoHash,ClientId),
 							send_bitfield(Socket),
 							main_loop(Socket, MasterPid);
 		{tcp_closed,_}->
+			gen_tcp:close(Socket),
 			exit(self(), "remote peer closed connection");
 		{tcp,_,Msg} ->
+			gen_tcp:close(Socket),
 			exit(self(), {"remote peer sent this",Msg})				
 	end.
 	
@@ -289,7 +292,9 @@ send_handshake(Socket, InfoHash, ClientId)->
 	
 check_infohash(Socket,InfoHashFromPeer)->
 	case torrent_mapper:req(InfoHashFromPeer) of
-		{error,not_found} -> exit(self(), "remote peer sent wrong infohash");
+		{error,not_found} ->
+			gen_tcp:close(Socket),
+			exit(self(), "remote peer sent wrong infohash");
 		{ok,TorrentPid} ->
 			{ok, IpPort} = inet:peername(Socket),
 			TorrentPid ! {new_upload,self(),IpPort}

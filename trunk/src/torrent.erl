@@ -139,8 +139,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			    FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding},
 			    send_completed(TrackerList);
 			_Other ->
-			    FinalStatusRecord = NewStatusRecord,
-			    send_completed(TrackerList)
+			    FinalStatusRecord = NewStatusRecord
 			end,
 		    SenderPid ! {ok, done},
 		    DownloadPid ! {piece_done, PieceIndex},
@@ -172,7 +171,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    {TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 	    case StatusRecord#torrent_status.status of 
 		downloading ->
-		    NewActiveNetList = spawn_connections(UnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],40 - length(ActiveNetList),Record);
+		    NewActiveNetList = spawn_connections(UnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],15 - length(ActiveNetList),Record);
 		_Other ->
 		    NewActiveNetList = []
 	    end,
@@ -193,6 +192,7 @@ ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 		_ when Reason == handshake,
 			   Reason == port_closed,
 			   Reason == bad_bitfield ->
+			io:fwrite("HAHAHAHHA~n"),
 			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList);
 		_ ->
 			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList) ++ [element(2,BadNet)]
