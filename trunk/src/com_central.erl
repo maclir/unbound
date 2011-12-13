@@ -12,6 +12,7 @@
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
 -include("torrent_db_records.hrl").
+-inclide("torrent_status.hrl");
 
 
 start_link() ->
@@ -31,16 +32,24 @@ add_new_torrent_url(Url) ->
 
 add_new_torrent_file(Binary) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary}).
+
 get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
-   
+
+create_statuses([H|T], Statuses)->
+    torrent_mapper:req(H#torrent.info_sha),
+    [#torrent_status{info_hash=H#torrent.info_sha, priority=3, name="dummy", size=9000, status="on"}|Statuses].
+
 handle_call({add_new_torrent,Binary},_From,State) ->
     {ok,Record} = parser:decode(Binary),
     torrent_db:init(),
     torrent_db:add(Record),
     {reply,ok,State};
+handle_call({remove_torrents, _}, _From, State)->
+    {reply, removed, State};
 handle_call({get_all_torrents}, _From, State) ->
-    Torrents = [].
+    Torrents = torrent_db:get_all_torrents();
+    Statuses = create_statuses(Torrents, []),
     % TODO: Populate list with #torrent_status record
     {reply, Torrents,State}.
     
