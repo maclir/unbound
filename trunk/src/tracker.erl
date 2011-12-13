@@ -12,7 +12,7 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 	case Announce of
 		<<"http",_Rest/binary>> ->
 			UrlInfoHash = info_hash:url_encode(InfoHash),
-			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started",200000);
+			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started",200);
 		<<"udp",_Rest/binary>> ->
 		TorrentPid ! {error,udp_not_supported};
 	    Var ->
@@ -33,7 +33,8 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	end.
 
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
-    Self = self(),
+   	io:fwrite("Getting Peer List: ~p\n", [NumWanted]),
+	Self = self(),
     TorrentPid ! {get_statistics,Self},
     receive
 	{statistics, Uploaded, Downloaded, Left} ->

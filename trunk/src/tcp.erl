@@ -216,18 +216,17 @@ main_loop(Socket, MasterPid)->
 				MasterPid ! {got_block, Offset,byte_size(Block),Block},
 				main_loop(Socket, MasterPid);
 		{stop,Reason} ->
-		io:fwrite("TCP Stopped\n"),
+		io:fwrite("TCP Stopped: ~p\n", [Reason]),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		{error, Reason}->
-		io:fwrite("TCP Stopped: ~p\n",[Reason]),
+		io:fwrite("TCP Error Stopped: ~p\n",[Reason]),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		Smth ->
-			MasterPid ! {"got unknown message:",Smth}, %% in case we got something really weird
+			io:fwrite("------------------>got unknown message: ~p~n", [Smth]), %% in case we got something really weird
 			main_loop(Socket, MasterPid)
 		after 10000 ->
-			io:fwrite("TCP Closed after 10000\n"),
 			gen_tcp:close(Socket),
 			exit(self(), main_loop_timeout)
 	end.

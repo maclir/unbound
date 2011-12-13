@@ -81,7 +81,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{peer_list,FromPid,ReceivedPeerList} ->
 	    
-	    io:fwrite("Got Peer List: ~p\n", [ReceivedPeerList]),
+	    io:fwrite("Got Peer List: ~p\n", [length(ReceivedPeerList)]),
 	    %% why do we need the tracker list?
 	    TempTrackerList = lists:delete(FromPid, TrackerList),
 	    NewTrackerList = [FromPid|TempTrackerList],
@@ -89,7 +89,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
 	    case StatusRecord#torrent_status.status of
 		downloading ->
-		    TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],140 - length(ActiveNetList),Record);
+		    TempActiveNetList = spawn_connections(NewUnusedPeers ++ LowPeerList,Record#torrent.info_sha,Id, [],120 - length(ActiveNetList),Record);
 		_Other ->
 		    TempActiveNetList = []
 	    end,
@@ -150,10 +150,9 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		    %% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
 		    %% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
 		    NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-		    io:fwrite("left: ~.3f ~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
+		    io:fwrite("left: ~.3f MegaByte~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
 		    torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 		    torrent_db:add(NewRecord),
-		    io:fwrite("done:~p~n", [PieceIndex]),
 		    loop(NewRecord,FinalStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{error, _Reason} ->
 		    SenderPid ! {error, corrupt_data},
