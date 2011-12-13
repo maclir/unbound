@@ -29,16 +29,16 @@ get_body([], Body) ->
 get_body([H|T], Body) ->
 	NewRow = 
 		"<row status=\"" ++ H#torrent_status.status ++ "\" id=\"" ++ H#torrent_status.info_hash ++ "\">
-			<cell><![CDATA[" ++ H#torrent_status.priority ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
 			<cell><![CDATA[" ++ H#torrent_status.name ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.size ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.downloaded / H#torrent_status.size * 100 ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downloaded) ++ "]]></cell>
 			<cell><![CDATA[" ++ H#torrent_status.status ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.peers ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.downspeed ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.upspeed ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.eta ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.uploaded ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.peers) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downspeed) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.upspeed) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.eta) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.uploaded) ++ "]]></cell>
 		</row>",
 	get_body(T, NewRow ++ Body).
 
@@ -49,7 +49,9 @@ get_data(Filter) ->
 	[X || X <- Data, X#torrent_status.status == binary_to_list(Filter)].
 
 temp_get_data() ->
-    com_central:get_all_torrents().
+    A = com_central:get_all_torrents(),
+    io:fwrite(A),
+    A.
 %	Row1 = #torrent_status{info_hash = "12fe3465ef7265238767", priority = "1", name = "S01E01", size = "14 GB",  status = "Stopped", peers = "4 (98)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
 %	Row2 = #torrent_status{info_hash = "12ae213465ef726523ae", priority = "2", name = "S01E02", size = "12 GB", status = "Downloading", peers = "14 (49)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},
 %	Row3 = #torrent_status{info_hash = "43fe34aeb4c7e654f834", priority = "3", name = "S01E03", size = "23 GB", status = "Seeding", peers = "40 (99)", downspeed = "34.4 kB/s", upspeed = "640 kB/s", eta = "10:12:12", uploaded = "15.2 GB"},

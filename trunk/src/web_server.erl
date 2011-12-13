@@ -13,14 +13,16 @@
 %% Returns:		{Header (list|string), Content (binary)}
 %%----------------------------------------------------------------------
 get_resp({'GET', _, Path}) ->
-	Content = get_content("." ++ Path),
-	Header = get_header(classify(Path), Content),
-	{Header, Content};
+    Content = get_content("." ++ Path),
+    Header = get_header(classify(Path), Content),
+    io:format("get response ~n"),
+    {Header, Content};
 get_resp({'POST', UnparsedParams, _Path}) ->
-	Params = seperate_params(UnparsedParams),
-	{Type , Content} = get_post_result(Params),
-	Header = get_header(Type, Content),
-	{Header, Content}.
+    Params = seperate_params(UnparsedParams),
+    {Type , Content} = get_post_result(Params),
+    Header = get_header(Type, Content),
+    io:format("post response ~n"),
+    {Header, Content}.
 
 %%----------------------------------------------------------------------
 %% Function:	seperate_params/1
