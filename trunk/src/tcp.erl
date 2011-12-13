@@ -50,7 +50,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
-    ClientId = "peer_id=" ++ binary_to_list(ClientIdBin) ++ "&",
+    ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
     Port = "port=" ++ "6769" ++ "&",
     Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
     Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
@@ -59,11 +59,11 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     Compact = "compact=" ++ "1",
 	if Eventt /= "none" ->
 		Event = "&event=" ++ Eventt,
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ Event,
-		io:fwrite("~p~n", [RequestString]);
+		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ Event;
 	true->
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
+		io:fwrite("~p~n", [RequestString]),
     {ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),

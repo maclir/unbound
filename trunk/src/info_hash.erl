@@ -13,13 +13,13 @@ to_hex(<<C1:4,C2:4,Rest/binary>>) ->
 	C1<10 ->
 	    Char1 = C1+$0;
 	C1>=10 ->
-	    Char1 = C1+$0+7
+	    Char1 = C1+$0+39
     end,
     if 
 	C2<10 ->
 	    Char2 = C2+$0;
 	C2>=10 ->
-	    Char2 = C2+$0+7
+	    Char2 = C2+$0+39
     end,
     [Char1,Char2|to_hex(Rest)];
 

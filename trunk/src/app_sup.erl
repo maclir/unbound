@@ -7,7 +7,7 @@
 
 -module(app_sup).
 -behaviour(supervisor).
--export([start_link/0,gen_random/1,clientId/0,stop/0]).
+-export([start_link/0,stop/0,gen_random/2]).
 -export([init/1]).
 
 start_link() ->
@@ -43,11 +43,14 @@ stop() ->
     exit(unbound_torrent,shutdown).
 
 %% Function for generating a random number with desired length
-gen_random(0) ->
-    [];
-gen_random(Num)->
-     [random:uniform(10) +47 | gen_random(Num -1)] .
+gen_random(0, <<Binary/binary>>) ->
+    Binary;
+gen_random(Counter, <<Binary/binary>>)->
+	RandomBinary = <<(random:uniform(256) - 1)>>,
+	gen_random(Counter -1, <<RandomBinary/binary , Binary/binary>>).
 
 %% Function for generating a 20 charachter unique id client
 clientId() ->
- list_to_binary(["-","U","B","0","0","0","1","-"|gen_random(12)]).
+	GeneralCode = <<"-UT0001-">>,
+	UniqueCode = gen_random(12, <<>>),
+	<<GeneralCode/binary, UniqueCode/binary>>.
