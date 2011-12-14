@@ -245,16 +245,17 @@ main_loop(Socket, MasterPid)->
 	end.
 
 init_listening(PortNumber,ClientId) ->
-    ListeningSocket = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
+    io:fwrite("Spawning a listening port\n"),
+    ListeningPid = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
     receive 
 	{ok, _Socket} ->
-	    {ok, ListeningSocket};
+	    {ok, ListeningPid};
 	{error, _ } ->
 	    {error, error_opening_socket}
     end.
 
 start_listening(InitPid, PortNumber, ClientId)->
-	io:fwrite("listening ~n"),
+	io:fwrite("Started listening on port ~p\n",[PortNumber]),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
 	 {ok, Socket} ->
 	    InitPid ! {ok, Socket},
@@ -264,7 +265,7 @@ start_listening(InitPid, PortNumber, ClientId)->
 accepting(Socket, ClientId)->
 	{ok, ListenSocket} = gen_tcp:accept(Socket),
 	io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
-	spawn_link(?MODULE, check_handshake,[ListenSocket,ClientId]),
+	spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
 	accepting(Socket,ClientId).
 	
 check_handshake(Socket,ClientId)->
