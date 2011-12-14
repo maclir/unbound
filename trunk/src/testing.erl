@@ -3,16 +3,12 @@
 -export([start/0]).
 
 start() ->
-%% 	{ok, File} = file:read_file("../torrents/Gentoo.torrent"),
-%% 	{ok, File} = file:read_file("../torrents/Ubuntu.torrent"),
-%% 	{ok, File} = file:read_file("../torrents/oooo.torrent"),
-%%  	{ok, File} = file:read_file("../torrents/M3_TestCar.torrent"),
-%%  	{ok, File} = file:read_file("../torrents/LetterFiles.torrent"),
-%%  	{ok, File} = file:read_file("../torrents/Pic3.torrent"),
-%%  	{ok, File} = file:read_file("../torrents/New.torrent"),
- 	{ok, File} = file:read_file("../torrents/Pppm.torrent"),
-	{ok, Record} = parser:decode(File),
-	torrent_db:init(),
-	torrent_db:add(Record),
-%% 	torrent_db:get_torrent_by_id(0).
-	app_sup:start_link().
+	app_sup:start_link(),
+	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/Pppm.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/Gentoo.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/Ubuntu.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/oooo.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/M3_TestCar.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/LetterFiles.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/Pic3.torrent", "").
+%% 	com_central:add_new_torrent_url("http://46.239.111.192:8080/torrents/New.torrent", "").
