@@ -8,7 +8,7 @@
 -module(com_central).
 -behaviour(gen_server).
 -export([start_link/1]).
--export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2, get_all_torrents/0]).
+-export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
 -include("torrent_db_records.hrl").
@@ -40,8 +40,8 @@ add_new_torrent_url(Url, Path) ->
 add_new_torrent_file(Binary, Path) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary, Path}).
 
-get_all_torrents()->
-    gen_server:call(?MODULE, {get_all_torrents}).
+%% get_all_torrents()->
+%%     gen_server:call(?MODULE, {get_all_torrents}).
 
 create_statuses([H|T], Statuses)->
     {ok, TPid} = torrent_mapper:req(H#torrent.info_sha),
@@ -89,12 +89,12 @@ handle_call({add_new_torrent,Binary, Path},_From,State) ->
     end;
 
 handle_call({remove_torrents, _}, _From, State)->
-    {reply, removed, State};
+    {reply, removed, State}.
 
-handle_call({get_all_torrents}, _From, State) ->
-    Torrents = torrent_db:get_all_torrents(),
-    Statuses = create_statuses(Torrents, []),
-    {reply, Statuses, State}.
+%% handle_call({get_all_torrents}, _From, State) ->
+%%     Torrents = torrent_db:get_all_torrents(),
+%%     Statuses = create_statuses(Torrents, []),
+%%     {reply, Statuses, State}.
     
 
 handle_cast(_,_) ->

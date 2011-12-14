@@ -165,12 +165,10 @@ find_by_SHA1(SHA)->
     Match.
 
 get_all_torrents()->
-		io:fwrite(".....a~n_"),
-    A = mnesia:transaction(fun()-> mnesia:match_object(torrent, 
+	    A = mnesia:transaction(fun()-> mnesia:match_object(torrent, 
 									   #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
 										    creation_date='_', comment='_', created_by='_', info_sha='_', 
 										    dir='_', status='_'}, read) end),
-		io:fwrite(".....b ~p ~n_", [A]),
 		{atomic, Match} = A,
     Match.
 

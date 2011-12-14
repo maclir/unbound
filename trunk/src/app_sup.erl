@@ -16,6 +16,10 @@ start_link() ->
 	undefined ->
 	    inets:start(),
 	    torrent_db:init(),
+		receive
+			after 100 ->
+				ok
+		end,
 	    Id = clientId(),
 	    supervisor:start_link({local,?MODULE},?MODULE,[Id]);
 	Pid ->
