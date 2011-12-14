@@ -51,6 +51,6 @@ gen_random(Counter, <<Binary/binary>>)->
 
 %% Function for generating a 20 charachter unique id client
 clientId() ->
-	GeneralCode = <<"-UT0001-">>,
+	GeneralCode = <<"-UB0001-">>,
 	UniqueCode = gen_random(12, <<>>),
 	<<GeneralCode/binary, UniqueCode/binary>>.

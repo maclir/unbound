@@ -51,7 +51,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
-    Port = "port=" ++ "6769" ++ "&",
+    Port = "port=" ++ "6881" ++ "&",
     Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
     Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
     Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
@@ -63,10 +63,20 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
 	true->
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
-		io:fwrite("~p~n", [RequestString]),
-    {ok,{_,_,Response}} = httpc:request(get, {RequestString,[	{"User-Agent", "Unbound"},
-															 	{"Accept", "*/*"},
-																{"Connection", "close"}]
+%% 		io:fwrite("~p~n", [RequestString]),
+	TestRequestString = 	"http://tiesto.barfly.se:6969/announce?info_hash=%c9%b8g%127%0a%5c%e7%ff%a7%11~E%23%9f%0e%df%87%0aK" ++
+							"&peer_id=-TR2330-xtf7gcr3ik6u" ++
+							"&port=51413" ++
+							"&uploaded=0" ++
+							"&downloaded=0" ++
+							"&left=1048576" ++
+							"&numwant=200" ++
+							"&compact=1" ++
+							"&event=started",
+	{ok,{_,_,Response}} = httpc:request(get, {TestRequestString,[	{"User-Agent", "Unbound"},
+																{"Host", "tiesto.barfly.se:6969"},
+																{"Accept", "*/*"},
+																{"Accept-Encoding", "gzip, identity"}]
 											 },[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
