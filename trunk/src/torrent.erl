@@ -31,6 +31,7 @@ init_loader({Pid,Id})->
     io:fwrite("Torrent Loader Started!\n"),
     Pid ! {ok,self()},
     RecordList = torrent_db:get_all_torrents(),
+	io:fwrite("record:~p~n", [RecordList]),
     start_torrent(Pid,RecordList,Id).
 
 start_torrent(Pid,[Record|Tail],Id) ->

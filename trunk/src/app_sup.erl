@@ -12,7 +12,7 @@
 
 start_link() ->
     random:seed(erlang:now()),
-    case whereis(unbound_torrent) of
+    case whereis(?MODULE) of
 	undefined ->
 	    inets:start(),
 	    torrent_db:init(),
