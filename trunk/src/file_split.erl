@@ -75,6 +75,7 @@ merge_data(_, [], Data) ->
 	{ok, Data};
 merge_data(TorrentPath, [{BinPath, StartPos, Length}|T], BinaryData) ->
 	{Name, Path} = path_create(BinPath, ""),
+	io:fwrite("~p~n", [TorrentPath ++ Path ++ Name]),
 	{ok, File} = file:open(TorrentPath ++ Path ++ Name, [read, binary]),
 	{ok, Data} = file:pread(File, StartPos, Length),
 	file:close(File),

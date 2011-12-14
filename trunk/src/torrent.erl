@@ -84,8 +84,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			DownloadPid ! {new_free, NetPid},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		{peer_list,FromPid,ReceivedPeerList} ->
-			
-			io:fwrite("Got Peer List: ~p\n", [ReceivedPeerList]),
 			TempTrackerList = lists:delete(FromPid, TrackerList),
 			NewTrackerList = [FromPid|TempTrackerList],
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
@@ -231,8 +229,8 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
 
 send_have(_,[]) ->
 	ok;
-send_have(PieceIndex, [{Pid,_}|Tail]) ->
-	io:fwrite("."),
+send_have(PieceIndex, [{Pid,Ip}|Tail]) ->
+	io:fwrite("~p,",[Ip]),
 	Pid ! {have, self(), PieceIndex},
 	send_have(PieceIndex,Tail).
 
