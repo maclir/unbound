@@ -55,6 +55,7 @@ free(_SHA1,[],NewMap) ->
     NewMap.
 
 req(SHA1,[{ID,Pid}|T]) ->
+    io:fwrite("Request made \n"),
     case SHA1 of
 	ID ->
 	    {ok,Pid};
@@ -62,4 +63,5 @@ req(SHA1,[{ID,Pid}|T]) ->
 	    req(SHA1,T)
     end;
 req(_SHA1,[]) ->
+    io:fwrite("Request made, map empty \n"),
     {error,not_found}.

@@ -1,6 +1,6 @@
 -module(torrent_db).
 -export([init/0, init_table/1, add/1, add/8, get_torrent_by_id/1, create_info_record/7, 
-	 create_file_record/3, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, 
+	 create_file_record/3, get_size/1, get_size_by_id/1, num_torrents/0, size_gt/1, size_lt/1, delete/1, 
 	 delete_by_SHA1/1, find_by_SHA1/1, get_all_torrents/0, get_last/0]).
 -import(utils_yavor).
 -include("torrent_db_records.hrl").
@@ -115,6 +115,9 @@ get_size(Torrent, [H|T])->
 get_size(_, [])->
     0.
 
+get_size(Torrent)->
+    get_size(Torrent, Torrent#torrent.info#info.files).
+    
 %% Returns a list of all downloads greater 
 %% in size (in bytes) than the specified number.
 size_gt(Size) -> 

@@ -35,8 +35,9 @@ get_body([H|T], Body) ->
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downloaded) ++ "]]></cell>
 			<cell><![CDATA[" ++ H#torrent_status.status ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.peers) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(0) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downspeed) ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.upspeed) ++ "]]></cell>
+            <cell><![CDATA[" ++ integer_to_list(H#torrent_status.upspeed) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.eta) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.uploaded) ++ "]]></cell>
 		</row>",
