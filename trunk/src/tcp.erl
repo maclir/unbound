@@ -63,20 +63,18 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
 	true->
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
-%% 		io:fwrite("~p~n", [RequestString]),
-	TestRequestString = 	"http://tiesto.barfly.se:6969/announce?info_hash=%c9%b8g%127%0a%5c%e7%ff%a7%11~E%23%9f%0e%df%87%0aK" ++
-							"&peer_id=-TR2330-xtf7gcr3ik6u" ++
-							"&port=51413" ++
-							"&uploaded=0" ++
-							"&downloaded=0" ++
-							"&left=1048576" ++
-							"&numwant=200" ++
-							"&compact=1" ++
-							"&event=started",
-	{ok,{_,_,Response}} = httpc:request(get, {TestRequestString,[	{"User-Agent", "Unbound"},
+%% 	TestRequestString = 	"http://tiesto.barfly.se:6969/announce?info_hash=%c9%b8g%127%0a%5c%e7%ff%a7%11~E%23%9f%0e%df%87%0aK" ++
+%% 							"&peer_id=-TR2330-xtf7gcr3ik6u" ++
+%% 							"&port=51413" ++
+%% 							"&uploaded=0" ++
+%% 							"&downloaded=0" ++
+%% 							"&left=1048576" ++
+%% 							"&numwant=200" ++
+%% 							"&compact=1" ++
+%% 							"&event=started",
+	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[	{"User-Agent", "Unbound"},
 																{"Host", "tiesto.barfly.se:6969"},
-																{"Accept", "*/*"},
-																{"Accept-Encoding", "gzip, identity"}]
+																{"Accept", "*/*"}]
 											 },[], []),
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
@@ -212,6 +210,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
+			io:fwrite("got request for ~p~p", [Index, Offset]),
 			MasterPid ! {got_request,self(), Index,Offset,Length},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
