@@ -272,8 +272,14 @@ start_listening(InitPid, PortNumber, ClientId)->
 	io:fwrite("Started listening on port ~p\n",[PortNumber]),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
 	 {ok, Socket} ->
-	    InitPid ! {ok, Socket},
-	    accepting(Socket, ClientId)
+	    	InitPid ! {ok, Socket},
+	    	accepting(Socket, ClientId);
+		{error, eaddrinuse} ->
+			receive
+				after 5000 ->
+					ok
+			end,
+			start_listening(InitPid, PortNumber, ClientId)
     end.
 
 %%----------------------------------------------------------------------
