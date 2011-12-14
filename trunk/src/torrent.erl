@@ -133,12 +133,14 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			%%TODO eta
 			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
-				{ok, TempRecord} ->
+				{ok, OldTempRecord} ->
 					case Done of
 						true when NewStatusRecord#torrent_status.status == downloading ->
 							FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding},
+							TempRecord = OldTempRecord#torrent{status=seeding},
 			    send_completed(TrackerList);
 						_Other ->
+							TempRecord = OldTempRecord,
 							FinalStatusRecord = NewStatusRecord
 					end,
 					SenderPid ! {ok, done},
