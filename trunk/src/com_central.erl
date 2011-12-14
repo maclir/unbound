@@ -8,7 +8,7 @@
 -module(com_central).
 -behaviour(gen_server).
 -export([start_link/0]).
--export([start_download/0,add_new_torrent_file/1,add_new_torrent_url/1, get_all_torrents/0]).
+-export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2, get_all_torrents/0]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
 -include("torrent_db_records.hrl").
@@ -25,13 +25,20 @@ init(_Args) ->
 start_download() ->
     gen_server:call(?MODULE, start_download).
 
-add_new_torrent_url(Url) ->
+add_new_torrent_url(Url, Path) ->
     inets:start(),
     {ok, {_Status,_Headers,Body}} = httpc:request(get,{Url,[]},[],[]),
-    add_new_torrent_file(list_to_binary(Body)).
+	case Path of
+		"" ->
+			{ok, Dir} = file:get_cwd(),
+			FinalPath = Dir ++ "/Unbound_Dest/";
+		_ ->
+			FinalPath = Path
+	end,
+    add_new_torrent_file(list_to_binary(Body), FinalPath).
 
-add_new_torrent_file(Binary) ->
-    gen_server:call(?MODULE, {add_new_torrent,Binary}).
+add_new_torrent_file(Binary, Path) ->
+    gen_server:call(?MODULE, {add_new_torrent,Binary, Path}).
 
 get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
@@ -53,10 +60,10 @@ create_statuses([H|T], Statuses)->
 create_statuses([], Statuses) ->
     Statuses.
 
-handle_call({add_new_torrent,Binary},_From,State) ->
+handle_call({add_new_torrent,Binary, Path},_From,State) ->
     {ok,Record} = parser:decode(Binary),
     torrent_db:init(),
-    torrent_db:add(Record),
+    torrent_db:add(Record#torrent{dir = Path}),
     {reply,ok,State};
 handle_call({remove_torrents, _}, _From, State)->
     {reply, removed, State};
