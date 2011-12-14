@@ -161,8 +161,8 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{upload,SenderPid,PieceIndex,Offset,Length} ->
 			%%TODO upspeed uploaded
 			io:fwrite("im uploading!!! ~n"),
-			File_Binary = file_split:request_data(PieceIndex,Offset,Length, Record),
-			SenderPid ! {piece,PieceIndex,Offset,Length,File_Binary},
+			{ok, File_Binary} = file_split:request_data(PieceIndex,Offset,Length, Record),
+			SenderPid ! {piece,PieceIndex,Offset,File_Binary},
 			NewStatusRecord = StatusRecord#torrent_status{uploaded = StatusRecord#torrent_status.uploaded + Length},
 			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 		
@@ -193,7 +193,8 @@ ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 		_ when Reason == handshake;
 			   Reason == port_closed;
 			   Reason == bad_bitfield;
-			   Reason == econnrefused ->
+			   Reason == econnrefused;
+			   Reason == bad_request ->
 			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList);
 		_ ->
 			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList)
