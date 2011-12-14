@@ -10,8 +10,8 @@ write(PieceId, Data, Records, Done) ->
 		true ->
 			%%TODO get the TempFolder from settings db
 			{ok, Dir} = file:get_cwd(),
-			TempFolder = Dir ++ "/Unbound_Test/" ++ info_hash:to_hex(Records#torrent.info_sha) ++ "/" ,
-			DestFolder = Dir ++ "/Unbound_Dest/",
+			TempFolder = Dir ++ "/Unbound_Temp/" ++ info_hash:to_hex(Records#torrent.info_sha) ++ "/" ,
+			DestFolder = Records#torrent.dir,
 			
 			StartPos = (PieceId * Records#torrent.info#info.piece_length),
 			PieceLength = byte_size(Data),		

@@ -53,7 +53,14 @@ path_create(H, String) ->
 %% Files = Records#torrent.info#info.files(
 request_data(PieceIndex, Offset, Length, Record) ->
 	StartPos = PieceIndex * Record#torrent.info#info.piece_length + Offset,
-	request_data_start(StartPos, Length, Record, Record#torrent.dir).
+	case Record#torrent.info#info.length - Record#torrent.info#info.length_complete of
+		0 ->
+			TorrentPath = Record#torrent.dir;
+		_ ->
+			{ok, Dir} = file:get_cwd(),
+			TorrentPath = Dir ++ "/Unbound_Temp/"
+	end,
+	request_data_start(StartPos, Length, Record, TorrentPath).
 
 request_data_start(StartPos, Length, Record, TorrentPath) ->
 	if
