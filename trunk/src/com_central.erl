@@ -72,19 +72,25 @@ create_statuses([], Statuses) ->
 
 handle_call({add_new_torrent,Binary, Path},_From,State) ->
     {ok,Record} = parser:decode(Binary),
-    io:fwrite("~p\n",[Path]),
     torrent_db:init(),
-    NewRecord = Record#torrent{dir=Path},
-    torrent_db:add(NewRecord),
-    AppSupPid = whereis(app_sup),
-    {client_id,Id} = lists:keyfind(client_id,1,State),
-    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
-    StartFunc = {torrent,start_link,[Id,NewRecord]},
-    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
-    supervisor:start_child(AppSupPid,ChildSpec),
-    {reply,ok,State};
+    case torrent_db:hash_exists(Record#torrent.info_sha) of
+	false ->
+	    NewRecord = Record#torrent{dir=Path},
+	    torrent_db:add(NewRecord),
+	    AppSupPid = whereis(app_sup),
+	    {client_id,Id} = lists:keyfind(client_id,1,State),
+	    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
+	    StartFunc = {torrent,start_link,[Id,NewRecord]},
+	    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
+	    supervisor:start_child(AppSupPid,ChildSpec),
+	    {reply,ok,State};
+	true ->
+	    {reply,duplicate,State}
+    end;
+
 handle_call({remove_torrents, _}, _From, State)->
     {reply, removed, State};
+
 handle_call({get_all_torrents}, _From, State) ->
     Torrents = torrent_db:get_all_torrents(),
     Statuses = create_statuses(Torrents, []),
