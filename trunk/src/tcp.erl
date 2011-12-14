@@ -298,7 +298,6 @@ accepting(Socket, ClientId)->
 %%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
 	io:fwrite("accepting new connection ~n"),
-	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
 						 _ReservedBytes:8/binary, 
