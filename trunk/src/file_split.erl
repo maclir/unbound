@@ -58,7 +58,7 @@ request_data(PieceIndex, Offset, Length, Record) ->
 			TorrentPath = Record#torrent.dir;
 		_ ->
 			{ok, Dir} = file:get_cwd(),
-			TorrentPath = Dir ++ "/Unbound_Temp/"
+			TorrentPath = Dir ++ "/Unbound_Temp/" ++ info_hash:to_hex(Record#torrent.info_sha) ++ "/"
 	end,
 	request_data_start(StartPos, Length, Record, TorrentPath).
 
