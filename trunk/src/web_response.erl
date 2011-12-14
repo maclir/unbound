@@ -50,8 +50,7 @@ get_data(Filter) ->
 	[X || X <- Data, X#torrent_status.status == binary_to_list(Filter)].
 
 temp_get_data() ->
-    A = com_central:get_all_torrents(),
-    A.
+    com_central:get_all_torrents().
 	% Row1 = #torrent_status{info_hash = "12fe3465ef7265238767", priority = 1, name = "S01E01", size = 14,  status = "Stopped", peers = 4, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
 	% Row2 = #torrent_status{info_hash = "12ae213465ef726523ae", priority = 2, name = "S01E02", size = 12, status = "Downloading", peers = 14, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
 	% Row3 = #torrent_status{info_hash = "43fe34aeb4c7e654f834", priority = 3, name = "S01E03", size = 23, status = "Seeding", peers = 40, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
