@@ -37,8 +37,11 @@ get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
 
 create_statuses([H|T], Statuses)->
-    torrent_mapper:req(H#torrent.info_sha),
-    create_statuses(T, [#torrent_status{info_hash=H#torrent.info_sha, priority=3, name="dummy", size=9000, status="on"}|Statuses]);
+    % torrent_mapper:req(H#torrent.info_sha),
+    Info = H#torrent.info,
+    % error here:
+    create_statuses(T, [#torrent_status{info_hash=info_hash:to_hex(H#torrent.info_sha), priority=3, name="Dummy", size=torrent_db:get_size(H), status="Downloading", 
+    peers = 4, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15}|Statuses]);
 create_statuses([], Statuses) ->
     Statuses.
 
