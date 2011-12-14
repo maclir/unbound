@@ -4,7 +4,7 @@
 %%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([check_handshake/2, start_listening/3]).
+-export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/8, init_listening/2]).
 
 %%----------------------------------------------------------------------
 %% Function:	connect_to_server/8
@@ -298,6 +298,7 @@ accepting(Socket, ClientId)->
 %%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
 	io:fwrite("accepting new connection ~n"),
+	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
 						 _ReservedBytes:8/binary, 
