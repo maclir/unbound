@@ -37,7 +37,8 @@ start_torrent(Pid,[Record|Tail],Id) ->
 	InfoHash = info_hash:to_hex(Record#torrent.info_sha),
 	StartFunc = {torrent,start_link,[Id,Record]},
 	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
-	supervisor:start_child(Pid,ChildSpec),
+    supervisor:start_child(Pid,ChildSpec),
+
 	start_torrent(Pid,Tail,Id);
 
 start_torrent(_Pid,[],_) ->
@@ -54,6 +55,7 @@ start_link(Id,Record) ->
 %%TODO Status record should also come from here
 init({Id,Record}) ->
 	process_flag(trap_exit,true),
+    torrent_mapper:reg(Record#torrent.sha_info),
 	DownloadPid = spawn(download,init,[Record,self()]),
 	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
 	Announce = AnnounceList ++ [Record#torrent.announce],
