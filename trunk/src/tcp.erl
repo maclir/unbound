@@ -1,53 +1,20 @@
+%%%----------------------------------------------------------------------
+%%% Author:		Stepan Stepasyuk
+%%% Desc.:		API for external communication. (with seeders and tracker)
+%%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([scrape/2, connect_to_server/8, open_a_socket/5, connect_to_client/4, check_handshake/2, start_listening/3, init_listening/2]).
+-export([check_handshake/2, start_listening/3]).
 
-%% THIS COMMENTED BLOCK IS FOR TESTING HERE! PLEASE DO NOT DELETE IT!
-
-%% -----------------------------------------------------------------------------------------------------------------
-
-% connect_to_server()-> %% this function is used to connect to our tracker and get the peer list
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started",[]},[], []),
-	% {ok,{dict,Pairs}} = decode(list_to_binary(Response)),
-	% Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
-	% [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)].
-
-% "http://tiesto.barfly.se:6969/announce?info_hash=%0a%ab%5d%21%39%57%72%99%4e%64%43%cb%b3%e2%ae%03%ce%52%3b%32&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started"	
-% http://tracker.mininova.org/announce?info_hash=%95%a2%b4%e4%51%7a%6b%55%17%7f%e6%e2%71%98%52%43%70%f2%75%22&peer_id=33aa6c1d95510cc140a5&port=6769&uploaded=0&downloaded=0&left=0&compact=0&no_peer_id=0&event=started	
-% scrape()->
-	% {ok,{_,_,Response}} = httpc:request(get, {"http://tracker.thepiratebay.org/scrape?info_hash=%8a%c3%73%1a%d4%b0%39%c0%53%93%b5%40%4a%fa%6e%73%97%81%0b%41",[]},[], []),
-	% case decode(list_to_binary(Response)) of	
-	% {ok,
-		% {dict,
-			% [{<<"files">>,
-				% {dict, [{InfoHash,
-							% {dict,[{<<"complete">>,Complete},
-								   % {<<"downloaded">>,Downloaded},
-								   % {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
-								   % io:format("Complete:~p~nDownloaded:~p~nIncomplete:~p~n",[Complete,Downloaded,Incomplete]);
-	% _ -> io:format("Tracker does not support scraping or probably does not like you~n")
-	% end.
-
-% connect_to_client(MasterPid, Socket)-> 
-	% erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
-	% gen_tcp:send(Socket,[  %% sending a handshake
-							% 19,
-							% "BitTorrent protocol",
-							% <<0,0,0,0,0,0,0,0>>,
-							% <<16#0a, 16#ab, 16#5d, 16#21, 16#39, 16#57, 16#72, 16#99, 16#4e, 16#64, 16#43, 16#cb, 16#b3, 16#e2, 16#ae, 16#03, 16#ce, 16#52, 16#3b, 16#32>>,
-							% "BDann7c1d95510bb160a"
-						% ]),
-	% handshake_loop(MasterPid, <<>>), 
-	% main_loop(Socket, MasterPid).
-	
-%% -----------------------------------------------------------------------------------------------------------------
-
-%%
-%% Tracker communiacation
-%%
-	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, DownloadedVal, LeftVal,NumWantedVal)-> %% this function is used to connect to our tracker and get the peer list
-    
+%%----------------------------------------------------------------------
+%% Function:	connect_to_server/8
+%% Purpose:		builds a request string and sends it to the tracker
+%% Args:		AnnounceBin,InfoHashBin,ClientIdBin (binaries)
+%%				Eventt (string)
+%%				UploadedVal,DownloadedVal,LeftVal,NumWantedVal (integers)
+%% Returns:		List of peers and the interval is successful
+%%----------------------------------------------------------------------	
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,DownloadedVal,LeftVal,NumWantedVal)->   
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
@@ -63,15 +30,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
 	true->
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
-%% 	TestRequestString = 	"http://tiesto.barfly.se:6969/announce?info_hash=%c9%b8g%127%0a%5c%e7%ff%a7%11~E%23%9f%0e%df%87%0aK" ++
-%% 							"&peer_id=-TR2330-xtf7gcr3ik6u" ++
-%% 							"&port=51413" ++
-%% 							"&uploaded=0" ++
-%% 							"&downloaded=0" ++
-%% 							"&left=1048576" ++
-%% 							"&numwant=200" ++
-%% 							"&compact=1" ++
-%% 							"&event=started",
+	
 	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[	{"User-Agent", "Unbound"},
 																{"Host", "tiesto.barfly.se:6969"},
 																{"Accept", "*/*"}]
@@ -79,7 +38,16 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
 	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
 	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
 	[lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)].
-	
+
+%%----------------------------------------------------------------------
+%% Function:	scrape/2
+%% Purpose:		builds a scrape request string,sends it and
+%%				parses the response
+%% Args:		ScrapeBin, InfoHashBin (binaries)
+%% Returns:		amount of seeders,
+%%				peers who started downloading,
+%%				peers who started downloading and stopped
+%%----------------------------------------------------------------------	
 scrape(ScrapeBin,InfoHashBin)->	
 	Scrape = binary_to_list(ScrapeBin) ++ "?",
 	InfoHash = "info_hash" ++ binary_to_list(InfoHashBin),
@@ -97,6 +65,12 @@ scrape(ScrapeBin,InfoHashBin)->
 	_ -> "Tracker does not support scraping or probably does not like you~n"
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:	process_pairs/1
+%% Purpose:		parses the response from the tracker
+%% Args:		a tuple with 2 elements
+%% Returns:		a list with pairs with the response details
+%%----------------------------------------------------------------------	
 process_pairs({Key, Value})->
 	case binary_to_list(Key) of
 		"complete" -> {"complete", Value};
@@ -104,19 +78,27 @@ process_pairs({Key, Value})->
 		"min interval" -> {"Min Interval",Value};
 		"interval" -> {"Interval",Value};
 		"peers" -> {"peers",separate(Value)};
-			%%  DO NOT PANIC! ALL IO:FORMATS ARE JUST FOR TESTING. THEY ARE TO BE REPLACED WITH ACTUAL VALUE RETURNING.		
 		_ -> {"Unknown pair. Key: ~p Value: ~p~n",[Key,Value]}
 	end.
-	
+
+%%----------------------------------------------------------------------
+%% Function:	separate/1
+%% Purpose:		converts the peers IP from binary to list.
+%% Args:		binary
+%% Returns:		a list of peers' IPs
+%%----------------------------------------------------------------------	
 separate(<<>>)->
 	[];
 separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)].
 	
-%%	
-%% Peer Communication
-%%
-
+%%----------------------------------------------------------------------
+%% Function:	open_a_socket/5
+%% Purpose:		connects to a peer	
+%% Args: 		DestinationIp(tuple of 4 elements), 
+%%				DestinationPort(integer), InfoHash (string)
+%%				ClientId (string), MasterPid (pid)	
+%%----------------------------------------------------------------------
 open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
 	case gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0},{active,false}]) of
 		{ok,Socket} -> 
@@ -125,9 +107,16 @@ open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
 			exit(self(), Reason)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:	connect_to_client/4
+%% Purpose:		handshakes a peer and starts listening for the response,
+%%				after response, changes options of a socket and enters
+%%				the main loop
+%% Args:		MasterPid (pid), Socket (socket), InfoHash (string)
+%%				ClientId (string)
+%%----------------------------------------------------------------------	
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
-%    erlang:port_connect(Socket, self()), %% since the port was opened it another process, we have to reconnect it to the current process.
-    gen_tcp:send(Socket,[  %% sending a handshake
+    gen_tcp:send(Socket,[
 			   19,
 			   "BitTorrent protocol",
 			   <<0,0,0,0,0,0,0,0>>,
@@ -136,8 +125,15 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 						]),
 	handshake_loop(MasterPid,Socket),
  	inet:setopts(Socket, [{packet, 4},{active, true}]),
-	main_loop(Socket, MasterPid). %% starting the main loop for further communiation
-	
+	main_loop(Socket, MasterPid).
+
+%%----------------------------------------------------------------------
+%% Function:	handshake_loop/2
+%% Purpose:		parses the peers' handshake
+%% Returns:		if a handshake is successful, the function sends
+%%				a message to the parent process, otherwise process dies
+%% Args:		MasterPid (pid), Socket (socket)
+%%----------------------------------------------------------------------	
 handshake_loop(MasterPid, Socket)->
 case gen_tcp:recv(Socket,68) of
 	{ok,<< 19, "BitTorrent protocol", 
@@ -145,16 +141,19 @@ case gen_tcp:recv(Socket,68) of
 						 _InfoHash:20/binary, 
 						 _PeerID:20/binary
 						 >>}->
-
 		MasterPid ! "peer accepted handshake";
 	{error, _Reason}->
 			gen_tcp:close(Socket),
 			exit(self(), handshake)
 end.
 
-	
+%%----------------------------------------------------------------------
+%% Function:	main_loop/2
+%% Purpose:		endless loo, used for identyfing incoming messages,
+%%				including internal ones.
+%% Args:		MasterPid (pid), Socket (socket)
+%%----------------------------------------------------------------------	
 main_loop(Socket, MasterPid)->
-	%% inet:setopts(Socket, [{active, once}, {packet, 4}]),
 	receive
 		choke ->
 			gen_tcp:send(Socket,<<0>>), 
@@ -162,11 +161,11 @@ main_loop(Socket, MasterPid)->
 		unchoke ->
 			gen_tcp:send(Socket,<<1>>), 
 			main_loop(Socket,MasterPid); 
-		keep_alive ->	%% when we send keep_alive message to the slave
-			gen_tcp:send(Socket,<<0>>), %% it sends the appropriate message to the peer
-			main_loop(Socket,MasterPid); %% starts the loop again
+		keep_alive ->
+			gen_tcp:send(Socket,<<0>>), 
+			main_loop(Socket,MasterPid);
 		interested ->
-			gen_tcp:send(Socket,<<2>>), %% send a message, to say you are interested. for more info see bittorrent specification
+			gen_tcp:send(Socket,<<2>>),
 			main_loop(Socket,MasterPid);
 		not_interested ->
 			gen_tcp:send(Socket,<<3>>),
@@ -205,9 +204,9 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_not_interested, self()},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<>>}->
-			main_loop(Socket, MasterPid); %% in this case <<>> actually means keep_alive message
+			main_loop(Socket, MasterPid);
 		{tcp,_,<<1>>}-> 
-			MasterPid ! {got_unchoked,self()}, %% process an unchoked message
+			MasterPid ! {got_unchoked,self()},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
 			io:fwrite("got request for ~p~p", [Index, Offset]),
@@ -244,6 +243,15 @@ main_loop(Socket, MasterPid)->
 			exit(self(), main_loop_timeout)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:	init_listening/2
+%% Purpose:		spawns a listening process
+%%				afterwards, enters a receive loop and waits for a
+%%				listening socket to arrive
+%% Returns:		Pid of the process, if a listening socket arrived,
+%%				error, of a listening socket does not arrive.
+%% Args:		PortNumber(integer), ClietId(string)
+%%----------------------------------------------------------------------
 init_listening(PortNumber,ClientId) ->
     io:fwrite("Spawning a listening port\n"),
     ListeningPid = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
@@ -254,6 +262,12 @@ init_listening(PortNumber,ClientId) ->
 	    {error, error_opening_socket}
     end.
 
+%%----------------------------------------------------------------------
+%% Function:	start_listening/3
+%% Purpose:		listens on a port, sends back
+%%				listening socket.
+%% Args:		InitPid (pid), PortNumber(integer), ClietId(string)
+%%----------------------------------------------------------------------
 start_listening(InitPid, PortNumber, ClientId)->
 	io:fwrite("Started listening on port ~p\n",[PortNumber]),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
@@ -261,16 +275,29 @@ start_listening(InitPid, PortNumber, ClientId)->
 	    InitPid ! {ok, Socket},
 	    accepting(Socket, ClientId)
     end.
-	
+
+%%----------------------------------------------------------------------
+%% Function:	accepting/2
+%% Purpose:		accepting connections, spawns a hanler process when
+%%				a connection is made.
+%% Returns:		amount of seeders,
+%%				peers who started downloading,
+%%				peers who started downloading and stopped
+%% Args:		Socket (socket), ClietId(string)
+%%----------------------------------------------------------------------	
 accepting(Socket, ClientId)->
 	{ok, ListenSocket} = gen_tcp:accept(Socket),
 	io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
 	spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
 	accepting(Socket,ClientId).
-	
+
+%%----------------------------------------------------------------------
+%% Function:	check_handshake/2
+%% Purpose:		checks if the peer sent us a right handshake
+%% Args:		Socket (socket), ClietId(string)
+%%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
 	io:fwrite("accepting new connection ~n"),
-	erlang:port_connect(Socket, self()),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
 						 _ReservedBytes:8/binary, 
@@ -287,7 +314,13 @@ check_handshake(Socket,ClientId)->
 			gen_tcp:close(Socket),
 			exit(self(), {"remote peer sent this",Msg})				
 	end.
-	
+
+%%----------------------------------------------------------------------
+%% Function:	send_handshake/3
+%% Purpose:		handshakes a peer.
+%% Returns:		ok, if the packet was sent, otherwise - {error, Reason}
+%% Args:		Socket (socket), InfoHash (string), ClietId(string)
+%%----------------------------------------------------------------------		
 send_handshake(Socket, InfoHash, ClientId)->
 	gen_tcp:send(Socket,[
 			   19,
@@ -296,7 +329,15 @@ send_handshake(Socket, InfoHash, ClientId)->
 			   InfoHash,
 			   ClientId
 						]).
-	
+
+%%----------------------------------------------------------------------
+%% Function:	check_infohash/2
+%% Purpose:		check peers' infohash, receives a pid of master process
+%% Returns:		sends back a message with ip and port of a peer,
+%%				if successful,
+%%				if not, kills itself.
+%% Args:		Socket (socket), InfoHashFromPeer (string)
+%%----------------------------------------------------------------------							
 check_infohash(Socket,InfoHashFromPeer)->
 	case torrent_mapper:req(InfoHashFromPeer) of
 		{error,not_found} ->
