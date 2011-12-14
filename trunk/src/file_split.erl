@@ -79,7 +79,7 @@ merge_data(TorrentPath, [{BinPath, StartPos, Length}|T], BinaryData) ->
 	{ok, File} = file:open(TorrentPath ++ Path ++ Name, [read, binary]),
 	{ok, Data} = file:pread(File, StartPos, Length),
 	file:close(File),
-	NewData = <<BinaryData, Data>>,
+	NewData = <<BinaryData/binary, Data/binary>>,
 	merge_data(TorrentPath, T, NewData).
 
 
