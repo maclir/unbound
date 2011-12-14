@@ -42,7 +42,7 @@ perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
 		    TorrentPid ! {peer_list,self(),PeerList},
 		    loop(TorrentPid,Announce,UrlInfoHash,Id,Interval);
 		{error,Reason} ->
-		    io:fwrite("Tracker.erl error ~p~n", [Reason]),
+		    io:fwrite("Tracker error ~p~n", [Reason]),
 		    TorrentPid ! {error,Reason};
 		K ->
 		    io:fwrite("Tracker.erl error ~p~n", [K])
