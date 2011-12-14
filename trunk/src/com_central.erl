@@ -37,11 +37,21 @@ get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
 
 create_statuses([H|T], Statuses)->
-    % torrent_mapper:req(H#torrent.info_sha),
-    Info = H#torrent.info,
+    TPid = torrent_mapper:req(H#torrent.info_sha),
+    TPid ! {get_statistics, self()},
+    io:format("hash ~p pid ~p\n", [H#torrent.info_sha, TPid]),
+    receive 
+        {statistics, Uploaded, Downloaded, Remaining} ->
+            Info = H#torrent.info,
+            create_statuses(T, [#torrent_status{info_hash=info_hash:to_hex(H#torrent.info_sha), priority=3, name="Dummy", size=torrent_db:get_size(H), status="Downloading", 
+                                peers = 4, downspeed = 34, upspeed = 640, eta = 101212, uploaded = Uploaded, downloaded = Downloaded}|Statuses]);
+
+        _ ->
+            ok
+    after 5000 -> io:format("Com_central timeout ~n")
+    end;
+    % [];
     % error here:
-    create_statuses(T, [#torrent_status{info_hash=info_hash:to_hex(H#torrent.info_sha), priority=3, name="Dummy", size=torrent_db:get_size(H), status="Downloading", 
-    peers = 4, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15}|Statuses]);
 create_statuses([], Statuses) ->
     Statuses.
 

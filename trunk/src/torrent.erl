@@ -55,7 +55,7 @@ start_link(Id,Record) ->
 %%TODO Status record should also come from here
 init({Id,Record}) ->
 	process_flag(trap_exit,true),
-    torrent_mapper:reg(Record#torrent.sha_info),
+    torrent_mapper:reg(Record#torrent.info_sha),
 	DownloadPid = spawn(download,init,[Record,self()]),
 	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
 	Announce = AnnounceList ++ [Record#torrent.announce],
