@@ -231,8 +231,7 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
 
 send_have(_,[]) ->
     ok;
-send_have(PieceIndex, [{Pid,Ip}|Tail]) ->
-	io:fwrite("SENDINH HAVE TO: ~p~n",[Ip]),
+send_have(PieceIndex, [{Pid,_Ip}|Tail]) ->
 	Pid ! {have, self(), PieceIndex},
 	send_have(PieceIndex,Tail).
 
