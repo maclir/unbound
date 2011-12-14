@@ -51,7 +51,7 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal, Downlo
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
-    Port = "port=" ++ "6881" ++ "&",
+    Port = "port=" ++ "6991" ++ "&",
     Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
     Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
     Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
@@ -254,6 +254,7 @@ init_listening(PortNumber,ClientId) ->
     end.
 
 start_listening(InitPid, PortNumber, ClientId)->
+	io:fwrite("listening ~n"),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
 	 {ok, Socket} ->
 	    InitPid ! {ok, Socket},
@@ -262,6 +263,7 @@ start_listening(InitPid, PortNumber, ClientId)->
 	
 accepting(Socket, ClientId)->
 	{ok, ListenSocket} = gen_tcp:accept(Socket),
+	io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
 	spawn_link(?MODULE, check_handshake,[ListenSocket,ClientId]),
 	accepting(Socket,ClientId).
 	
