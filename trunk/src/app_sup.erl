@@ -17,7 +17,7 @@ start_link() ->
 	    inets:start(),
 	    torrent_db:init(),
 	    Id = clientId(),
-	    supervisor:start_link({local,unbound_torrent},?MODULE,[Id]);
+	    supervisor:start_link({local,?MODULE},?MODULE,[Id]);
 	Pid ->
 	    io:fwrite("The Unbound Torrent client is already started with Pid ~p!",[Pid])
     end.
@@ -32,7 +32,7 @@ init([Id]) ->
 	   transient, brutal_kill, worker,[torrent_loader]},
 	  {port_sup,{port_sup,start_link,[Id]},
 	   permanent, infinity, supervisor,[port_sup]},
-	  {com_central,{com_central,start_link,[]},
+	  {com_central,{com_central,start_link,[Id]},
 	   permanent, brutal_kill, worker,[com_central]}
 	 ]
 	}

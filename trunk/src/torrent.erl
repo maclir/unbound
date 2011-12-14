@@ -18,31 +18,31 @@
 %% storage and dynamically add all the torrents found into the supervisor.
 
 start_link_loader(Id) ->
-	Self = self(),
-	spawn_link(?MODULE,init_loader,[{Self,Id}]),
-	receive
-		{ok,Pid} ->
-			{ok,Pid}
-		after 100 ->
-			{error,time_out}
-	end.
+    Self = self(),
+    spawn_link(?MODULE,init_loader,[{Self,Id}]),
+    receive
+	{ok,Pid} ->
+	    {ok,Pid}
+    after 100 ->
+	    {error,time_out}
+    end.
 
 init_loader({Pid,Id})->
-	io:fwrite("Torrent Loader Started!\n"),
-	Pid ! {ok,self()},
-	RecordList = [torrent_db:get_torrent_by_id(0)],
-	start_torrent(Pid,RecordList,Id).
+    io:fwrite("Torrent Loader Started!\n"),
+    Pid ! {ok,self()},
+    RecordList = torrent_db:get_all_torrents(),
+    start_torrent(Pid,RecordList,Id).
 
 start_torrent(Pid,[Record|Tail],Id) ->
-	InfoHash = info_hash:to_hex(Record#torrent.info_sha),
-	StartFunc = {torrent,start_link,[Id,Record]},
-	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
+    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
+    StartFunc = {torrent,start_link,[Id,Record]},
+    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
     supervisor:start_child(Pid,ChildSpec),
-
-	start_torrent(Pid,Tail,Id);
+    
+    start_torrent(Pid,Tail,Id);
 
 start_torrent(_Pid,[],_) ->
-	ok.
+    ok.
 
 
 
@@ -50,40 +50,39 @@ start_torrent(_Pid,[],_) ->
 %% Regular torrent functions
 
 start_link(Id,Record) ->
-	{ok,spawn_link(torrent,init,[{Id,Record}])}.
+    {ok,spawn_link(torrent,init,[{Id,Record}])}.
 
 %%TODO Status record should also come from here
 init({Id,Record}) ->
-	process_flag(trap_exit,true),
+    process_flag(trap_exit,true),
     torrent_mapper:reg(Record#torrent.info_sha),
-	DownloadPid = spawn(download,init,[Record,self()]),
-	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
-	Announce = AnnounceList ++ [Record#torrent.announce],
-	StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
-								   %				   priority = Record#torrent.priority,
-								   name = Record#torrent.info#info.name,
-								   size = Record#torrent.info#info.length,
-								   status = Record#torrent.status,
-								   download_timer = erlang:now(),
-								   upload_timer = erlang:now()},   
-	spawn_trackers(Announce,Record#torrent.info_sha,Id),
-	loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[]).
+    DownloadPid = spawn(download,init,[Record,self()]),
+    AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
+    Announce = AnnounceList ++ [Record#torrent.announce],
+    StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
+				   name = Record#torrent.info#info.name,
+				   size = Record#torrent.info#info.length,
+				   status = Record#torrent.status,
+				   download_timer = erlang:now(),
+				   upload_timer = erlang:now()},   
+    spawn_trackers(Announce,Record#torrent.info_sha,Id),
+    loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[]).
 %%TODO status
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
-	receive
-		{new_upload,TcpPid, IpPort} ->
-			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
-			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers);
-		{get_statistics,Pid} ->
-			Pid ! {statistics,StatusRecord#torrent_status.uploaded
-				   , StatusRecord#torrent_status.downloaded
-				   , Record#torrent.info#info.length - Record#torrent.info#info.length_complete},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{im_free, NetPid} ->
-			DownloadPid ! {new_free, NetPid},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
-		{peer_list,FromPid,ReceivedPeerList} ->
+    receive
+	{new_upload,TcpPid, IpPort} ->
+	    NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
+	    NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers);
+	{get_statistics,Pid} ->
+	    Pid ! {statistics,StatusRecord#torrent_status.uploaded
+		   , StatusRecord#torrent_status.downloaded
+		   , Record#torrent.info#info.length - Record#torrent.info#info.length_complete},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{im_free, NetPid} ->
+	    DownloadPid ! {new_free, NetPid},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
+	{peer_list,FromPid,ReceivedPeerList} ->
 			TempTrackerList = lists:delete(FromPid, TrackerList),
 			NewTrackerList = [FromPid|TempTrackerList],
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
@@ -138,7 +137,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					case Done of
 						true when NewStatusRecord#torrent_status.status == downloading ->
 							FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding},
-							send_completed(TrackerList);
+			    send_completed(TrackerList);
 						_Other ->
 							FinalStatusRecord = NewStatusRecord
 					end,
@@ -184,7 +183,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			end,
 			FinalActiveNetList = NewActiveNetList ++ TempActiveNetList,
 			loop(Record,StatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers)
-	end.
+    end.
 
 ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
@@ -205,38 +204,38 @@ ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 spawn_trackers([],_,_) ->
 	ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
-	Self = self(),
-	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
-	spawn_trackers(AnnounceList,InfoHash,Id).
+    Self = self(),
+    spawn(tracker,init,[Self,Announce,InfoHash,Id]),
+    spawn_trackers(AnnounceList,InfoHash,Id).
 
 screen_peers([] ,_ActiveNetList, List) ->
-	List;
+    List;
 screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
-	case lists:keymember(IpPort, 2, ActiveNetList) of
-		true ->
-			screen_peers(PeerList, ActiveNetList, List);
-		false ->
-			screen_peers(PeerList, ActiveNetList, [IpPort|List])
-	end.
+    case lists:keymember(IpPort, 2, ActiveNetList) of
+	true ->
+	    screen_peers(PeerList, ActiveNetList, List);
+	false ->
+	    screen_peers(PeerList, ActiveNetList, [IpPort|List])
+    end.
 
 spawn_connections(_,_InfoHash,_Id,NetList,Count,_Record) when Count < 1->
-	NetList;
+    NetList;
 spawn_connections([],_InfoHash,_Id,NetList,_,_Record) ->
-	NetList;
+    NetList;
 spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
-	Self = self(),
-	Pid = spawn_link(nettransfer,init,[Self,Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
-	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
+    Self = self(),
+    Pid = spawn_link(nettransfer,init,[Self,Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
+    spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
 
 send_have(_,[]) ->
-	ok;
+    ok;
 send_have(PieceIndex, [{Pid,Ip}|Tail]) ->
 	io:fwrite("SENDINH HAVE TO: ~p~n",[Ip]),
 	Pid ! {have, self(), PieceIndex},
 	send_have(PieceIndex,Tail).
 
 send_completed([]) ->
-	ok;
+    ok;
 send_completed([Pid|Tail]) ->
-	Pid ! {completed},
-	send_completed(Tail).
+    Pid ! {completed},
+    send_completed(Tail).
