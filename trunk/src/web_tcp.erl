@@ -3,7 +3,7 @@
 %%% Desc.:		main module for the webserver
 %%%----------------------------------------------------------------------
 -module(web_tcp).
--export([start/0, start/1, stop/0, stop/1]).
+-export([start_link/0,start/0, start/1, stop/0, stop/1]).
 
 
 %%-----------------------------------------------------------------------
