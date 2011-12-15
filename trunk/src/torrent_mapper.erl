@@ -24,7 +24,7 @@ free(SHA1) ->
 req(SHA1) ->
     gen_server:call(?MODULE,{req,SHA1}).
 
-req() ->
+req_all() ->
     gen_server:call(?MODULE,{req,all}).
 
 init(_Args) ->
