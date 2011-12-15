@@ -283,7 +283,7 @@ start_listening(InitPid, PortNumber, ClientId)->
 	{ok, Socket} ->
 	    InitPid ! {ok, Socket},
 	    accepting(Socket, ClientId);
-	{error, eaddrinuse} ->
+	{error, _} ->
 	    io:fwrite("Port ~p in use, retrying in 5 seconds\n",[PortNumber]),
 	    receive
 	    after 5000 ->
