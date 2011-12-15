@@ -22,13 +22,11 @@ get_resp({'GET', _, Path}) ->
 	end,			
 	Content = get_content(FinalPath),
     Header = get_header(classify(Path), Content),
-    io:format("get response ~n"),
     {Header, Content};
 get_resp({'POST', UnparsedParams, _Path}) ->
     Params = seperate_params(UnparsedParams),
     {Type , Content} = get_post_result(Params),
     Header = get_header(Type, Content),
-    io:format("post response ~n"),
     {Header, Content}.
 
 %%----------------------------------------------------------------------

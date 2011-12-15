@@ -42,21 +42,21 @@ add_new_torrent_file(Binary, Path) ->
 get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
 
+create_statuses([], Statuses) ->
+    Statuses;
 create_statuses([H|T], Statuses)->
-    {ok, TPid} = torrent_mapper:req(H#torrent.info_sha),
-    TPid ! {get_status, self()},
+    H ! {get_status_record, self()},
+	io:fwrite("44:, ~p~n", [T]),
     receive 
         {status, Status} ->
-            Info = H#torrent.info,
             create_statuses(T, 
 			    [Status|Statuses]);
         _ ->
             Statuses
-    after 5000 -> Statuses
-    end;    % error here:
-create_statuses([], Statuses) ->
-    Statuses.
-
+    after 5000 ->
+			io:fwrite("4, ~p~n", [H]),
+			Statuses
+    end.
 
 handle_call({add_new_torrent,Binary, Path},_From,State) ->
     {ok,Record} = parser:decode(Binary),
@@ -80,8 +80,8 @@ handle_call({remove_torrents, _}, _From, State)->
     {reply, removed, State};
 
 handle_call({get_all_torrents}, _From, State) ->
-    Torrents = torrent_db:get_all_torrents(),
-    Statuses = create_statuses(Torrents, []),
+	TorrentPids = torrent_mapper:req_all(),
+    Statuses = create_statuses(TorrentPids, []),
     {reply, Statuses, State}.
     
 

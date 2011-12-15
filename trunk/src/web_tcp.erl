@@ -76,7 +76,6 @@ port_name(Port) ->
 %% Args:		ListenSock (integer)
 %%----------------------------------------------------------------------
 loop(ListenSock) ->
-    io:format("listen loop"),
 	{ok, Sock} = gen_tcp:accept(ListenSock),
 	{ok, {{_Ip1,_Ip2,_Ip3,_Ip4}, _Port}} = inet:peername(Sock),
 	% io:format("~p.~p.~p.~p:~p~n", [Ip1, Ip2, Ip3, Ip4, Port]),

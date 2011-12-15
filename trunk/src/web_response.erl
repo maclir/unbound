@@ -14,7 +14,6 @@ get_data_xml(Filter) ->
 		<rows>
 		<page>1</page>
 		<total>1</total>",
-
 	Body = get_body(get_data(Filter), []),
 	
 	Footer = 
@@ -28,7 +27,7 @@ get_body([], Body) ->
 	Body;
 get_body([H|T], Body) ->
 	NewRow = 
-		"<row status=\"" ++ H#torrent_status.status ++ "\" id=\"" ++ H#torrent_status.info_hash ++ "\">
+		"<row status=\"" ++ atom_to_list(H#torrent_status.status) ++ "\" id=\"" ++ info_hash:to_hex(H#torrent_status.info_hash) ++ "\">
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
 			<cell><![CDATA[" ++ binary_to_list(H#torrent_status.name) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
@@ -44,14 +43,15 @@ get_body([H|T], Body) ->
 	get_body(T, NewRow ++ Body).
 
 get_data(<<"all">>) ->
-	temp_get_data();
+	io:fwrite("1~n"),
+    com_central:get_all_torrents();
 get_data(Filter) ->
-	Data = temp_get_data(),
+	io:fwrite("3~n"),
+	Data = com_central:get_all_torrents(),
 	FilterFun = fun(Record) -> Record#torrent_status.status == binary_to_atom(Filter, utf8) end,
 	lists:filter(FilterFun, Data).
 
-temp_get_data() ->
-    com_central:get_all_torrents().
+%% temp_get_data() ->
 	% Row1 = #torrent_status{info_hash = "12fe3465ef7265238767", priority = 1, name = "S01E01", size = 14,  status = "Stopped", peers = 4, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
 	% Row2 = #torrent_status{info_hash = "12ae213465ef726523ae", priority = 2, name = "S01E02", size = 12, status = "Downloading", peers = 14, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
 	% Row3 = #torrent_status{info_hash = "43fe34aeb4c7e654f834", priority = 3, name = "S01E03", size = 23, status = "Seeding", peers = 40, downspeed = 34, upspeed = 640, eta = 101212, uploaded = 15},
