@@ -209,7 +209,7 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_unchoked,self()},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
-			io:fwrite("got request for ~p~p", [Index, Offset]),
+			io:fwrite("got request for ~p, ~p", [Index, Offset]),
 			MasterPid ! {got_request,self(), Index,Offset,Length},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->

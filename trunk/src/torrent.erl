@@ -83,6 +83,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 	    DownloadPid ! {new_free, NetPid},
 	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 	{peer_list,FromPid,ReceivedPeerList} ->
+			io:fwrite("Peers: ~p~n", [ReceivedPeerList]),
 			TempTrackerList = lists:delete(FromPid, TrackerList),
 			NewTrackerList = [FromPid|TempTrackerList],
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
