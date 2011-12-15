@@ -46,9 +46,10 @@ create_statuses([], Statuses) ->
     Statuses;
 create_statuses([H|T], Statuses)->
     H ! {get_status_record, self()},
-	io:fwrite("44:, ~p~n", [T]),
+	io:fwrite("call:, ~p~n", [H]),
     receive 
         {status, Status} ->
+			io:fwrite("answer:, ~p~n", [H]),
             create_statuses(T, 
 			    [Status|Statuses]);
         _ ->

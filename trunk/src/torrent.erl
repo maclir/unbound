@@ -71,8 +71,8 @@ init({Id,Record}) ->
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers) ->
     receive
 	{get_status_record,Sender} ->
-	    Sender ! {status,StatusRecord};
-
+	    Sender ! {status,StatusRecord},
+	    loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers);
 	{new_upload,TcpPid, IpPort} ->
 	    NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 	    NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
