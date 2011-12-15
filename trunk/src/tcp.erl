@@ -295,7 +295,6 @@ accepting(Socket, ClientId)->
     {ok, ListenSocket} = gen_tcp:accept(Socket),
     io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
     spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
-    erlang:unlink(ListenSocket),
     accepting(Socket,ClientId).
 
 %%----------------------------------------------------------------------
