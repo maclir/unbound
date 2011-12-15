@@ -13,7 +13,14 @@
 %% Returns:		{Header (list|string), Content (binary)}
 %%----------------------------------------------------------------------
 get_resp({'GET', _, Path}) ->
-    Content = get_content("." ++ Path),
+    {ok, Cwd} = file:get_cwd(),
+	case Path of
+		"/" ->
+			FinalPath = Cwd ++ "/../UI"  ++ Path ++ "index.html";
+		_ ->
+			FinalPath = Cwd ++ "/../UI"  ++ Path
+	end,			
+	Content = get_content(FinalPath),
     Header = get_header(classify(Path), Content),
     io:format("get response ~n"),
     {Header, Content};
