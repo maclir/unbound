@@ -37,9 +37,7 @@ init([Id]) ->
 	  {port_sup,{port_sup,start_link,[Id]},
 	   permanent, infinity, supervisor,[port_sup]},
 	  {com_central,{com_central,start_link,[Id]},
-	   permanent, brutal_kill, worker,[com_central]},
-	  {ui_server, {web_tcp,start_link,[]},
-	   permanent, brutal_kill, worker,[ui_server]}
+	   permanent, brutal_kill, worker,[com_central]}
 	 ]
 	}
     }.

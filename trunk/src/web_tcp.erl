@@ -3,23 +3,9 @@
 %%% Desc.:		main module for the webserver
 %%%----------------------------------------------------------------------
 -module(web_tcp).
--export([start_link/0,start/0, start/1, stop/0, stop/1]).
+-export([start/0, start/1, stop/0, stop/1]).
 
-
-%%-----------------------------------------------------------------------
-%% Function: start_link/0
-%% Purpose: spawns the process
-%% Returns: {ok, Pid} | {error, Reason}
-%%-----------------------------------------------------------------------
-start_link() ->
-    Pid = spawn_link(fun -> start(self())),
-    receive
-	started ->
-	    {ok, Pid};
-	Reason ->
-	    {error, Reason}
-    end.
-		       
+	       
 %%----------------------------------------------------------------------
 %% Function:	start/0
 %% Purpose:		same as start/1 with default port of 9999
@@ -27,8 +13,7 @@ start_link() ->
 %%				{already_started, Port (integer)} already started on
 %%				this port
 %%----------------------------------------------------------------------
-start(Caller) ->
-    Caller ! started,
+start() ->
     start(9999).
 
 %%----------------------------------------------------------------------
