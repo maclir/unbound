@@ -4,7 +4,7 @@
 %%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/8, init_listening/2]).
+-export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/8, init_listening/2, scrape/2]).
 
 %%----------------------------------------------------------------------
 %% Function:	connect_to_server/8
@@ -31,13 +31,22 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,Downloa
 		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
 	
-	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[	{"User-Agent", "Unbound"},
-																{"Host", "tiesto.barfly.se:6969"},
+	case httpc:request(get, {RequestString,[{"User-Agent", "Unbound"},
 																{"Accept", "*/*"}]
-											 },[], []),
-	{ok,{dict,Pairs}} = decode(list_to_binary(Response)),
-	Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
-	[lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)].
+											 },[], []) of
+		{ok,{_,_,Response}} -> 
+			case decode(list_to_binary(Response)) of 
+				{ok,{dict,Pairs}} -> 
+					Result = lists:map(fun(X)->process_pairs(X) end, Pairs),
+					[lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)];
+				{error, Reason} ->
+					exit(self(), Reason)
+			end;
+		{error,Reason} ->
+			exit(self(), Reason)
+	end.
+	
+	
 
 %%----------------------------------------------------------------------
 %% Function:	scrape/2
