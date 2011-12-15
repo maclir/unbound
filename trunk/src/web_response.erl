@@ -47,7 +47,8 @@ get_data(<<"all">>) ->
 	temp_get_data();
 get_data(Filter) ->
 	Data = temp_get_data(),
-	[X || X <- Data, X#torrent_status.status == binary_to_list(Filter)].
+	FilterFun = fun(Record) -> Record#torrent_status.status == binary_to_atom(Filter, utf8) end,
+	lists:filter(FilterFun, Data).
 
 temp_get_data() ->
     com_central:get_all_torrents().
