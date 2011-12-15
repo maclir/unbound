@@ -8,7 +8,8 @@
 -module(com_central).
 -behaviour(gen_server).
 -export([start_link/1]).
--export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2, get_all_torrents/0]).
+-export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2]).
+-export([torrent_command/2, get_all_torrents/0]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
 -include("torrent_db_records.hrl").
@@ -27,17 +28,24 @@ start_download() ->
 add_new_torrent_url(Url, Path) ->
     inets:start(),
     {ok, {_Status,_Headers,Body}} = httpc:request(get,{Url,[]},[],[]),
-	case Path of
-		"" ->
-			{ok, Dir} = file:get_cwd(),
-			FinalPath = Dir ++ "/Unbound_Dest/";
-		_ ->
-			FinalPath = Path
-	end,
+    IsDir = filelib:is_dir(Path),
+    case Path of
+	"" ->
+	    {ok, Dir} = file:get_cwd(),
+	    FinalPath = Dir ++ "/Unbound_Dest/";
+	_ when IsDir ->
+	    FinalPath = Path;
+	_ ->
+	    {ok, Dir} = file:get_cwd(),
+	    FinalPath = Dir ++ "/Unbound_Dest/"
+    end,
     add_new_torrent_file(list_to_binary(Body), FinalPath).
 
 add_new_torrent_file(Binary, Path) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary, Path}).
+
+torrent_command(Hash, Command) ->
+    gen_server:call(?MODULE, {torrent_command,Hash,Command}).
 
 get_all_torrents()->
     gen_server:call(?MODULE, {get_all_torrents}).
@@ -74,6 +82,11 @@ handle_call({add_new_torrent,Binary, Path},_From,State) ->
 	true ->
 	    {reply,duplicate,State}
     end;
+
+handle_call({torrent_command,Hash,Command},_From,State) ->
+    {ok,Pid} = torrent_mapper:req(Hash),
+    Pid ! {command, Command},
+    {reply, ok, State};
 
 handle_call({remove_torrents, _}, _From, State)->
     {reply, removed, State};
