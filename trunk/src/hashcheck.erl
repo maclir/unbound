@@ -7,19 +7,36 @@
 
 -export([calculate_hash/1, compare/2,is_equal/2]).
 
-%% calcualtes the sha1 for the binary file
+%%----------------------------------------------------------------------
+%% Function:	calculate_hash/1
+%% Purpose:		calcualtes the sha1 for the binary file
+%% Args:		File
+%% Returns:		computation of sha for the given file.
+%%----------------------------------------------------------------------
+
 calculate_hash(File) ->
      crypto:sha(File).
 
 
-%% first calculates the sha1 for the received data and then sends it together
-%% with the sha1 stored in the file to comparator
+%%----------------------------------------------------------------------
+%% Function:	compare/2
+%% Purpose:     first calcualtes the sha1 for the received data and then send it
+%%              together with the sha1 stored in the file for compare.
+%% Args:		Sha1, ReceivedData
+%% Returns:     sends data to is_equal function for comparing.
+%%----------------------------------------------------------------------
 
 compare(Sha1 , ReceivedData) ->
     HashFile = calculate_hash(ReceivedData),
     is_equal(Sha1 , HashFile).
 
-%% comparing the sha1 files.
+
+%%----------------------------------------------------------------------
+%% Function:	is_equal/2
+%% Purpose:		comparing the sha1 files
+%% Args:		sha1,sha1
+%% Returns:     checks if it is the same or not( true, false)
+%%----------------------------------------------------------------------
 
 is_equal(Sha1 , Sha1) ->
     true;
