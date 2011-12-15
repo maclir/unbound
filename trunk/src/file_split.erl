@@ -1,13 +1,20 @@
-%% Author: Evelina Vorobyeva
-%% Created: Nov 18, 2011
+%%%----------------------------------------------------------------------
+%%% Author:		Evelina Vorobyeva
+%%% Desc.:		Calculating the data's position inside the file for 
+%%%				both uploading and downloading
+%%%----------------------------------------------------------------------
 
 -module(file_split).
 -export([start/5, path_create/2, request_data/4]).
 -include("torrent_db_records.hrl").
 
 
-
-%% Starting function
+%%----------------------------------------------------------------------
+%% Function:	start/5
+%% Purpose:		starts the calculation process
+%% Args:		Data(binary), StartPos, PieceLength(integers),
+%%				TempPath (String), Records (list of records)
+%%----------------------------------------------------------------------	
 start(Data, StartPos, PieceLength, TempPath, Records) ->
 	if
 		(is_list(Records#torrent.info#info.files) and (Records#torrent.info#info.files /= []) and is_record(hd(Records#torrent.info#info.files), file)) ->
@@ -16,10 +23,16 @@ start(Data, StartPos, PieceLength, TempPath, Records) ->
 			Files = [{[Records#torrent.info#info.name], StartPos, PieceLength}]
 	end,
 	
-
 	write_to_file(Files, Data, TempPath, Records).
 
-%% Function to write the data to the file
+
+%%----------------------------------------------------------------------
+%% Function:	write_to_file/4
+%% Purpose:		Write the data to the file
+%% Returns:		ok and changed DB record with the changed LengthComplete entry
+%% Args:		BinaryPath(binary), StartPos(integer), Length(integer)
+%%				AllData(binary), TempPath(String), Records(List of records)
+%%----------------------------------------------------------------------	
 write_to_file(_, <<>>, _, Record) ->
 	{ok, Record};
 write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
@@ -38,7 +51,12 @@ write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	end,
 	write_to_file(T, Rest, TempPath, NewRecord).
 
-%% Function to change the binary data into Strings and create the path for saving the data on the HD
+%%----------------------------------------------------------------------
+%% Function:	path_create/2
+%% Purpose:		Creates the path string for saving data on HD from the binary data
+%% Returns:		Name of the file and a path string
+%% Args:		BinaryPath (binary), empty String
+%%----------------------------------------------------------------------
 path_create([H|[]], String) ->
 	Name = binary_to_list(H),
  	{Name, String};
@@ -49,8 +67,12 @@ path_create(H, String) ->
 	Name = binary_to_list(H),
  	{Name, String}.
 
-%% Merging the binary data from the files
-%% Files = Records#torrent.info#info.files(
+%%----------------------------------------------------------------------
+%% Function:	request_data/4
+%% Purpose:		Calculates the start position of the data in the file (for uploading) 
+%% Args:		PieceIndex(integer), Offset(integer), Length(integer)
+%%				Record(record)
+%%----------------------------------------------------------------------
 request_data(PieceIndex, Offset, Length, Record) ->
 	StartPos = PieceIndex * Record#torrent.info#info.piece_length + Offset,
 	case Record#torrent.info#info.length - Record#torrent.info#info.length_complete of
@@ -62,6 +84,13 @@ request_data(PieceIndex, Offset, Length, Record) ->
 	end,
 	request_data_start(StartPos, Length, Record, TorrentPath).
 
+%%----------------------------------------------------------------------
+%% Function:	request_data_start/4
+%% Purpose:		Merges the binary data from the files (for uploading)
+%%				Files = Records#torrent.info#info.files
+%% Args:		StartPos(integer), Length(integer)
+%%				Records(record), TorrentPath(String)
+%%----------------------------------------------------------------------
 request_data_start(StartPos, Length, Record, TorrentPath) ->
 	if
 		(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
@@ -71,6 +100,12 @@ request_data_start(StartPos, Length, Record, TorrentPath) ->
 	end,
 	merge_data(TorrentPath, FileMap, <<>>).
 
+%%----------------------------------------------------------------------
+%% Function:	merge_data/3
+%% Purpose:		Reading the requested binary data from the files 
+%% Returns:		Binary Data needed to be uploaded			
+%% Args:		TorrentPath(String), FileMap(List), BinaryData(binary)
+%%----------------------------------------------------------------------
 merge_data(_, [], Data) ->
 	{ok, Data};
 merge_data(TorrentPath, [{BinPath, StartPos, Length}|T], BinaryData) ->
@@ -82,7 +117,12 @@ merge_data(TorrentPath, [{BinPath, StartPos, Length}|T], BinaryData) ->
 	NewData = <<BinaryData/binary, Data/binary>>,
 	merge_data(TorrentPath, T, NewData).
 
-
+%%----------------------------------------------------------------------
+%% Function:	alter_record/3
+%% Purpose:		Changing the downloaded file's length in the DB
+%% Returns:		Changed DB record
+%% Args:		Length(integer), Path(String), Record(record)
+%%----------------------------------------------------------------------
 %% Updating the downloaded file's length in the db
 alter_record(Length, Path, Record) ->
 	Files = Record#torrent.info#info.files,
@@ -94,11 +134,16 @@ alter_record(Length, Path, Record) ->
 	NewRecord = Record#torrent{info = (Record#torrent.info)#info{files = NewList}},
 	NewRecord.
 												
-%% co-author: Alireza Pazirandeh
-%% The function for calculating the positions of of the pieces inside the files
+%%----------------------------------------------------------------------
+%% co-author: 	Alireza Pazirandeh
+%% Function:	calc_files/5
+%% Purpose:		Calculating the positions of the piece inside the file
+%% Returns:		A record with the Path string, start position and the data's length
+%% Args:		StartPos(integer), Length(integer), Record(List of records), 
+%%				StartFilePos(Integer), Files(List)
+%%----------------------------------------------------------------------
 calc_files(_, 0, _, _, Files) ->
 		lists:reverse(Files);
-%% the startPos < startFilePos and endPos < endFilePos, this is the last piece
 calc_files(StartPos, Length, [H|T], StartFilePos, Files)
 	when ((StartPos < StartFilePos + H#file.length) and (StartPos >= StartFilePos)) ->
 		MaxAllowedLength = StartFilePos + H#file.length - StartPos,

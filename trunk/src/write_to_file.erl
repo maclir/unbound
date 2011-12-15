@@ -1,10 +1,19 @@
-%% Author: Evelina Vorobyeva
-%% Created: Nov 14, 2011
-
+%%%----------------------------------------------------------------------
+%%% Author:		Evelina Vorobyeva
+%%% Desc.:		Creating the files and folders and writing the downloaded
+%%%				data there
+%%%----------------------------------------------------------------------
 -module(write_to_file).
 -export([write/4]).
 -include("torrent_db_records.hrl").
 
+%%----------------------------------------------------------------------
+%% Function:	write/4
+%% Purpose:		writing the data in the write position in file
+%%				in the temporary folder
+%% Args:		PieceId(Integer), Data(binary), Records(record),
+%%				Done(boolean)
+%%----------------------------------------------------------------------	
 write(PieceId, Data, Records, Done) ->
 	case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
 		true ->
@@ -33,18 +42,35 @@ write(PieceId, Data, Records, Done) ->
 			{error, sha_did_not_match}
 	end.
 
-
-%% Validating the piece's SHA1 
+%%----------------------------------------------------------------------
+%% Function:	check_sha/3
+%% Purpose:		Validating the piece's sha1 
+%% Args:		Shas(String), PieceId(Integer), Data(Binary)
+%% Returns:		true, if the validation succesful, otherwise false
+%%----------------------------------------------------------------------
 check_sha(Shas, PieceId, Data) ->
 	hashcheck:compare(shas_split(Shas, PieceId), Data).
 
+%%----------------------------------------------------------------------
+%% Function:	shas_split/2
+%% Purpose:		Spliting Sha1 String into 20-bit piece for exact piece of Data 
+%% Args:		Shas(String), Index(Integer)
+%% Returns:		Sha1 20-bit string
+%%----------------------------------------------------------------------
 %% Split sha1 String into 20-bit piece for exact piece of Data
 shas_split(Shas, Index) ->
 	Start = (20 * Index),
 	<<_ShaStart:Start/binary, NeededSha:20/binary, _Rest/binary>> = Shas,
 	NeededSha.
 
-%% Move the downloaded data from temporary folder into destination folder
+%%----------------------------------------------------------------------
+%% Function:	move_to_folder/3
+%% Purpose:		Moving the downloaded data from temporary folder into 
+%%				destination folder 
+%% Args:		Shas(String), PieceId(Integer), Data(Binary)
+%% Returns:		true, if the validation succesful, otherwise false
+%%----------------------------------------------------------------------
+
 move_to_folder([], TempFolder, _) ->
 	delete_files(["/"], TempFolder),
 	{ok, done};
@@ -55,6 +81,13 @@ move_to_folder([H|T], TempFolder, DestFolder) ->
 	filelib:ensure_dir(DestFolder ++ FilePath),
 	file:rename(TempFilePath, DestFilePath),
 	move_to_folder(T, TempFolder, DestFolder).
+
+%%----------------------------------------------------------------------
+%% Function:	delete_files/2
+%% Purpose:		Deleting the useless temporary files and folders 
+%% Args:		File(List), Path(String)
+%% Returns:		{ok, done}
+%%----------------------------------------------------------------------
 
 delete_files([], _) ->
 	{ok, done};
