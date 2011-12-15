@@ -48,7 +48,7 @@ create_statuses([H|T], Statuses)->
     io:format("pid ~p\n", [TPid]),
     TPid ! {get_statistics, self()},
     receive 
-        {statistics, Uploaded, Downloaded, Remaining} ->
+        {statistics, Uploaded, Downloaded, _Remaining} ->
             Info = H#torrent.info,
             create_statuses(T, 
 			    [#torrent_status{info_hash=info_hash:to_hex(H#torrent.info_sha), 

@@ -269,17 +269,18 @@ init_listening(PortNumber,ClientId) ->
 %% Args:		InitPid (pid), PortNumber(integer), ClietId(string)
 %%----------------------------------------------------------------------
 start_listening(InitPid, PortNumber, ClientId)->
-	io:fwrite("Started listening on port ~p\n",[PortNumber]),
+    io:fwrite("Started listening on port ~p\n",[PortNumber]),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
-	 {ok, Socket} ->
-	    	InitPid ! {ok, Socket},
-	    	accepting(Socket, ClientId);
-		{error, eaddrinuse} ->
-			receive
-				after 5000 ->
-					ok
-			end,
-			start_listening(InitPid, PortNumber, ClientId)
+	{ok, Socket} ->
+	    InitPid ! {ok, Socket},
+	    accepting(Socket, ClientId);
+	{error, eaddrinuse} ->
+	    io:fwrite("Port ~p in use, retrying in 5 seconds\n",[PortNumber]),
+	    receive
+	    after 5000 ->
+		    ok
+	    end,
+	    start_listening(InitPid, PortNumber, ClientId)
     end.
 
 %%----------------------------------------------------------------------

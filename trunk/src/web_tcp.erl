@@ -27,20 +27,12 @@ start() ->
 start(Port) ->
 	Name = port_name(Port),
     case whereis(Name) of
-		undefined ->
-			Pid = spawn(fun () ->
-							{ok, ListenSock} = gen_tcp:listen(Port,[
-															 	binary,
-																{packet, http},
-																{active, false}
-															]), 
-							loop(ListenSock)
-						end),
-			register(Name, Pid),
-	    	{ok, Port};
-		_ ->
-	    	{already_started, Port}
-	end.
+	undefined ->
+	    Pid = spawn(fun () -> start_listen(Port) end),
+	    register(Name, Pid);
+	_ ->
+	    {already_started, Port}
+    end.
 
 %%----------------------------------------------------------------------
 %% Function:	stop/0
@@ -86,7 +78,7 @@ port_name(Port) ->
 loop(ListenSock) ->
     io:format("listen loop"),
 	{ok, Sock} = gen_tcp:accept(ListenSock),
-	{ok, {{Ip1,Ip2,Ip3,Ip4}, Port}} = inet:peername(Sock),
+	{ok, {{_Ip1,_Ip2,_Ip3,_Ip4}, _Port}} = inet:peername(Sock),
 	% io:format("~p.~p.~p.~p:~p~n", [Ip1, Ip2, Ip3, Ip4, Port]),
 	Handler = spawn(fun () ->
 						handle_req(gen_tcp:recv(Sock, 0), Sock)
@@ -164,3 +156,21 @@ send_unsupported_error(Sock) ->
 respond_to_client(Sock, Headers, Response) ->
 	gen_tcp:send(Sock, [Headers, Response]),
 	gen_tcp:close(Sock).
+
+start_listen(Port) ->
+    Result = gen_tcp:listen(Port,[binary,
+			 {packet, http},
+			 {active, false}
+			]),
+    case Result of
+	{ok, ListenSocket} ->
+	    loop(ListenSocket);
+	_other ->
+	    io:fwrite("Port ~p in use, retrying in 5 seconds\n",[Port]),
+	    receive
+	    after 5000 ->
+		    start_listen(Port)
+	    end
+    end.
+	
+
