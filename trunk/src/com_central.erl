@@ -46,29 +46,19 @@ get_all_torrents()->
 create_statuses([H|T], Statuses)->
     {ok, TPid} = torrent_mapper:req(H#torrent.info_sha),
     io:format("pid ~p\n", [TPid]),
-    TPid ! {get_statistics, self()},
+    TPid ! {get_status, self()},
     receive 
-        {statistics, Uploaded, Downloaded, _Remaining} ->
+        {status, Status} ->
             Info = H#torrent.info,
             create_statuses(T, 
-			    [#torrent_status{info_hash=info_hash:to_hex(H#torrent.info_sha), 
-					     priority=3, 
-					     name=binary_to_list(Info#info.name), 
-					     size=torrent_db:get_size_by_id(H#torrent.id), 
-					     status="Downloading", 
-					     peers = 4, 
-					     downspeed = 0, 
-					     upspeed = 0, 
-					     eta = 101212, 
-					     downloaded=Downloaded, 
-					     uploaded=Uploaded}|Statuses]);
-
+			    [Status|Statuses]);
         _ ->
             Statuses
     after 5000 -> Statuses
     end;    % error here:
 create_statuses([], Statuses) ->
     Statuses.
+
 
 handle_call({add_new_torrent,Binary, Path},_From,State) ->
     {ok,Record} = parser:decode(Binary),

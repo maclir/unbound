@@ -30,10 +30,10 @@ get_body([H|T], Body) ->
 	NewRow = 
 		"<row status=\"" ++ H#torrent_status.status ++ "\" id=\"" ++ H#torrent_status.info_hash ++ "\">
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.name ++ "]]></cell>
+			<cell><![CDATA[" ++ binary_to_list(H#torrent_status.name) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downloaded) ++ "]]></cell>
-			<cell><![CDATA[" ++ H#torrent_status.status ++ "]]></cell>
+			<cell><![CDATA[" ++ atom_to_list(H#torrent_status.status) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.peers) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(0) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downspeed) ++ "]]></cell>
