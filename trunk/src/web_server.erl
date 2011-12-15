@@ -82,7 +82,7 @@ get_post_result([{<<"command">>,Command}]) ->
 	io:format("Command: ~p~n", [Command]),
     case list_to_binary(Command) of
         "exit" ->
-            com_central:exit_program();
+            com_central:terminate();
         "settings"->
             ok;
         _-> ok
