@@ -19,7 +19,6 @@ start_link(Id) ->
     gen_server:start_link({local,?MODULE},?MODULE,[Id],[{timeout,100000}]).
 
 init([ClientId]) ->
-	io:fwrite("Com central started~n"),
     {ok,[{client_id,ClientId}]}.
 
 start_download() ->
@@ -45,7 +44,6 @@ get_all_torrents()->
 
 create_statuses([H|T], Statuses)->
     {ok, TPid} = torrent_mapper:req(H#torrent.info_sha),
-    io:format("pid ~p\n", [TPid]),
     TPid ! {get_status, self()},
     receive 
         {status, Status} ->
