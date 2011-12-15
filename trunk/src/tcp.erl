@@ -292,10 +292,11 @@ start_listening(InitPid, PortNumber, ClientId)->
 %% Args:		Socket (socket), ClietId(string)
 %%----------------------------------------------------------------------	
 accepting(Socket, ClientId)->
-	{ok, ListenSocket} = gen_tcp:accept(Socket),
-	io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
-	spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
-	accepting(Socket,ClientId).
+    {ok, ListenSocket} = gen_tcp:accept(Socket),
+    io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
+    spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
+    erlang:unlink(ListenSocket),
+    accepting(Socket,ClientId).
 
 %%----------------------------------------------------------------------
 %% Function:	check_handshake/2
@@ -303,6 +304,7 @@ accepting(Socket, ClientId)->
 %% Args:		Socket (socket), ClietId(string)
 %%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
+    erlang:port_connect(Socket,self()),
 	io:fwrite("accepting new connection ~n"),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
@@ -318,14 +320,14 @@ check_handshake(Socket,ClientId)->
 			exit(self(), "remote peer closed connection");
 		{tcp,_,Msg} ->
 			gen_tcp:close(Socket),
-			exit(self(), {"remote peer sent this",Msg})				
+			exit(self(), {"remote peer sent this",Msg})
 	end.
 
 %%----------------------------------------------------------------------
 %% Function:	send_handshake/3
-%% Purpose:		handshakes a peer.
-%% Returns:		ok, if the packet was sent, otherwise - {error, Reason}
-%% Args:		Socket (socket), InfoHash (string), ClietId(string)
+%% Purpose:	handshakes a peer.
+%% Returns:	ok, if the packet was sent, otherwise - {error, Reason}
+%% Args:	Socket (socket), InfoHash (string), ClietId(string)
 %%----------------------------------------------------------------------		
 send_handshake(Socket, InfoHash, ClientId)->
 	gen_tcp:send(Socket,[
