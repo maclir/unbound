@@ -9,7 +9,7 @@
 -module(torrent_mapper).
 -behavoiur(gen_server).
 -export([start_link/0]).
--export([reg/1,free/1,req/1]).
+-export([reg/1,free/1,req/1,req/0]).
 -export([init/1, handle_call/3]).
 
 start_link() ->
@@ -24,6 +24,9 @@ free(SHA1) ->
 req(SHA1) ->
     gen_server:call(?MODULE,{req,SHA1}).
 
+req() ->
+    gen_server:call(?MODULE,{req,all}).
+
 init(_Args) ->
     io:fwrite("Torrent Mapper started!\n"),
     {ok,[]}.
@@ -35,6 +38,10 @@ handle_call({reg,SHA1},{Pid,_Tag},Map) ->
 handle_call({free,SHA1},_From,Map) ->
     NewMap = free(SHA1,Map,[]),
     {reply,ok,NewMap};
+
+handle_call({req,all},_From,Map) ->
+    Result = lists:map(fun(X)->del_hash(X) end,Map),
+    {reply,Result,Map};
 
 handle_call({req,SHA1},_From,Map) ->
     Result = req(SHA1,Map),
@@ -63,3 +70,6 @@ req(SHA1,[{ID,Pid}|T]) ->
     end;
 req(_SHA1,[]) ->
     {error,not_found}.
+
+del_hash({_id,Pid}) ->
+    Pid.
