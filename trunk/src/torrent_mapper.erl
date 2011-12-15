@@ -9,7 +9,7 @@
 -module(torrent_mapper).
 -behavoiur(gen_server).
 -export([start_link/0]).
--export([reg/1,free/1,req/1,req/0]).
+-export([reg/1,free/1,req/1,req_all/0]).
 -export([init/1, handle_call/3]).
 
 start_link() ->
