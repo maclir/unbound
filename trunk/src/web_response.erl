@@ -15,10 +15,8 @@ get_data_xml(Filter) ->
 		<page>1</page>
 		<total>1</total>",
 	Body = get_body(get_data(Filter), []),
-	
 	Footer = 
 		"</rows>",
-		
 	Data = Header ++ Body ++ Footer,
 	XmlData = lists:flatten(Data),
 	iolist_to_binary(XmlData).
@@ -43,10 +41,8 @@ get_body([H|T], Body) ->
 	get_body(T, NewRow ++ Body).
 
 get_data(<<"all">>) ->
-	io:fwrite("1~n"),
     com_central:get_all_torrents();
 get_data(Filter) ->
-	io:fwrite("3~n"),
 	Data = com_central:get_all_torrents(),
 	FilterFun = fun(Record) -> Record#torrent_status.status == binary_to_atom(Filter, utf8) end,
 	lists:filter(FilterFun, Data).

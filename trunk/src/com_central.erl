@@ -49,13 +49,11 @@ create_statuses([H|T], Statuses)->
 	io:fwrite("call:, ~p~n", [H]),
     receive 
         {status, Status} ->
-			io:fwrite("answer:, ~p~n", [H]),
             create_statuses(T, 
 			    [Status|Statuses]);
         _ ->
             Statuses
     after 5000 ->
-			io:fwrite("4, ~p~n", [H]),
 			Statuses
     end.
 
