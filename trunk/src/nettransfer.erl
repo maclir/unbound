@@ -196,8 +196,9 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			TorrentPid ! {upload, Self,Index,Offset,Length},
 			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 		
-		{piece,Index,Offset,Length,Binary} ->
-			TcpPid ! {send_piece,Index,Offset,Length,Binary},
+		{piece,Index,Offset,Binary} ->
+		io:fwrite("Sending!!!"),
+			TcpPid ! {send_piece,Index,Offset,Binary},
 			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
 	
 		after 120000 ->
