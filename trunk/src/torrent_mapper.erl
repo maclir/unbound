@@ -32,7 +32,7 @@ init(_Args) ->
     {ok,[]}.
 
 handle_call({reg,SHA1},{Pid,_Tag},Map) ->
-    NewMap = [{SHA1,Pid}|Map],
+    NewMap = lists:keystore(SHA1,1,Map,{SHA1,Pid}),
     {reply,ok,NewMap};
 
 handle_call({free,SHA1},_From,Map) ->
