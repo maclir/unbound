@@ -24,6 +24,7 @@ get_data_xml(Filter) ->
 get_body([], Body) ->
 	Body;
 get_body([H|T], Body) ->
+    io:format("status ~p\n", [H]),
 	NewRow = 
 		"<row status=\"" ++ atom_to_list(H#torrent_status.status) ++ "\" id=\"" ++ info_hash:to_hex(H#torrent_status.info_hash) ++ "\">
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
@@ -31,10 +32,10 @@ get_body([H|T], Body) ->
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downloaded) ++ "]]></cell>
 			<cell><![CDATA[" ++ atom_to_list(H#torrent_status.status) ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.peers) ++ "]]></cell>
+			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.connected_peers) ++ " (" ++ integer_to_list(H#torrent_status.peers) ++ ")]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(0) ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downspeed) ++ "]]></cell>
-            <cell><![CDATA[" ++ integer_to_list(H#torrent_status.upspeed) ++ "]]></cell>
+			<cell><![CDATA[" ++ float_to_list(H#torrent_status.downspeed) ++ "]]></cell>
+            <cell><![CDATA[" ++ float_to_list(H#torrent_status.upspeed) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.eta) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.uploaded) ++ "]]></cell>
 		</row>",
