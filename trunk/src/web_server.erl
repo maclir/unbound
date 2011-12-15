@@ -66,16 +66,27 @@ seperate_each_param([H|T], Data) ->
 	% {xml, web_response:get_data_xml({})};
 get_post_result([{<<"filter">>, Filter}]) ->
 	{xml, web_response:get_data_xml(Filter)};
+%% Commands: resume, stop, delete
 get_post_result([{<<"row">>, Row},
 				 {<<"command">>,Command}]) ->
 	io:format("Command: ~p, Row: ~p~n", [Command, Row]),
+    com_central:torrent_command(info_hash:from_hex(Row), binary_to_atom(Command, "utf8")),
 	{text, <<"done">>};
+%% Commands: new
 get_post_result([{<<"url">>, Url},
 				 {<<"command">>,Command}]) ->
 	io:format("Command: ~p, Url: ~p~n", [Command, Url]),
 	add_new_torrent(Url);
+%% Commands: exit, settings
 get_post_result([{<<"command">>,Command}]) ->
 	io:format("Command: ~p~n", [Command]),
+    case list_to_binary(Command) of
+        "exit" ->
+            com_central:exit_program();
+        "settings"->
+            ok;
+        _-> ok
+    end,
 	{text, <<"done">>};
 get_post_result(Whatttt) ->
 	io:format("post: ~p~n", [Whatttt]),
