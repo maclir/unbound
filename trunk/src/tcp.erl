@@ -294,7 +294,8 @@ start_listening(InitPid, PortNumber, ClientId)->
 accepting(Socket, ClientId)->
     {ok, ListenSocket} = gen_tcp:accept(Socket),
     io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
-    spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
+    HandlingPid = spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
+    gen_tcp:controlling_process(ListenSocket, HandlingPid),
     accepting(Socket,ClientId).
 
 %%----------------------------------------------------------------------
@@ -303,7 +304,6 @@ accepting(Socket, ClientId)->
 %% Args:		Socket (socket), ClietId(string)
 %%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
-    erlang:port_connect(Socket,self()),
 	io:fwrite("accepting new connection ~n"),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
