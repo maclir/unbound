@@ -664,6 +664,7 @@ var timeout = 1500;
 			addRowProp: function () {
 				$('tbody tr', g.bDiv).each(function () {
 					$(this).click(function (e) {
+						$(this).removeClass('trSelected');
 						var obj = (e.target || e.srcElement);
 						if (obj.href || obj.type) return true;
 						if ($(this).hasClass('trSelected')) {
