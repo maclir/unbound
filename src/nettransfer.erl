@@ -222,7 +222,6 @@ loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus);
 
 		{piece,Index,Offset,Binary} ->
-		io:fwrite("Sending!!!"),
 			TcpPid ! {send_piece,Index,Offset,Binary},
 			loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus)
 

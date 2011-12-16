@@ -20,8 +20,8 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started",200);
 		<<"udp",_Rest/binary>> ->
 			TorrentPid ! {error,udp_not_supported};
-		Var ->
-			io:fwrite("Tracker init got: ~w\n",[Var])
+		_Var ->
+			ok
 	end.
 
 %%----------------------------------------------------------------------
@@ -60,10 +60,9 @@ perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
 					TorrentPid ! {peer_list,self(),PeerList},
 					loop(TorrentPid,Announce,UrlInfoHash,Id,Interval);
 				{error,Reason} ->
-					io:fwrite("Tracker error ~p~n", [Reason]),
 					TorrentPid ! {error,Reason};
-				K ->
-					io:fwrite("Tracker.erl error ~p~n", [K])
+				_K ->
+					ok
 			end
 	end.
 

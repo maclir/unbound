@@ -38,7 +38,6 @@ start_link_loader(Id) ->
 %% Args:      {Pid,Id}(tuple)
 %%----------------------------------------------------------------------
 init_loader({Pid,Id})->
-	io:fwrite("Torrent Loader Started!\n"),
 	Pid ! {ok,self()},
 	RecordList = torrent_db:get_all_torrents(),
 	start_torrent(Pid,RecordList,Id).
@@ -276,7 +275,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog)
 			end;
 		{upload,SenderPid,PieceIndex,Offset,Length} ->
-			io:fwrite("im uploading!!! ~n"),
 			{ok, File_Binary} = file_split:request_data(PieceIndex,Offset,Length, Record),
 			SenderPid ! {piece,PieceIndex,Offset,File_Binary},
 			NewStatusRecord = StatusRecord#torrent_status{uploaded = StatusRecord#torrent_status.uploaded + Length},

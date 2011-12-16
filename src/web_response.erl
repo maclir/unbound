@@ -42,7 +42,6 @@ get_body_files([], Body) ->
 	Body;
 get_body_files([H|T], Body) ->
 	{Name, Path} = file_split:path_create(H#file.path, ""),
-	io:fwrite("File: ~p~n", [H]),
     SizeKB = utils:bytes_to_kbytes(H#file.length),
     case SizeKB > 1024 of
         true -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MB";
