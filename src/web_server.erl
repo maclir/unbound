@@ -87,10 +87,10 @@ get_post_result([{<<"path">>,Path},
 
 %% Commands: exit, settings
 get_post_result([{<<"command">>,Command}]) ->
-    case list_to_binary(Command) of
-        "exit" ->
+    case Command of
+        <<"exit">> ->
             app_sup:stop();
-        "settings"->
+        <<"settings">> ->
             ok;
         _-> ok
     end,
