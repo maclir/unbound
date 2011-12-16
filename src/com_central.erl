@@ -8,7 +8,7 @@
 -module(com_central).
 -behaviour(gen_server).
 -export([start_link/1]).
--export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2]).
+-export([start_download/0,add_new_torrent_file/2,add_new_torrent_url/2,get_files/1]).
 -export([torrent_command/2, get_all_torrents/0]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2]).
 -export([code_change/3,terminate/2]).
@@ -21,6 +21,9 @@ start_link(Id) ->
 
 init([ClientId]) ->
     {ok,[{client_id,ClientId}]}.
+
+get_files(InfoHash) ->
+    gen_server:call(?MODULE, {get_files, InfoHash}).
 
 start_download() ->
     gen_server:call(?MODULE, start_download).
@@ -68,6 +71,14 @@ create_statuses([H|T], Statuses)->
 			Statuses
     end.
 
+handle_call({get_files,InfoHash},_From,State) ->
+	{ok,Pid} = torrent_mapper:req(InfoHash),
+	Pid ! {get_files, self()},
+	receive
+		{files, Files} ->
+			{reply,Files,State}
+	end;
+	
 handle_call({add_new_torrent,Binary, Path},_From,State) ->
     case parser:decode(Binary) of
 	{ok, Record} ->

@@ -90,13 +90,22 @@ loop(Record,StatusRecord, Id) ->
 			torrent_db:add(NewRecord),
 			NewStatusRecord = StatusRecord#torrent_status{status = downloading, timer = erlang:now()},
 			init_start(Id, NewRecord,NewStatusRecord);
+		{command, delete} ->
+			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
+			torrent_mapper:free(Record#torrent.info_sha);
 		{get_status_record,Sender} ->
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = 0.0, upspeed = 0.0, timer = erlang:now()},
 			Sender ! {status,NewStatusRecord},
 			loop(Record,NewStatusRecord, Id);
-		{command, delete} ->
-			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
-			torrent_mapper:free(Record#torrent.info_sha);
+		{get_files, ComPid} ->
+			if
+				(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
+					Files = Record#torrent.info#info.files;
+				true ->
+					Files = [#file{path = Record#torrent.info#info.name}]
+			end,
+			ComPid ! {files, Files},
+			loop(Record,StatusRecord, Id);
 		_Other ->
 			loop(Record,StatusRecord, Id)
 	end.
@@ -122,7 +131,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			Now = erlang:now(),
 			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
-			
 			if
 				Elapsed > 3.0 ->
 					NewRateLog = {0,0},
@@ -136,6 +144,15 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = NewTime},
 			Sender ! {status,NewStatusRecord},
 			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, NewRateLog);
+		{get_files, ComPid} ->
+			if
+				(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
+					Files = Record#torrent.info#info.files;
+				true ->
+					Files = [#file{path = Record#torrent.info#info.name}]
+			end,
+			ComPid ! {files, Files},
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{new_upload,TcpPid, IpPort} ->
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
