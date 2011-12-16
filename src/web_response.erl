@@ -42,10 +42,17 @@ get_body_files([], Body) ->
 	Body;
 get_body_files([H|T], Body) ->
 	{Name, Path} = file_split:path_create(H#file.path),
+    
+    SizeKB = utils:bytes_to_kbytes(H#file.length),
+    case SizeKB > 1024 of
+        true -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MB";
+        _ -> Size = io_lib:format("~.2f",[SizeKB]) ++ " KB"
+    end,
+    
 	Row = "<row>" ++
 	"<cell><![CDATA[" ++ Path ++ Name ++ "]]><cell>" ++
-	"<cell><![CDATA[" ++ integer_to_list(binary_to_list(H#file.length)) ++ "]]><cell>" ++
-	"<cell><![CDATA[" ++ integer_to_list(binary_to_list(H#file.length_complete)) ++ "]]><cell>" ++
+	"<cell><![CDATA[" ++ Size ++ "]]><cell>" ++
+	"<cell><![CDATA[" ++ float_to_list(binary_to_list(H#file.length)/binary_to_list(H#file.length_complete)*100) ++ "%]]><cell>" ++
 	"</row>",
 	get_body_files(T, Body ++ Row).
 %%----------------------------------------------------------------------
@@ -92,7 +99,7 @@ get_body([H|T], Body) ->
             ETAMinutes = Rem2 div 60,
             Rem3 = Rem2 rem 60,
             ETASeconds = Rem3,
-            ETA = io_lib:format("~p:~p:~p:~p", [ETADays, ETAHours, ETAMinutes, ETASeconds])
+            ETA = io_lib:format("~2..0B:~2..0B:~2..0B:~2..0B", [ETADays, ETAHours, ETAMinutes, ETASeconds])
     end,
     
 	NewRow = 
