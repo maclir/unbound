@@ -8,7 +8,7 @@
 %%----------------------------------------------------------------------
 %% Function:  init/6
 %% Purpose:
-%% Args:      TorrentPid(pid),DestinationIp(pid),DestinationPort(integer),InfoHash(list),ClientId(integer),
+%% Args:      TorrentPid(pid),DestinationIp(pid),DestinationPort(integer),InfoHash(stringt),ClientId(string),
 %%            Bitfield(binary)
 %% Returns:
 %%----------------------------------------------------------------------
@@ -24,9 +24,8 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitst
 
 %%----------------------------------------------------------------------
 %% Function: init_upload/3
-%% Purpose:
+%% Purpose:  initializes the downloading process
 %% Args:     TorrentPid(pid),TcpPid(pid),Bitfield(binary)
-%% Returns:
 %%----------------------------------------------------------------------
 init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
 	ZeroPaddedBitfield = pad_bitfield(Bitfield),
@@ -41,9 +40,9 @@ init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
 
 %%----------------------------------------------------------------------
 %% Function:  pad_bitfield/1
-%% Purpose:
+%% Purpose:   adds zeris to the bitfield so it becomes binary
 %% Args:      Bitfield(binary)
-%% Returns:
+%% Returns:   binary
 %%----------------------------------------------------------------------
 pad_bitfield(<<Bitfield/bitstring>>) ->
 	BitLength = bit_size(Bitfield),
@@ -57,9 +56,10 @@ pad_bitfield(<<Bitfield/bitstring>>) ->
 
 %%----------------------------------------------------------------------
 %% Function:  loop/6
-%% Purpose:
-%% Args:      DownloadStatus,TcpPid(pid),TorrentPid(pid),StoredBitfield,Que,UploadStatus
-%% Returns:
+%% Purpose:   it exchanges messages with tcp process, torrent process and piece
+%%            process and also keeps the state of one connection and filters the
+%%            messages
+%% Args:      DownloadStatus(tuple),TcpPid(pid),TorrentPid(pid),StoredBitfield(binary),Que(list),UploadStatus(tuple)
 %%----------------------------------------------------------------------
 loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 	receive
