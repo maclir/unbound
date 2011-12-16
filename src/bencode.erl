@@ -1,3 +1,4 @@
+%%% This module has been copied from wiki.theory.org/Decoding_encoding_bencoded_data_with_erlang
 -module(bencode).
 
 %% API
