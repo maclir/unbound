@@ -240,7 +240,7 @@ main_loop(Socket, MasterPid)->
 		{error, Reason}->
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
-		Smth ->
+		_Smth ->
 			main_loop(Socket, MasterPid)
 		after 10000 ->
 			gen_tcp:close(Socket),
