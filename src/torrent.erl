@@ -1,4 +1,4 @@
-%%% @author Peter Myllykoski <peter@UL30JT>, Nahid Vafaie
+%%% @author Peter Myllykoski <peter@UL30JT>, Nahid Vafaie, Alireza Pazirandeh
 %%% @copyright (C) 2011, Peter Myllykoski
 %%% @doc
 %%%

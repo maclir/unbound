@@ -11,8 +11,8 @@
 -include("torrent_db_records.hrl").
 %%----------------------------------------------------------------------
 %% Function:	init/2
-%% Purpose:		initiating the 
-%% Args:		
+%% Purpose:		preparing the arguments and starting the main loop
+%% Args:		Record#torrent, Pid
 %%----------------------------------------------------------------------
 init(Record, TorrentPid)->
 	PieceLength = Record#torrent.info#info.piece_length,
@@ -34,8 +34,8 @@ init(Record, TorrentPid)->
 	loop(Que, Downloading, TorrentPid).
 %%----------------------------------------------------------------------
 %% Function:	loop/3
-%% Purpose:		 
-%% Args:		
+%% Purpose:		listeting to incoming messages
+%% Args:		Que(list), Downloading(list), pid
 %%----------------------------------------------------------------------
 loop(Que, Downloading, TorrentPid) ->
 	receive
@@ -71,8 +71,8 @@ loop(Que, Downloading, TorrentPid) ->
 	end.
 %%----------------------------------------------------------------------
 %% Function:	remove_from_list/3
-%% Purpose:		 
-%% Args:		
+%% Purpose:		removing the disconnected pids from lists
+%% Args:		list, pid, list
 %%----------------------------------------------------------------------
 remove_from_list([], _NetPid, List)->
 	sort(List);
@@ -86,8 +86,8 @@ remove_from_list([{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List)->
 	remove_from_list(T, NetPid, [{PieceIndex, lists:delete(NetPid, NetPidList), PieceInfo}|List]).
 %%----------------------------------------------------------------------
 %% Function:	alter_list/5
-%% Purpose:		 
-%% Args:		
+%% Purpose:		adding a netpid to the lists
+%% Args:		list, list, pid, atom (true|false), list
 %%----------------------------------------------------------------------
 alter_list(_, [], _NetPid, Status, NewList) ->
 	{Status, sort(NewList)};
@@ -102,8 +102,8 @@ alter_list(IndexList, [{PieceIndex, NetPidList, PieceInfo}|List], NetPid, Status
 	alter_list(IndexList, List, NetPid, NewStatus or Status, NewList).
 %%----------------------------------------------------------------------
 %% Function:	allocate_net/2
-%% Purpose:		 
-%% Args:		
+%% Purpose:		allocating the net to the piece pids
+%% Args:		list, pid
 %%----------------------------------------------------------------------
 allocate_net([], _NetPid) ->
 	spawn_more;
@@ -124,8 +124,8 @@ allocate_net([{_PieceIndex, NetPidList, PiecePid}|Downloading], NetPid) ->
 	end.
 %%----------------------------------------------------------------------
 %% Function:	spawn_piece/5
-%% Purpose:		 
-%% Args:		
+%% Purpose:		spawn pieces as needed
+%% Args:		list, list, pid, list, pid
 %%----------------------------------------------------------------------
 spawn_piece([], Downloading, NetPid, RawQue, _TorrentPid) ->
 	NetPid ! not_interested,
@@ -147,8 +147,8 @@ spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Ra
 	end.
 %%----------------------------------------------------------------------
 %% Function:	kill_pieces/1
-%% Purpose:		 
-%% Args:		
+%% Purpose:		kill all running pieces
+%% Args:		list
 %%----------------------------------------------------------------------
 kill_pieces([]) ->
 	ok;
@@ -156,8 +156,9 @@ kill_pieces([{_PieceIndex, _NetPidList, PiecePid}|_Downloading]) ->
 	exit(PiecePid, stopped).
 %%----------------------------------------------------------------------
 %% Function:	sort/1
-%% Purpose:		 
-%% Args:		
+%% Purpose:		sorting the lists and bringing the rarest pieces in the
+%%				beginning of the que
+%% Args:		list
 %%----------------------------------------------------------------------
 sort(List) ->
 	SortFun = fun(X, Y) -> length(element(2, X)) < length(element(2, Y)) end,
