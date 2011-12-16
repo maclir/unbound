@@ -61,8 +61,11 @@ init([Id]) ->
 %% Purpose:  stopes the applciation
 %%----------------------------------------------------------------------
 stop() ->
-    lists:foreach(fun({Id,_,_,_})-> supervisor:terminate_child(unbound_torrent,Id) end,supervisor:which_children(unbound_torrent)),
-    exit(unbound_torrent,shutdown).
+    lists:foreach(fun({Id,_,_,_})-> 
+			  supervisor:terminate_child(unbound_torrent,Id) 
+		  end,
+		  supervisor:which_children(unbound_torrent)),
+    exit(?MODULE,shutdown).
 
 
 %%----------------------------------------------------------------------
