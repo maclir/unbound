@@ -258,7 +258,7 @@ img{
     height:100%;background-color:#D4D81C;margin:0 0; padding:0 0;border-radius:4px;
 }
 #progressText{
-    position:relative; top:-19px;
+    position:relative; top:-19px; margin:0 auto;text-align:center;
 }
 img.btn_close {
 	float: right;
