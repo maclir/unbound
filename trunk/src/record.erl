@@ -2,6 +2,13 @@
 -export([store/3]).
 -include("torrent_db_records.hrl").
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 store(Key,Value,Record) ->
 	case Key of
 		<<"announce">> ->
@@ -32,7 +39,7 @@ store(Key,Value,Record) ->
 			TotalSize = lists:sum(Sizes),
 			NewRecord = Record#info{files=Value,length=TotalSize};
 		<<"length">> ->
-			if 
+			if
 				is_record(Record,info) ->
 					NewRecord = Record#info{length=Value};
 				is_record(Record,file) ->

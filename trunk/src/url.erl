@@ -8,6 +8,13 @@
 -module(url).
 -export([encode/1]).
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 encode(Binary) ->
     {ok, File} = file:open("HexSHA",[append]),
     encode(Binary,File),
@@ -24,7 +31,7 @@ encode(Binary,File) ->
     io:fwrite(File,"~.16X",[X,""]),
     io:fwrite(File,"~.16X",[Y,""]),
     encode(T,File).
-   
 
-    
+
+
 

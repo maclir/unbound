@@ -12,8 +12,22 @@
 -export([start_link/1]).
 -export([init/1]).
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 start_link(ClientId) ->
     supervisor:start_link(?MODULE,[ClientId]).
+
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 init(ClientId) ->
     io:fwrite("Port Supervisor started\n"),
