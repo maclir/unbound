@@ -62,12 +62,12 @@ init({Id,Record}) ->
 								   timer = erlang:now()},
 	process_flag(trap_exit,true),
 	torrent_mapper:reg(Record#torrent.info_sha),
-    case Record#torrent.status of
-	stopped ->
-	    loop(Record,StatusRecord,Id);
-	_other ->
-	    init_start(Id, Record, StatusRecord)
-    end.
+	case Record#torrent.status of
+		stopped ->
+			loop(Record,StatusRecord,Id);
+		_other ->
+			init_start(Id, Record, StatusRecord)
+	end.
 
 init_start(Id, Record, StatusRecord) ->
 	DownloadPid = spawn(download,init,[Record,self()]),
@@ -78,22 +78,25 @@ init_start(Id, Record, StatusRecord) ->
 
 loop(Record,StatusRecord, Id) ->
 	receive
-	    {command, start} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
-		NewRecord = Record#torrent{status = seeding},
-		torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
-		torrent_db:add(NewRecord),
-		NewStatusRecord = StatusRecord#torrent_status{status = seeding, timer = erlang:now()},
-		init_start(Id, NewRecord,NewStatusRecord);
-	    {command, start} ->
+		{command, start} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
+			NewRecord = Record#torrent{status = seeding},
+			torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+			torrent_db:add(NewRecord),
+			NewStatusRecord = StatusRecord#torrent_status{status = seeding, timer = erlang:now()},
+			init_start(Id, NewRecord,NewStatusRecord);
+		{command, start} ->
 			NewRecord = Record#torrent{status = downloading},
-		torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
-		torrent_db:add(NewRecord),
+			torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+			torrent_db:add(NewRecord),
 			NewStatusRecord = StatusRecord#torrent_status{status = downloading, timer = erlang:now()},
 			init_start(Id, NewRecord,NewStatusRecord);
 		{get_status_record,Sender} ->
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = 0.0, upspeed = 0.0, timer = erlang:now()},
 			Sender ! {status,NewStatusRecord},
 			loop(Record,NewStatusRecord, Id);
+		{command, delete} ->
+			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
+			torrent_mapper:free(Record#torrent.info_sha);
 		_Other ->
 			loop(Record,StatusRecord, Id)
 	end.
@@ -107,8 +110,8 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{command, stop} ->
 			stop(DownloadPid, TrackerList, ActiveNetList),
 			NewRecord = Record#torrent{status = stopped},
-		torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
-		torrent_db:add(NewRecord),
+			torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+			torrent_db:add(NewRecord),
 			NewStatusRecord = StatusRecord#torrent_status{status = stopped},
 			loop(NewRecord,NewStatusRecord,Id);
 		{command, delete} ->
