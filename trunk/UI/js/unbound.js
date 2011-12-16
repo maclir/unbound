@@ -117,16 +117,16 @@ function disableButtons(){
 
 function parseFiles(xml) {
     var data = "";
-    var startTag = "<table border='1' id='mainTable'><tbody><tr><td style=\"width: 120px\">Name</td><td style=\"width: 120px\">Size</td><td style=\"width: 120px\">Done</td></tr>";
+    var startTag = "<table border='1' id='file-table'><tbody><tr><td style=\"width: 120px\">Name</td><td style=\"width: 120px\">Size</td><td style=\"width: 120px\">Done</td></tr>";
     var endTag = "</tbody></table>";
     $(xml).find("row").each(function() {
         var url = $(this);
         var name = $(url).find("name").text();
         var size = $(url).find("size").text();
         var done = $(url).find("done").text();
-        data += "<tr><td>" + name + "</td>";
-        data += "<td>" + size + "</td></tr>";
-        data += "<td>" + done + "</td></tr>";
+        data += "<tr><td class='file-name'>" + name + "</td>";
+        data += "<td class='file-size'>" + size + "</td>";
+        data += "<td class='file-done'>" + done + "</td></tr>";
      });
     var finalData = startTag + data + endTag;
     return finalData;
@@ -152,7 +152,7 @@ function addFiles(){
 }
 
 function removeFiles(){
-	$('#mainTable').remove();
+	$('#file-table').remove();
 }
 
 var outerLayout, innerLayout, innerInnerLayout, gridorder;
