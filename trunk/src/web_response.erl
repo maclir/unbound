@@ -1,5 +1,5 @@
 %%%----------------------------------------------------------------------
-%%% Author:		Alireza Pazirandeh
+%%% Author:		Alireza Pazirandeh, Yavor Paunov
 %%% Desc.:		generating teh xml representing the state of
 %%				the application
 %%%----------------------------------------------------------------------

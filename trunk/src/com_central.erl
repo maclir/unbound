@@ -1,4 +1,4 @@
-%%% @author Peter Myllykoski <peter@UL30JT>
+%%% @author Peter Myllykoski <peter@UL30JT>, Yavor Paunov
 %%% @copyright (C) 2011, Peter Myllykoski
 %%% @doc
 %%%
