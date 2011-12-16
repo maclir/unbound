@@ -29,7 +29,12 @@ get_body([H|T], Body) ->
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
 			<cell><![CDATA[" ++ binary_to_list(H#torrent_status.name) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.downloaded) ++ "]]></cell>
+			<cell><![CDATA[" ++                 
+                "<div id='progressbar' \">
+                    <div id='progressMade' style=\"width:" ++ io_lib:format("~.2f",[H#torrent_status.downloaded/H#torrent_status.size*100]) ++ "%;\"\>
+                </div>
+                <div id='progressText' >" ++ io_lib:format("~.2f",[H#torrent_status.downloaded/H#torrent_status.size*100]) ++ "%</div>
+            </div>]]></cell>
 			<cell><![CDATA[" ++ atom_to_list(H#torrent_status.status) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.connected_peers) ++ " (" ++ integer_to_list(H#torrent_status.peers) ++ ")]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(0) ++ "]]></cell>

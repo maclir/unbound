@@ -251,6 +251,15 @@ img{
 	-moz-border-radius: 10px;
 	border-radius: 10px;
 }
+#progressbar{
+    height:14px;width:100%;padding:0 0; margin:0 0; border:1px #ABABAB solid; border-radius:4px;
+}
+#progressMade{
+    height:100%;background-color:#D4D81C;margin:0 0; padding:0 0;border-radius:4px;
+}
+#progressText{
+    position:relative; top:-19px;
+}
 img.btn_close {
 	float: right;
 	margin: -55px -55px 0 0;
