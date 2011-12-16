@@ -1,8 +1,18 @@
+%%%----------------------------------------------------------------------
+%%% Author:		Alireza Pazirandeh
+%%% Desc.:		
+%%				
+%%%----------------------------------------------------------------------
+
 -module(download).
 
 -export([init/2, sort/1]).
 -include("torrent_db_records.hrl").
-
+%%----------------------------------------------------------------------
+%% Function:	init/2
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 init(Record, TorrentPid)->
 	PieceLength = Record#torrent.info#info.piece_length,
 	TotalLength = Record#torrent.info#info.length,
@@ -21,7 +31,11 @@ init(Record, TorrentPid)->
 	Downloading = [],
 
 	loop(Que, Downloading, TorrentPid).
-
+%%----------------------------------------------------------------------
+%% Function:	loop/3
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 loop(Que, Downloading, TorrentPid) ->
 	receive
 		{die} ->
@@ -54,7 +68,11 @@ loop(Que, Downloading, TorrentPid) ->
 			NewDownloading = remove_from_list(Downloading, NetPid, []),
 			loop(NewQue, NewDownloading, TorrentPid)
 	end.
-
+%%----------------------------------------------------------------------
+%% Function:	remove_from_list/3
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 remove_from_list([], _NetPid, List)->
 	sort(List);
 remove_from_list([{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List)->
@@ -65,7 +83,11 @@ remove_from_list([{PieceIndex, NetPidList, PieceInfo}|T], NetPid, List)->
 			ok
 	end,
 	remove_from_list(T, NetPid, [{PieceIndex, lists:delete(NetPid, NetPidList), PieceInfo}|List]).
-
+%%----------------------------------------------------------------------
+%% Function:	alter_list/5
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 alter_list(_, [], _NetPid, Status, NewList) ->
 	{Status, sort(NewList)};
 alter_list(IndexList, [{PieceIndex, NetPidList, PieceInfo}|List], NetPid, Status, TempList) ->
@@ -77,7 +99,11 @@ alter_list(IndexList, [{PieceIndex, NetPidList, PieceInfo}|List], NetPid, Status
 			NewList = [{PieceIndex, [NetPid | NetPidList], PieceInfo}|TempList]
 	end,
 	alter_list(IndexList, List, NetPid, NewStatus or Status, NewList).
-
+%%----------------------------------------------------------------------
+%% Function:	allocate_net/2
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 allocate_net([], _NetPid) ->
 	spawn_more;
 allocate_net([{_PieceIndex, NetPidList, PiecePid}|Downloading], NetPid) ->
@@ -95,7 +121,11 @@ allocate_net([{_PieceIndex, NetPidList, PiecePid}|Downloading], NetPid) ->
 		false ->
 			allocate_net(Downloading, NetPid)
 	end.
-
+%%----------------------------------------------------------------------
+%% Function:	spawn_piece/5
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 spawn_piece([], Downloading, NetPid, RawQue, _TorrentPid) ->
 	NetPid ! not_interested,
 	{RawQue, Downloading};
@@ -114,12 +144,20 @@ spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Ra
 		false ->
 			spawn_piece(Que, Downloading, NetPid, RawQue, TorrentPid)
 	end.
+%%----------------------------------------------------------------------
+%% Function:	kill_pieces/1
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 kill_pieces([]) ->
 	ok;
 kill_pieces([{_PieceIndex, _NetPidList, PiecePid}|_Downloading]) ->
 	exit(PiecePid, stopped).
-
+%%----------------------------------------------------------------------
+%% Function:	sort/1
+%% Purpose:		 
+%% Args:		
+%%----------------------------------------------------------------------
 sort(List) ->
-%% 	List.
 	SortFun = fun(X, Y) -> length(element(2, X)) < length(element(2, Y)) end,
 	lists:sort(SortFun, List).
