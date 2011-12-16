@@ -105,6 +105,7 @@ function closePopUp(){
 
 function enableButtons(){
 	$("#button-bar div a").addClass("enabled");
+	$("#button-bar div a.hard-disabled").removeClass("enabled");
 	$("#button-bar div a.row-action").removeClass("disabled");
 }
 
