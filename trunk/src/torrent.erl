@@ -168,12 +168,12 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			DownloadPid ! {net_index_list, FromPid, [{Index}]},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{dowloaded,SenderPid,PieceIndex,Data} ->
-			TotalDownload = StatusRecord#torrent_status.downloaded + size(Data),
+			TotalDownload = StatusRecord#torrent_status.downloaded + byte_size(Data),
 			NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload},
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
-			NewRateLog = {DownloadSizeLog + size(Data),UploadSizeLog},
+			NewRateLog = {DownloadSizeLog + byte_size(Data),UploadSizeLog},
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
-			NewTrackerDownloaded = TrackerDownloaded + size(Data),
+			NewTrackerDownloaded = TrackerDownloaded + byte_size(Data),
 			NewTrackerStats = {NewTrackerDownloaded, TrackerUploaded},
 			%%TODO eta
 			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
@@ -194,7 +194,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
 					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
 					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
-					io:fwrite("left: ~.3f MegaByte~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
 					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
 					loop(NewRecord,FinalStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
@@ -216,7 +215,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
 			NewRateLog = {DownloadSizeLog,UploadSizeLog + Length},
 			loop(NewRecord,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
-		
 		{'EXIT',FromPid,Reason} ->
 			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
