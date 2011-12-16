@@ -99,7 +99,9 @@ process_pairs({Key, Value})->
 separate(<<>>)->
 	[];
 separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
-	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)].
+	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)];
+separate(_)->
+	ok.
 	
 %%----------------------------------------------------------------------
 %% Function:	open_a_socket/5
@@ -197,9 +199,6 @@ main_loop(Socket, MasterPid)->
 		{send_cancel,Index,Offset,Length}->
 			gen_tcp:send(Socket,[<<8:8,Index:32,Offset:32,Length:32>>]),
 			main_loop(Socket,MasterPid);
-		{send_port, Port}->
-			gen_tcp:send(Socket,[<<9:8,Port:32>>]),
-			main_loop(Socket,MasterPid);
 		{tcp,_,<<4:8, PieceIndex:32>>} ->
 			MasterPid ! {have,self(),PieceIndex},
 			main_loop(Socket,MasterPid);
@@ -224,8 +223,8 @@ main_loop(Socket, MasterPid)->
 		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
 			MasterPid ! {got_cancel, self(), Index, Offset, Length},
 			main_loop(Socket,MasterPid);
-		{tcp,_,<<9:8,Port:16>>}->
-			MasterPid ! {got_port,self(),Port},
+		{tcp,_,<<9:8,_Port:16>>}->
+			% normally, we should not get this message, but just in case. 
 			main_loop(Socket,MasterPid);
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
