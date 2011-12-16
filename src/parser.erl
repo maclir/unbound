@@ -1,3 +1,6 @@
+%%% @author Peter Myllykoski and Alireza Pazirandeh
+%%% Based on code found at wiki.theory.org/Decoding_encoding_bencoded_data_with_erlang
+
 -module(parser).
 
 -export([decode/1]).
@@ -6,9 +9,9 @@
 
 %%----------------------------------------------------------------------
 %% Function: decode/1
-%% Purpose:
+%% Purpose:  API function for the module
 %% Args:     Data(list)
-%% Returns:
+%% Returns:  {ok,Record} or {error, unparsed}
 %%----------------------------------------------------------------------
 decode(Data) ->
     case catch dec(Data,#torrent{}) of
@@ -22,9 +25,8 @@ decode(Data) ->
 
 %%----------------------------------------------------------------------
 %% Function:   dec/2
-%% Purpose:
+%% Purpose:    determine what type of decoding should be done
 %% Args:       Data(list),Record(list)
-%% Returns:
 %%----------------------------------------------------------------------
 dec(<<$l, Tail/binary>>,Record) ->
     dec_list(Tail, [],Record);
@@ -37,9 +39,9 @@ dec(Data,_Record) ->
 
 %%----------------------------------------------------------------------
 %% Function:    dec_int/2
-%% Purpose:
+%% Purpose:     decoding a bencoded integer
 %% Args:        <<X,Tail/binary,Acc(list)
-%% Returns:
+%% Returns:     integer
 %%----------------------------------------------------------------------
 dec_int(<<$e, Tail/binary>>, Acc) ->
     {list_to_integer(lists:reverse(Acc)), Tail};
@@ -48,9 +50,9 @@ dec_int(<<X, Tail/binary>>, Acc) ->
 
 %%----------------------------------------------------------------------
 %% Function:    dec_string/2
-%% Purpose:
+%% Purpose:     decode a string
 %% Args:        <<X, Tail/binary>>, Acc (list)
-%% Returns:
+%% Returns:     string
 %%----------------------------------------------------------------------
 dec_string(<<$:, Tail/binary>>, Acc) ->
     Int = list_to_integer(lists:reverse(Acc)),
@@ -61,9 +63,9 @@ dec_string(<<X, Tail/binary>>, Acc) ->
 
 %%----------------------------------------------------------------------
 %% Function:  dec_list/3
-%% Purpose:
+%% Purpose:   decode a list
 %% Args:      Data(list),Acc(list),Record(list of records)
-%% Returns:
+%% Returns:   list
 %%----------------------------------------------------------------------
 dec_list(<<$e, Tail/binary>>, Acc,_Record) ->
     {lists:reverse(Acc), Tail};
@@ -73,9 +75,8 @@ dec_list(Data, Acc, Record) ->
 
 %%----------------------------------------------------------------------
 %% Function:	dec_dict/2
-%% Purpose:
+%% Purpose:     decode a dictionary and insert the key value pair into the record
 %% Args:		Data(list),Record(list of records)
-%% Returns:
 %%----------------------------------------------------------------------
 dec_dict(<<$e, Tail/binary>>, Record) ->
     {Record, Tail};
