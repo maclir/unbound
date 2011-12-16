@@ -7,8 +7,18 @@
 
 -module(web_response).
 
--export([get_data_xml/1]).
+-export([get_data_xml/1, get_files_xml/1]).
 -include("torrent_status.hrl").
+-include("torrent_db_records.hrl").
+get_files_xml(Files) ->
+	Header = 
+		"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>
+		<rows>",
+	Body = get_body_files(Files, []),
+	Footer =  "</rows>",
+	Data = Header ++ Body ++ Footer,
+	XmlData = lists:flatten(Data),
+	iolist_to_binary(XmlData).
 %%----------------------------------------------------------------------
 %% Function:	get_data_xml/1
 %% Purpose:		Constructs the data to be sent in response to the GET request. 
@@ -28,6 +38,16 @@ get_data_xml(Filter) ->
 	XmlData = lists:flatten(Data),
 	iolist_to_binary(XmlData).
     
+get_body_files([], Body) ->
+	Body;
+get_body_files([H|T], Body) ->
+	{Name, Path} = file_split:path_create(H#file.path),
+	Row = "<row>" ++
+	"<cell><![CDATA[" ++ Path ++ Name ++ "]]><cell>" ++
+	"<cell><![CDATA[" ++ integer_to_list(binary_to_list(H#file.length)) ++ "]]><cell>" ++
+	"<cell><![CDATA[" ++ integer_to_list(binary_to_list(H#file.length_complete)) ++ "]]><cell>" ++
+	"</row>",
+	get_body_files(T, Body ++ Row).
 %%----------------------------------------------------------------------
 %% Function:	get_data_xml/1
 %% Purpose:		Creates the body of the data to be sent in response. 
