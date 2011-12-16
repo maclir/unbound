@@ -7,7 +7,7 @@
 
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
--export([start_link/2,init/1]).
+-export([start_link/3,init/1]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -55,8 +55,8 @@ start_torrent(_Pid,[],_) ->
 %% =============================================================================
 %% Regular torrent functions
 
-start_link(Id,Record) ->
-	{ok,spawn_link(torrent,init,[{Id,Record}])}.
+start_link(Id,Record, StatusRecord) ->
+	{ok,spawn_link(torrent,init,[{Id,Record,StatusRecord}])}.
 
 %%TODO Status record should also come from here
 init({Id,Record,StatusRecord}) ->
