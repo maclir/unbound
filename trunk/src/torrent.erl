@@ -87,7 +87,7 @@ loop(Record,StatusRecord, Id) ->
 		_ ->
 			loop(Record,StatusRecord, Id)
 	end.
-	
+
 %%TODO status
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog) ->
 	receive
@@ -209,7 +209,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 			{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
 			loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
-end.
+	end.
 
 stop(DownloadPid, TrackerList, ActiveNetList) ->
 	DownloadPid ! {die},
@@ -219,15 +219,21 @@ stop(DownloadPid, TrackerList, ActiveNetList) ->
 ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
 	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
-	case Reason of
-		_ when Reason == handshake;
-			   Reason == port_closed;
-			   Reason == bad_bitfield;
-			   Reason == econnrefused;
-			   Reason == bad_request ->
-			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList);
-		_ ->
-			NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList)
+	if
+		is_tuple(BadNet) ->			
+			case Reason of
+				_ when Reason == handshake;
+					   Reason == port_closed;
+					   Reason == bad_bitfield;
+					   Reason == econnrefused;
+					   Reason == bad_request ->
+					NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList);
+				_ ->
+					NewLowPeerList = lists:delete(element(2,BadNet), LowPeerList)
+			end;
+		true ->
+			NewLowPeerList = LowPeerList,
+			ok
 	end,
 	DownloadPid ! {net_exited, FromPid},
 	{NewActiveNetList ,NewLowPeerList}.
