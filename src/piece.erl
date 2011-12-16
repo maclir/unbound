@@ -89,9 +89,9 @@ unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
 
 %%----------------------------------------------------------------------
 %% Function:	construct_piece/2
-%% Purpose:
-%% Args:		
-%% Returns:
+%% Purpose:     constructs the piece from all the block when piece is finished.
+%% Args:		[](list),Binary(binary)
+%% Returns:     Binary
 %%----------------------------------------------------------------------
 construct_piece([],<<Piece/binary>>) ->
 	Piece;
@@ -100,8 +100,8 @@ construct_piece([{_, <<Block/binary>>}|T], <<Piece/binary>>) ->
 
 %%----------------------------------------------------------------------
 %% Function:  	create_blocklist/0
-%% Purpose:		
-%% Returns:
+%% Purpose:		creats a block list to be used for downloading wanted and finished.
+%% Returns:     list
 %% Args:		NumBlocks(integer)
 %%----------------------------------------------------------------------
 create_blocklist(0) ->
