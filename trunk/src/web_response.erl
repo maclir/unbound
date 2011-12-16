@@ -41,8 +41,8 @@ get_data_xml(Filter) ->
 get_body_files([], Body) ->
 	Body;
 get_body_files([H|T], Body) ->
-	{Name, Path} = file_split:path_create(H#file.path),
-    
+	{Name, Path} = file_split:path_create(H#file.path, ""),
+	io:fwrite("File: ~p~n", [H]),
     SizeKB = utils:bytes_to_kbytes(H#file.length),
     case SizeKB > 1024 of
         true -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MB";
@@ -50,9 +50,9 @@ get_body_files([H|T], Body) ->
     end,
     
 	Row = "<row>" ++
-	"<cell><![CDATA[" ++ Path ++ Name ++ "]]><cell>" ++
-	"<cell><![CDATA[" ++ Size ++ "]]><cell>" ++
-	"<cell><![CDATA[" ++ float_to_list(binary_to_list(H#file.length)/binary_to_list(H#file.length_complete)*100) ++ "%]]><cell>" ++
+	"<name>" ++ Path ++ Name ++ "<name>" ++
+	"<size>" ++ Size ++ "<size>" ++
+	"<done>" ++ io_lib:format("~.2f",[(H#file.length/H#file.length_complete)*100]) ++ "%<done>" ++
 	"</row>",
 	get_body_files(T, Body ++ Row).
 %%----------------------------------------------------------------------
@@ -87,7 +87,6 @@ get_body([H|T], Body) ->
         true -> USpeed = io_lib:format("~.2f",[utils:kbytes_to_mbytes(USpeedKB)]) ++ " MB/s";
         _ -> USpeed = io_lib:format("~.2f",[USpeedKB]) ++ " KB/s"
     end,    
-    io:format("size ~p\n downloaded ~p\n downspeed ~p\n", [H#torrent_status.size, H#torrent_status.downloaded, H#torrent_status.downspeed]),
     case H#torrent_status.downspeed of
         0.0 ->  ETA = "N/A";
         _   ->  

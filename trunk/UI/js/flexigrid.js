@@ -668,9 +668,11 @@ var timeout = 1500;
 						if (obj.href || obj.type) return true;
 						if ($(this).hasClass('trSelected')) {
 							selectedRow = null;
+							removeFiles();
 							$(this).removeClass('trSelected');
 						} else {
 							selectedRow = $(this).attr('id');
+							addFiles();
 							$(this).addClass('trSelected');
 						}
 						if (p.singleSelect) $(this).siblings().removeClass('trSelected');

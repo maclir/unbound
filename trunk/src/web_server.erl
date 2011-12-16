@@ -102,7 +102,7 @@ get_post_result([{<<"command">>,Command}]) ->
 %% Commands: getting files
 get_post_result([{<<"row">>, Row}]) ->
 	Files = com_central:get_files(info_hash:from_hex(binary_to_list(Row))),
-	web_response:get_files_xml(Files);
+	{xml, web_response:get_files_xml(Files)};
 
 get_post_result(Whatttt) ->
 	io:format("post: ~p~n", [Whatttt]),
