@@ -29,25 +29,25 @@
 		<div class="pane outer-center">
 			<div id="button-bar">
 				<div class="image-container first-element">
-					<a href="#?w=500" rel="torrent_dialog" class="poplight page"></a>
+					<a href="#?w=500" rel="torrent_dialog" title="new torrent" class="poplight page"></a>
 				</div>
 				 <div class="image-container">
-					<a href="#" class="row-action delete" onclick="postCommand('delete')"></a>
+					<a href="#" class="row-action delete" title="delete" onclick="postCommand('delete')"></a>
 				</div>
 				<div class="image-container">
-					<a href="#" class="row-action play" onclick="postCommand('start')"></a>
-					<a href="#" class="row-action pause hard-disabled" onclick="postCommand('pause')"></a>
-					<a href="#" class="row-action stop" onclick="postCommand('stop')"></a>
+					<a href="#" class="row-action play" title="resume" onclick="postCommand('start')"></a>
+					<a href="#" class="row-action pause hard-disabled" title="pause" onclick="postCommand('pause')"></a>
+					<a href="#" class="row-action stop" title="stop" onclick="postCommand('stop')"></a>
 				</div>
 				<div class="image-container">
-					<a href="#" class="row-action arrowup hard-disabled" onclick="postCommand('priorityup')"></a>
-					<a href="#" class="row-action arrowdown hard-disabled" onclick="postCommand('prioritydown')"></a>
+					<a href="#" class="row-action arrowup hard-disabled" title="move up" onclick="postCommand('priorityup')"></a>
+					<a href="#" class="row-action arrowdown hard-disabled" title="move down" onclick="postCommand('prioritydown')"></a>
 				</div>
 				<div class="image-container">
-					<a href="#" class="eject hard-disabled" onclick="postCommand('exit')" ></a>
+					<a href="#" class="eject hard-disabled" title="exit" onclick="postCommand('exit')" ></a>
 				</div>
 				<div class="image-container">
-					<a href="#" class="settings hard-disabled" onclick="postCommand('settings')"></a>
+					<a href="#" class="settings hard-disabled" title="settings" onclick="postCommand('settings')"></a>
 				</div>
 				<div class="spacer"></div>
 			</div>
