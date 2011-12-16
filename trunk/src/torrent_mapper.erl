@@ -9,7 +9,7 @@
 -module(torrent_mapper).
 -behavoiur(gen_server).
 -export([start_link/0]).
--export([reg/1,free/1,req_all/0]).
+-export([reg/1,free/1,req_all/0,req/1]).
 -export([init/1, handle_call/3]).
 
 %%----------------------------------------------------------------------
@@ -41,6 +41,13 @@ free(SHA1) ->
 
 
 
+%%----------------------------------------------------------------------
+%% Function:     req/1
+%% Purpose:      API function for registering new torrent process
+%% Args:          SHA1(string)
+%%----------------------------------------------------------------------
+req(SHA1) ->
+    gen_server:call(?MODULE,{req,SHA1}).
 %%----------------------------------------------------------------------
 %% Function:  req_all/0
 %% Purpose:   API function
