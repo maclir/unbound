@@ -17,7 +17,6 @@
 write(PieceId, Data, Records, Done) ->
 	case (check_sha(Records#torrent.info#info.pieces, PieceId, Data)) of
 		true ->
-			%%TODO get the TempFolder from settings db
 			{ok, Dir} = file:get_cwd(),
 			TempFolder = Dir ++ "/Unbound_Temp/" ++ info_hash:to_hex(Records#torrent.info_sha) ++ "/" ,
 			DestFolder = Records#torrent.dir ++ "/",
