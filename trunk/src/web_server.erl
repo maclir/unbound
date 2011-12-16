@@ -76,7 +76,7 @@ get_post_result([{<<"row">>, Row},
 get_post_result([{<<"url">>, Url},
 				 {<<"command">>,Command}]) ->
 	io:format("Command: ~p, Url: ~p~n", [Command, Url]),
-	add_new_torrent(Url);
+	com_central:add_new_torrent_url(Url, "");
 %% Commands: exit, settings
 get_post_result([{<<"command">>,Command}]) ->
 	io:format("Command: ~p~n", [Command]),
@@ -92,10 +92,6 @@ get_post_result(Whatttt) ->
 	io:format("post: ~p~n", [Whatttt]),
 	{text, <<"done">>}.
 
-add_new_torrent(<<"asdasd">>) ->
-	{text, <<"done">>};
-add_new_torrent(Url) ->
-	{text, Url}.
 %%----------------------------------------------------------------------
 %% Function:	get_content/1
 %% Purpose:		reading the file in Path and sending back the contents
