@@ -109,6 +109,9 @@ url_decode(<<String/binary>>) ->
 %% Args:     string, Hex(boolean)
 %% Returns:  list
 %%----------------------------------------------------------------------
+url_decode(<<>>,_Hex) ->
+    <<>>;
+
 url_decode(<<V1,V2,Tail/binary>>,Hex) ->
     if
 	Hex == true ->
