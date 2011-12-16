@@ -9,12 +9,10 @@
 -export([init/3]).
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function: init/3
+%% Purpose:  initializes the piece index and length
+%% Args:     PieceIndex(integer),TorrentPid(pid),PieceSize(integer)
 %%----------------------------------------------------------------------
-
 init(PieceIndex,TorrentPid,PieceSize) ->
 	BlockSize = 16384,
 	TempNumBlocks = PieceSize div BlockSize,
@@ -32,12 +30,10 @@ init(PieceIndex,TorrentPid,PieceSize) ->
 	loop([],PieceIndex,BlockStatus,TorrentPid,PieceSize,LastBlockInfo).
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function:  loop/6
+%% Purpose:   it handles everything related to the pieces of the torrent file.
+%% Args:      Piece(list),PieceIndex(integer),BlockStatus(tuple),TorrentPid(pid),PieceSize(integer),LastBlockInfo{tuple}
 %%----------------------------------------------------------------------
-
 loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 	receive
 		{unregister, PeerPid} ->
@@ -79,12 +75,10 @@ loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 			loop(Piece,PieceIndex,NewBlockStatus,TorrentPid,PieceSize,LastBlockInfo)
 	end.
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function:    unregister_pid/2
+%% Purpose:     it unregisters the tcp processes
+%% Args:        PeerPid(pid),{Wanted,Downloading,Finished}(tuple)
 %%----------------------------------------------------------------------
-
 unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
 	case lists:keyfind(PeerPid,2,Downloading) of
 		{Block,Pid} ->
@@ -92,37 +86,34 @@ unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
 		false ->
 			{Wanted, Downloading, Finished}
 	end.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  construct_piece/2
 %% Purpose:
 %% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 construct_piece([],<<Piece/binary>>) ->
 	Piece;
 construct_piece([{_, <<Block/binary>>}|T], <<Piece/binary>>) ->
 	construct_piece(T, <<Piece/binary, Block/binary>>).
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  create_blocklist/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 create_blocklist(0) ->
 	[0];
 create_blocklist(NumBlocks) ->
 	[NumBlocks|create_blocklist(NumBlocks-1)].
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  request_block/4
 %% Purpose:
-%% Args:
+%% Args:      {Wanted,Downloading,Finished}(tuple),PieceIndex(integer),NetPid(pid),{LastBlockInfo,LastBlockSize}(tuple)
 %% Returns:
 %%----------------------------------------------------------------------
-
-
 request_block({Wanted,Downloading,Finished},PieceIndex,NetPid,{LastBlockIndex,LastBlockSize}) ->
 	[HeadWanted|TailWanted] = Wanted,
 	if
