@@ -348,7 +348,7 @@ send_handshake(Socket, InfoHash, ClientId)->
 %%----------------------------------------------------------------------							
 check_infohash(Socket,InfoHashFromPeer)->
 	case torrent_mapper:req(InfoHashFromPeer) of
-		{error,not_found} ->
+		{error,_} ->
 			gen_tcp:close(Socket),
 			exit(self(), "remote peer sent wrong infohash");
 		{ok,TorrentPid} ->
