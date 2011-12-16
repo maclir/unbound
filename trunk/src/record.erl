@@ -1,14 +1,14 @@
+%%% @author: Peter Myllykoski, Alireza Pazirandeh
 -module(record).
 -export([store/3]).
 -include("torrent_db_records.hrl").
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function: store/3
+%% Purpose:  matches the key against wanted keys and if it matches then inserts
+%%           the value into the provided record
+%% Args:     Key(string),Value(string),Record(record)
 %%----------------------------------------------------------------------
-
 store(Key,Value,Record) ->
 	case Key of
 		<<"announce">> ->
