@@ -52,7 +52,7 @@ get_body_files([H|T], Body) ->
 	Row = "<row>" ++
 	"<name>" ++ Path ++ Name ++ "</name>" ++
 	"<size>" ++ Size ++ "</size>" ++
-	"<done>" ++ io_lib:format("~.2f",[(H#file.length/H#file.length_complete)*100]) ++ "%</done>" ++
+	"<done>" ++ io_lib:format("~.2f",[(H#file.length_complete/H#file.length)*100]) ++ "%</done>" ++
 	"</row>",
 	get_body_files(T, Body ++ Row).
 %%----------------------------------------------------------------------
