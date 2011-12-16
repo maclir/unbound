@@ -55,7 +55,7 @@ check_sha(Shas, PieceId, Data) ->
 %% Function:	shas_split/2
 %% Purpose:		Spliting Sha1 String into 20-bit piece for exact piece of Data 
 %% Args:		Shas(String), Index(Integer)
-%% Returns:		Sha1 20-bit string
+%% Returns:		Sha1 20-bit binary
 %%----------------------------------------------------------------------
 %% Split sha1 String into 20-bit piece for exact piece of Data
 shas_split(Shas, Index) ->
