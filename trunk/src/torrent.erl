@@ -205,16 +205,11 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 		
 		{'EXIT',FromPid,Reason} ->
-			case Reason of
-				stopped ->
-					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
-				_ ->
-					NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
-					{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
-					{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
-					loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
-			end
-	end.
+			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
+			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
+			{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
+			loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
+end.
 
 stop(DownloadPid, TrackerList, ActiveNetList) ->
 	DownloadPid ! {die},
