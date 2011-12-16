@@ -39,6 +39,8 @@ start_torrent(Pid,[Record|Tail],Id) ->
 								   name = Record#torrent.info#info.name,
 								   size = Record#torrent.info#info.length,
 								   status = Record#torrent.status,
+								   downloaded = Record#torrent.info#info.length_complete,
+								   uploaded = Record#torrent.info#info.length_uploaded,
 								   timer = erlang:now()},  
 	StartFunc = {torrent,start_link,[Id,Record, StatusRecord]},
 	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
@@ -191,8 +193,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					send_have(PieceIndex,ActiveNetList),
 					NewBitField = bitfield:flip_bit(PieceIndex, TempRecord#torrent.info#info.bitfield),
 					NewLength = TempRecord#torrent.info#info.length_complete + byte_size(Data),
-					%% 					Percentage = NewLength / TempRecord#torrent.info#info.length * 100,
-					%% 					io:fwrite("....~n~.2f~n....~n", [Percentage]),
 					NewRecord = TempRecord#torrent{info = (TempRecord#torrent.info)#info{bitfield = NewBitField, length_complete = NewLength}},
 					io:fwrite("left: ~.3f MegaByte~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
 					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
@@ -207,12 +207,15 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{ok, File_Binary} = file_split:request_data(PieceIndex,Offset,Length, Record),
 			SenderPid ! {piece,PieceIndex,Offset,File_Binary},
 			NewStatusRecord = StatusRecord#torrent_status{uploaded = StatusRecord#torrent_status.uploaded + Length},
+			NewRecord = Record#torrent{info = (Record#torrent.info)#info{length_uploaded = StatusRecord#torrent_status.uploaded + Length}},
+			torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
+			torrent_db:add(NewRecord),
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
 			NewTrackerUploaded = TrackerUploaded + Length,
 			NewTrackerStats = {TrackerDownloaded, NewTrackerUploaded},
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
 			NewRateLog = {DownloadSizeLog,UploadSizeLog + Length},
-			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
+			loop(NewRecord,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 		
 		{'EXIT',FromPid,Reason} ->
 			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
