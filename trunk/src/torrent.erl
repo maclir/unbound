@@ -117,13 +117,13 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			torrent_mapper:free(Record#torrent.info_sha);
 		{get_status_record,Sender} ->
 			Now = erlang:now(),
-			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer),
+			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
-			DownloadSpeed = DownloadSizeLog/(Elapsed/1000000),
-			UploadSpeed = UploadSizeLog/(Elapsed/1000000),
+			DownloadSpeed = DownloadSizeLog/Elapsed,
+			UploadSpeed = UploadSizeLog/Elapsed,
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = Now},
 			Sender ! {status,NewStatusRecord},
-			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
+			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, {0,0});
 		{new_upload,TcpPid, IpPort} ->
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
