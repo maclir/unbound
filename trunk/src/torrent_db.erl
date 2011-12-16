@@ -6,13 +6,23 @@
 -include("torrent_db_records.hrl").
 -include_lib("stdlib/include/qlc.hrl").
 
-% Initializes mnesia and creates the download table. TESTEDy
+%% 
+%%----------------------------------------------------------------------
+%% Function:	init/0
+%% Purpose:		Initializes mnesia and creates the download table. 
+%% Returns:     ok | {error, Reason}
+%%----------------------------------------------------------------------
 init()->
     mnesia:start(),
     mnesia:change_table_copy_type(schema, node(), disc_copies),
     init_table(false).
    
-% Creates a schema and the download table. TESTED
+%%----------------------------------------------------------------------
+%% Function:	init_table/1
+%% Purpose:		Creates a schema and the download table.
+%% Args:		ForceRestart/binary
+%% Returns:     ok
+%%----------------------------------------------------------------------
 init_table(false) ->
     mnesia:create_schema([node()]),
     mnesia:create_table(torrent, [{attributes, record_info(fields, torrent)}, {disc_copies, [node()]}, {type, ordered_set}]),
@@ -22,16 +32,13 @@ init_table(true) ->
     init_table(false),
     ok.
 
-%% Adds a new entry to the torrent table.
-%% Valid attributes:
-%% -Info: record(#info)
-%% -Announce: String
-%% -AnnounceList: List of strings
-%% -CreationDate: Integer
-%% -Comment: String
-%% -CreatedBy: String
-%% -Encoding: String
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%----------------------------------------------------------------------
+%% Function:	add/7
+%% Purpose:		Creates a schema and the download table.
+%% Args:		Info/#info, Announce/string, AnnounceList/list, CreationDate/string,
+%%                  Comment/string, CreatedBy/string, Encoding:string
+%% Returns:     ok
+%%----------------------------------------------------------------------
 add(Info, InfoSHA, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Encoding) ->
     Torrent = #torrent {
             info=Info, info_sha=InfoSHA,
@@ -44,41 +51,51 @@ add(Info, InfoSHA, Announce, AnnounceList, CreationDate, Comment, CreatedBy, Enc
         },
     add(Torrent).
 
-%% Adds a new entry to the torrent table.
-%% Valid attributes:
-%% -Torrent: #torrents
-%% The id value is automatically assigned in the function.
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%----------------------------------------------------------------------
+%% Function:	add/1
+%% Purpose:		Adds a new entry to the torrent table.
+%% Args:		Torrent/#torrent
+%% Returns:     ok
+%%----------------------------------------------------------------------
 add(Torrent) -> 
    % Torrent#torrent.id = num_torrents(),
     {atomic, Result} = mnesia:transaction(fun()-> mnesia:write(Torrent#torrent{id=get_last()+1}) end),
     Result.
     
-%% Returns the #torrent with the specified id.
+%% 
+%%----------------------------------------------------------------------
+%% Function:	get_torrent_by_id/1
+%% Purpose:		Returns the #torrent with the specified id.
+%% Args:		Id/integer
+%% Returns:     Result/list
+%%----------------------------------------------------------------------
 get_torrent_by_id(Id) ->
     {atomic, [Result]} = mnesia:transaction(fun()-> mnesia:read(torrent, Id) end),
     Result.
     
-
-%% Creates and returns an #info record.
+%%----------------------------------------------------------------------
+%% Function:	create_info_record/7
+%% Purpose:		Creates and returns an #info record.
+%% Args:		PieceLength/integer, Pieces/list, Private/integer, Name/string, Length/integer, Md5/string, Files/list
+%% Returns:     Record/#info
+%%----------------------------------------------------------------------
 create_info_record(PieceLength, Pieces, Private, Name, Length, Md5, Files)->
     #info{piece_length=PieceLength, pieces=Pieces, private=Private, name=Name, length=Length, md5sum=Md5, files=Files}.
 
-%% Creates and returns a #file record.
+%%----------------------------------------------------------------------
+%% Function:	create_file_record/3
+%% Purpose:		Creates and returns an #file record.
+%% Args:		Length/integer, Md5/string, Path/string
+%% Returns:     Record/#file
+%%----------------------------------------------------------------------
 create_file_record(Length, Md5, Path)->
     #file{path=Path, md5sum=Md5, length=Length}.
 
-%% Returns a list of all downloads that match the specified pattern. 
-%% The Pattern should be a #torrent.
-%% match(Pairs) ->
-%%     Result = mnesia:dirty_match_object(match(#torrent{}, Pairs)),
-%%     Result.
-%% match(Pattern, [{K, V}|T]) ->
-%%     match(Pattern#torrent{K=V}, T);
-%% match(Pattern, []) ->
-%%     Pattern.
-
-%% Returns the number of torrents added to the database.
+%%----------------------------------------------------------------------
+%% Function:	num_torrents/0
+%% Purpose:		Returns the number of torrents added to the database.
+%% Returns:     Num/integer
+%%----------------------------------------------------------------------
 num_torrents()->
     num_torrents(0, -1).
 num_torrents(Num, Prev)->
@@ -90,7 +107,12 @@ num_torrents(Num, Prev)->
 	{atomic, Next} ->
 	    num_torrents(Num, Next)
     end.
-%% Returns the last id in the table.
+    
+%%----------------------------------------------------------------------
+%% Function:	get_last/0
+%% Purpose:		Returns the last id in the table.
+%% Returns:     Id/integer
+%%----------------------------------------------------------------------
 get_last()->
     case mnesia:dirty_last(torrent) of
 	'$end_of_table' ->
@@ -99,8 +121,13 @@ get_last()->
 	    Last
     end.
 
-%% Returns the sum of the lengthys of all files described 
-%% in the torrent at the specified index in the table.
+%%----------------------------------------------------------------------
+%% Function:	get_size_by_id/1
+%% Purpose:		Returns the total size of the torrent at the row with
+%%              the given Id.
+%% Args:        Id/integer
+%% Returns:     Size/integer
+%%----------------------------------------------------------------------
 get_size_by_id(Id) -> 
     Torrent = get_torrent_by_id(Id),
     case Torrent#torrent.info#info.length of
@@ -110,16 +137,26 @@ get_size_by_id(Id) ->
 	    Size
     end.
 
+%%----------------------------------------------------------------------
+%% Function:	get_size/1
+%% Purpose:		Returns the total size of the given torrent.
+%% Args:        Torrent/#torrent
+%% Returns:     Size/integer
+%%----------------------------------------------------------------------
+get_size(Torrent)->
+    get_size(Torrent, Torrent#torrent.info#info.files).
 get_size(Torrent, [H|T])->
     H#file.length + get_size(Torrent,T);
 get_size(_, [])->
-    0.
-
-get_size(Torrent)->
-    get_size(Torrent, Torrent#torrent.info#info.files).
+    0.  
     
-%% Returns a list of all downloads greater 
-%% in size (in bytes) than the specified number.
+%%----------------------------------------------------------------------
+%% Function:	size_gt/1
+%% Purpose:		Returns a list of all downloads greater 
+%%              in size (in bytes) than the specified number.
+%% Args:        Size/integer
+%% Returns:     Result/list
+%%----------------------------------------------------------------------
 size_gt(Size) -> 
     Transaction = fun() ->
 			  Query = qlc:q([Torrent || Torrent <- mnesia:table(torrent), get_size_by_id(Torrent#torrent.id) > Size]),
@@ -127,9 +164,13 @@ size_gt(Size) ->
 		  end,
     {atomic, Result} = mnesia:transaction(Transaction),
     Result.
-
-%% Returns a list of all downloads lesser 
-%% in size (in bytes) than the specified number.    
+%%----------------------------------------------------------------------
+%% Function:	size_lt/1
+%% Purpose:		Returns a list of all downloads lesser 
+%%              in size (in bytes) than the specified number. 
+%% Args:        Size/integer
+%% Returns:     Result/list
+%%----------------------------------------------------------------------
 size_lt(Size) ->
     Transaction = fun() ->
 			  Query = qlc:q([Torrent || Torrent <- mnesia:table(torrent), get_size_by_id(Torrent#torrent.id) < Size]),
@@ -138,8 +179,13 @@ size_lt(Size) ->
     {atomic, Result} = mnesia:transaction(Transaction),
     Result.
 
-%% Deletes entries from the torrent table.
-%% Accepts as argument either a list of torrent records or an integer.
+%%----------------------------------------------------------------------
+%% Function:	delete/1
+%% Purpose:		Deletes entries from the torrent table.
+%% Args:        Id/integer | List/list
+%% Returns:     ok | {error, Reason}
+%%----------------------------------------------------------------------
+
 %% If a list is 
 delete([H|T])->
     Id = H#torrent.id,
@@ -151,6 +197,12 @@ delete(Id) ->
     {atomic, Result} = mnesia:transaction(fun()-> mnesia:delete({torrent, Id}) end),
     Result.
 
+%%----------------------------------------------------------------------
+%% Function:	delete/1
+%% Purpose:		Deletes the entry in the table with the given hash value.
+%% Args:        SHA/String
+%% Returns:     ok | {error, Reason}
+%%----------------------------------------------------------------------
 delete_by_SHA1(SHA)->
     {atomic, Match} = mnesia:transaction(fun()-> mnesia:match_object(torrent, #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
 							creation_date='_', comment='_', created_by='_', info_sha=SHA, dir='_', status='_'}, read) end),
@@ -163,7 +215,11 @@ find_by_SHA1(SHA)->
 										    dir='_', status='_'}, read) end),
     
     Match.
-
+%%----------------------------------------------------------------------
+%% Function:	get_all_torrents/1
+%% Purpose:		Returns a list of all torrents in the table.
+%% Returns:     List/list
+%%----------------------------------------------------------------------
 get_all_torrents()->
 	    A = mnesia:transaction(fun()-> mnesia:match_object(torrent, 
 									   #torrent{id='_', info='_', announce='_', announce_list='_', encoding='_',
@@ -171,7 +227,12 @@ get_all_torrents()->
 										    dir='_', status='_'}, read) end),
 		{atomic, Match} = A,
     Match.
-
+%%----------------------------------------------------------------------
+%% Function:	hash_exists/1
+%% Purpose:		Check if the given hash value exists in the table.
+%% Args:        Hash/string
+%% Returns:     true | false
+%%----------------------------------------------------------------------
 hash_exists(Hash) ->
     hash_exists(Hash, get_all_torrents()).
 hash_exists(_, [])->
