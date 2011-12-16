@@ -9,12 +9,11 @@
 -export([to_hex/1,from_hex/1,url_encode/1,url_decode/1]).
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function: to_hex/1
+%% Purpose:  converts it to hex
+%% Args:     info_hash(binary)
+%% Returns:  a hex string
 %%----------------------------------------------------------------------
-
 to_hex(<<C1:4,C2:4,Rest/binary>>) ->
     if
 	C1<10 ->
@@ -32,14 +31,14 @@ to_hex(<<C1:4,C2:4,Rest/binary>>) ->
 
 to_hex(<<>>) ->
     [].
-%% Crashes when given an empty string (list). Intentional?
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
 
+
+%%----------------------------------------------------------------------
+%% Function: from_hex/1
+%% Purpose:  converts hexa decimal string to its binary form
+%% Args:     hex string
+%% Returns:  binary
+%%----------------------------------------------------------------------
 from_hex([C1,C2|[]]) ->
     if
 	C1>=$A,C1=<$F ->
@@ -65,14 +64,13 @@ from_hex([C1,C2|Tail]) ->
     Bin = from_hex([C1,C2]),
     list_to_binary(lists:flatten([Bin|[BinTail]])).
 
-%% Fails when given an empty binary.
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
 
+%%----------------------------------------------------------------------
+%% Function: url_encode/1
+%% Purpose:  percent encode all characters that are invalid in the url.
+%% Args:     any kind of binary
+%% Returns:  string
+%%----------------------------------------------------------------------
 url_encode(<<Byte:8,Rest/binary>>) ->
     if
 	Byte>=$0,Byte=<$9 ->
@@ -95,17 +93,22 @@ url_encode(<<Byte:8,Rest/binary>>) ->
 	    EncRest = url_encode(Rest),
 	    <<Enc/binary,EncRest/binary>>
     end.
-%% Fails when given an empty binary or binary has one element(?).
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
 
+%%----------------------------------------------------------------------
+%% Function:  url_decode/1
+%% Purpose:   it decodes all percenting code characters
+%% Args:      string
+%% Returns:   binary
+%%----------------------------------------------------------------------
 url_decode(<<String/binary>>) ->
     list_to_binary(url_decode(String,false)).
 
+%%----------------------------------------------------------------------
+%% Function: url_decode/2
+%% Purpose:  it decodes the percenting code
+%% Args:     string, Hex(boolean)
+%% Returns:  list
+%%----------------------------------------------------------------------
 url_decode(<<V1,V2,Tail/binary>>,Hex) ->
     if
 	Hex == true ->
@@ -128,12 +131,7 @@ url_decode(<<V1/binary>>,false) ->
 %% Test Code:
 
 -include_lib("eunit/include/eunit.hrl").
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
+
 
 hash_test_()->
     [?_assert(from_hex("6791797158d372E100021189cc76002531745038") ==
