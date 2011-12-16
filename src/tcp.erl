@@ -217,7 +217,6 @@ main_loop(Socket, MasterPid)->
 			MasterPid ! {got_unchoked,self()},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<6:8, Index:32, Offset:32, Length:32>>}->
-			io:fwrite("got request for ~p, ~p~n", [Index, Offset]),
 			MasterPid ! {got_request,self(), Index,Offset,Length},
 			main_loop(Socket, MasterPid);
 		{tcp,_,<<8:8, Index:32, Offset:32, Length:32>>}->
@@ -236,15 +235,12 @@ main_loop(Socket, MasterPid)->
 				MasterPid ! {got_block, Offset,byte_size(Block),Block},
 				main_loop(Socket, MasterPid);
 		{stop,Reason} ->
-		io:fwrite("TCP Stopped: ~p\n", [Reason]),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		{error, Reason}->
-		io:fwrite("TCP Error Stopped: ~p\n",[Reason]),
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
 		Smth ->
-			io:fwrite("------------------>got unknown message: ~p~n", [Smth]), %% in case we got something really weird
 			main_loop(Socket, MasterPid)
 		after 10000 ->
 			gen_tcp:close(Socket),
@@ -261,7 +257,6 @@ main_loop(Socket, MasterPid)->
 %% Args:		PortNumber(integer), ClietId(string)
 %%----------------------------------------------------------------------
 init_listening(PortNumber,ClientId) ->
-    io:fwrite("Spawning a listening port\n"),
     ListeningPid = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
     receive 
 	{ok, _Socket} ->
@@ -277,7 +272,6 @@ init_listening(PortNumber,ClientId) ->
 %% Args:		InitPid (pid), PortNumber(integer), ClietId(string)
 %%----------------------------------------------------------------------
 start_listening(InitPid, PortNumber, ClientId)->
-    io:fwrite("Started listening on port ~p\n",[PortNumber]),
     case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
 	{ok, Socket} ->
 	    InitPid ! {ok, Socket},
@@ -302,7 +296,6 @@ start_listening(InitPid, PortNumber, ClientId)->
 %%----------------------------------------------------------------------	
 accepting(Socket, ClientId)->
     {ok, ListenSocket} = gen_tcp:accept(Socket),
-    io:fwrite("accepting ~p~n", [inet:peername(ListenSocket)]),
     HandlingPid = spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
     gen_tcp:controlling_process(ListenSocket, HandlingPid),
     accepting(Socket,ClientId).
@@ -313,7 +306,6 @@ accepting(Socket, ClientId)->
 %% Args:		Socket (socket), ClietId(string)
 %%----------------------------------------------------------------------		
 check_handshake(Socket,ClientId)->
-	io:fwrite("accepting new connection ~n"),
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
 						 _ReservedBytes:8/binary, 
