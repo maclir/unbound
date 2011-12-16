@@ -4,13 +4,14 @@
 -module(nettransfer).
 
 -export([init/6,init_upload/3]).
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  init/6
 %% Purpose:
-%% Args:
+%% Args:      TorrentPid(pid),DestinationIp(pid),DestinationPort(integer),InfoHash(list),ClientId(integer),
+%%            Bitfield(binary)
 %% Returns:
 %%----------------------------------------------------------------------
-
 init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitstring>>)->
 	ZeroPaddedBitfield = pad_bitfield(Bitfield),
 	TcpPid = spawn_link(tcp,open_a_socket,[DestinationIp, DestinationPort,InfoHash,ClientId,self()]),
@@ -20,13 +21,13 @@ init(TorrentPid,DestinationIp,DestinationPort,InfoHash,ClientId,<<Bitfield/bitst
 	DownloadStatus= {Choked,Interested},
 	UploadStatus = {Choked,Interested},
 	loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: init_upload/3
 %% Purpose:
-%% Args:
+%% Args:     TorrentPid(pid),TcpPid(pid),Bitfield(binary)
 %% Returns:
 %%----------------------------------------------------------------------
-
 init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
 	ZeroPaddedBitfield = pad_bitfield(Bitfield),
 	TorrentPid ! {ok,self()},
@@ -37,13 +38,13 @@ init_upload(TorrentPid,TcpPid,<<Bitfield/bitstring>>) ->
 	DownloadStatus = {Choked,Interested},
 	UploadStatus = {Choked,Interested},
 	loop(DownloadStatus,TcpPid,TorrentPid,0,[],UploadStatus).
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  pad_bitfield/1
 %% Purpose:
-%% Args:
+%% Args:      Bitfield(binary)
 %% Returns:
 %%----------------------------------------------------------------------
-
 pad_bitfield(<<Bitfield/bitstring>>) ->
 	BitLength = bit_size(Bitfield),
 	case BitLength rem 8 of
@@ -53,13 +54,13 @@ pad_bitfield(<<Bitfield/bitstring>>) ->
 			Padding = 8 - Rem,
 			<<Bitfield/bitstring,0:Padding>>
 	end.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  loop/6
 %% Purpose:
-%% Args:
+%% Args:      DownloadStatus,TcpPid(pid),TorrentPid(pid),StoredBitfield,Que,UploadStatus
 %% Returns:
 %%----------------------------------------------------------------------
-
 loop(DownloadStatus,TcpPid,TorrentPid,StoredBitfield,Que,UploadStatus) ->
 	receive
 		check_free ->
