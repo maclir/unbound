@@ -75,8 +75,19 @@ get_post_result([{<<"row">>, Row},
 %% Commands: new
 get_post_result([{<<"url">>, Url},
 				 {<<"command">>,Command}]) ->
-	io:format("Command: ~p, Url: ~p~n", [Command, Url]),
-	com_central:add_new_torrent_url(Url, "");
+	io:format("Command: ~p, Url: ~p~n", [Command, binary_to_list(Url)]),
+	Result = com_central:add_new_torrent_url(Url, ""),
+	case Result of
+		ok ->
+			{text, <<"done">>};
+		duplicate ->
+			{text, <<"torrent already exists">>};
+		invalid_url ->
+			{text, <<"invalud url">>};
+		invalid_folder ->
+			{text, <<"invalud folder path">>}
+	end;
+
 %% Commands: exit, settings
 get_post_result([{<<"command">>,Command}]) ->
 	io:format("Command: ~p~n", [Command]),
