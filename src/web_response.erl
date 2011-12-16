@@ -43,6 +43,12 @@ get_body([H|T], Body) ->
         _ -> Size = io_lib:format("~.2f",[SizeKB]) ++ " KB"
     end,
     
+    UppedKB = utils:bytes_to_kbytes(H#torrent_status.uploaded),
+    case UppedKB > 1024 of
+        true -> Upped = io_lib:format("~.2f",[utils:kbytes_to_mbytes(UppedKB)]) ++ " MB";
+        _ -> Upped = io_lib:format("~.2f",[UppedKB]) ++ " KB"
+    end,
+    
     DSpeedKB = utils:bytes_to_kbytes(H#torrent_status.downspeed),
     case DSpeedKB > 1024 of
         true -> DSpeed = io_lib:format("~.2f",[utils:kbytes_to_mbytes(DSpeedKB)]) ++ " MB/s";
@@ -84,7 +90,7 @@ get_body([H|T], Body) ->
 			<cell><![CDATA[" ++ DSpeed ++ "]]></cell>
             <cell><![CDATA[" ++ USpeed ++ "]]></cell>
 			<cell><![CDATA[" ++ ETA ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.uploaded) ++ "]]></cell>
+			<cell><![CDATA[" ++ Upped ++ "]]></cell>
 		</row>",
 	get_body(T, NewRow ++ Body).
 %%----------------------------------------------------------------------
