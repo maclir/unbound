@@ -113,7 +113,8 @@ handle_req({ok, {http_request, Method, {_PathMode ,Path}, _Version}}, Sock) ->
 		_ ->
 			send_unsupported_error(Sock)
 	end;
-handle_req(SockError, Sock) ->
+
+handle_req(_SockError, Sock) ->
 	gen_tcp:close(Sock).
 
 %%----------------------------------------------------------------------
