@@ -1,6 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% Author:		Alireza Pazirandeh
-%%% Desc.:		
+%%% Desc.:		Module responsible for handling all the pieces and
+%%%				allocating free nets to them
 %%				
 %%%----------------------------------------------------------------------
 
@@ -10,7 +11,7 @@
 -include("torrent_db_records.hrl").
 %%----------------------------------------------------------------------
 %% Function:	init/2
-%% Purpose:		 
+%% Purpose:		initiating the 
 %% Args:		
 %%----------------------------------------------------------------------
 init(Record, TorrentPid)->
