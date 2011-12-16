@@ -8,14 +8,21 @@
 -module(info_hash).
 -export([to_hex/1,from_hex/1,url_encode/1,url_decode/1]).
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 to_hex(<<C1:4,C2:4,Rest/binary>>) ->
-    if 
+    if
 	C1<10 ->
 	    Char1 = C1+$0;
 	C1>=10 ->
 	    Char1 = C1+$0+39
     end,
-    if 
+    if
 	C2<10 ->
 	    Char2 = C2+$0;
 	C2>=10 ->
@@ -26,6 +33,13 @@ to_hex(<<C1:4,C2:4,Rest/binary>>) ->
 to_hex(<<>>) ->
     [].
 %% Crashes when given an empty string (list). Intentional?
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 from_hex([C1,C2|[]]) ->
     if
 	C1>=$A,C1=<$F ->
@@ -52,6 +66,13 @@ from_hex([C1,C2|Tail]) ->
     list_to_binary(lists:flatten([Bin|[BinTail]])).
 
 %% Fails when given an empty binary.
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 url_encode(<<Byte:8,Rest/binary>>) ->
     if
 	Byte>=$0,Byte=<$9 ->
@@ -75,6 +96,13 @@ url_encode(<<Byte:8,Rest/binary>>) ->
 	    <<Enc/binary,EncRest/binary>>
     end.
 %% Fails when given an empty binary or binary has one element(?).
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 url_decode(<<String/binary>>) ->
     list_to_binary(url_decode(String,false)).
 
@@ -95,13 +123,20 @@ url_decode(<<V1/binary>>,false) ->
     V1.
 
 
-    
-	    
+
+
 %% Test Code:
+
 -include_lib("eunit/include/eunit.hrl").
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 hash_test_()->
-    [?_assert(from_hex("6791797158d372E100021189cc76002531745038") == 
+    [?_assert(from_hex("6791797158d372E100021189cc76002531745038") ==
 		 from_hex("6791797158D372E100021189CC76002531745038")),
      ?_assert(from_hex("6791797158D372E100021189CC76002531745038") == <<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>),
      ?_assert(to_hex(<<103,145,121,113,88,211,114,225,0,2,17,137,204,118,0,37,49,116,80,56>>) == "6791797158D372E100021189CC76002531745038" ),
@@ -114,4 +149,4 @@ hash_test_()->
      ?_assert(url_encode(<<"Hello, world!">>) == <<"Hello%2C%20world%21">>),
      ?_assert(url_decode(<<"Hello%2C%20world%21">> ) == <<"Hello, world!">>)
     ].
-	     
+

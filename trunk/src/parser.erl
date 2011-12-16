@@ -4,6 +4,12 @@
 -define(DICT, orddict).
 -include("torrent_db_records.hrl").
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 decode(Data) ->
     InfoSha = calculateInfoSha(Data),
@@ -13,6 +19,12 @@ decode(Data) ->
 	{Res, _} ->
 	    {ok, Res}
     end.
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 dec(<<$l, Tail/binary>>,Record) ->
     dec_list(Tail, [],Record);
@@ -22,11 +34,23 @@ dec(<<$i, Tail/binary>>,_Record) ->
     dec_int(Tail, []);
 dec(Data,_Record) ->
     dec_string(Data, []).
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 dec_int(<<$e, Tail/binary>>, Acc) ->
     {list_to_integer(lists:reverse(Acc)), Tail};
 dec_int(<<X, Tail/binary>>, Acc) ->
     dec_int(Tail, [X|Acc]).
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 dec_string(<<$:, Tail/binary>>, Acc) ->
     Int = list_to_integer(lists:reverse(Acc)),
@@ -34,6 +58,12 @@ dec_string(<<$:, Tail/binary>>, Acc) ->
     {Str, Rest};
 dec_string(<<X, Tail/binary>>, Acc) ->
     dec_string(Tail, [X|Acc]).
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 dec_list(<<$e, Tail/binary>>, Acc,_Record) ->
     {lists:reverse(Acc), Tail};
@@ -55,6 +85,12 @@ dec_dict(Data, Record) ->
     end,
     {Val, Tail2} = dec(Tail1,NewRecord),
     dec_dict(Tail2, record:store(Key,Val,Record)).
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 calculateInfoSha(Binary) ->
     case Binary of

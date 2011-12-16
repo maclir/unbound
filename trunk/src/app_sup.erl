@@ -10,6 +10,13 @@
 -export([start_link/0,stop/0,gen_random/2]).
 -export([init/1]).
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 start_link() ->
     random:seed(erlang:now()),
     case whereis(?MODULE) of
@@ -26,6 +33,12 @@ start_link() ->
 	    io:fwrite("The Unbound Torrent client is already started with Pid ~p!",[Pid])
     end.
 
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
 init([Id]) ->
     io:fwrite("Application Supervisor started!\n"),
@@ -41,12 +54,25 @@ init([Id]) ->
 	 ]
 	}
     }.
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
 
-stop() ->    
+stop() ->
     lists:foreach(fun({Id,_,_,_})-> supervisor:terminate_child(unbound_torrent,Id) end,supervisor:which_children(unbound_torrent)),
     exit(unbound_torrent,shutdown).
 
 %% Function for generating a random number with desired length
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 gen_random(0, <<Binary/binary>>) ->
     Binary;
 gen_random(Counter, <<Binary/binary>>)->
@@ -54,6 +80,13 @@ gen_random(Counter, <<Binary/binary>>)->
 	gen_random(Counter -1, <<RandomBinary/binary , Binary/binary>>).
 
 %% Function for generating a 20 charachter unique id client
+%%----------------------------------------------------------------------
+%% Function:
+%% Purpose:
+%% Args:
+%% Returns:
+%%----------------------------------------------------------------------
+
 clientId() ->
 	GeneralCode = <<"-UB0001-">>,
 	UniqueCode = gen_random(12, <<>>),
