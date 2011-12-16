@@ -1,3 +1,0 @@
-
-main(Args) ->
-    make:all().

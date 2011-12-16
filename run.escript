@@ -1,3 +1,0 @@
-
-main(Args) ->
-    testing:start().
