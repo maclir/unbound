@@ -24,6 +24,9 @@ init(Record, TorrentPid)->
 
 loop(Que, Downloading, TorrentPid) ->
 	receive
+		{die} ->
+			kill_pieces(Downloading),
+			exit(self(), stopped);
 		{new_free, NetPid} ->
 			case allocate_net(Downloading, NetPid) of
 				done ->
@@ -111,6 +114,10 @@ spawn_piece([{PieceIndex, NetPidList, PieceLength}|Que], Downloading, NetPid, Ra
 		false ->
 			spawn_piece(Que, Downloading, NetPid, RawQue, TorrentPid)
 	end.
+kill_pieces([]) ->
+	ok;
+kill_pieces([{_PieceIndex, _NetPidList, PiecePid}|_Downloading]) ->
+	exit(PiecePid, stopped).
 
 sort(List) ->
 %% 	List.
