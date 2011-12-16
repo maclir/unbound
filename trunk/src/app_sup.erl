@@ -12,8 +12,7 @@
 
 %%----------------------------------------------------------------------
 %% Function:  start_link/0
-%% Purpose:
-%% Returns:
+%% Purpose:   creates client id and starts the main process of applciation
 %%----------------------------------------------------------------------
 start_link() ->
     random:seed(erlang:now()),
@@ -33,9 +32,12 @@ start_link() ->
 
 %%----------------------------------------------------------------------
 %% Function:  init/1
-%% Purpose:
+%% Purpose:   spawns torrent_mapper(process that maps torrent pids to the
+%%            related info hash), torrent_loader(process that spawns a new
+%%            torrent process for each entry in the torrent database),port_sup(supervisor
+%%            process that manage the listening port) and com_central(process
+%%            that handles all the communications with a UI)
 %% Args:      id (list)
-%% Returns:
 %%----------------------------------------------------------------------
 init([Id]) ->
     io:fwrite("Application Supervisor started!\n"),
@@ -54,8 +56,7 @@ init([Id]) ->
 
 %%----------------------------------------------------------------------
 %% Function: stop/0
-%% Purpose:
-%% Returns:
+%% Purpose:  stopes the applciation
 %%----------------------------------------------------------------------
 stop() ->
     lists:foreach(fun({Id,_,_,_})-> supervisor:terminate_child(unbound_torrent,Id) end,supervisor:which_children(unbound_torrent)),
