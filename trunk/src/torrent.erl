@@ -7,7 +7,7 @@
 
 -module(torrent).
 -export([start_link_loader/1,init_loader/1]).
--export([start_link/3,init/1]).
+-export([start_link/2,init/1]).
 -include("torrent_db_records.hrl").
 -include("torrent_status.hrl").
 
@@ -35,17 +35,9 @@ init_loader({Pid,Id})->
 
 start_torrent(Pid,[Record|Tail],Id) ->
 	InfoHash = info_hash:to_hex(Record#torrent.info_sha),
-	StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
-								   name = Record#torrent.info#info.name,
-								   size = Record#torrent.info#info.length,
-								   status = Record#torrent.status,
-								   downloaded = Record#torrent.info#info.length_complete,
-								   uploaded = Record#torrent.info#info.length_uploaded,
-								   timer = erlang:now()},  
-	StartFunc = {torrent,start_link,[Id,Record, StatusRecord]},
+	StartFunc = {torrent,start_link,[Id,Record]},
 	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
 	supervisor:start_child(Pid,ChildSpec),
-	
 	start_torrent(Pid,Tail,Id);
 
 start_torrent(_Pid,[],_) ->
@@ -56,11 +48,18 @@ start_torrent(_Pid,[],_) ->
 %% =============================================================================
 %% Regular torrent functions
 
-start_link(Id,Record, StatusRecord) ->
-	{ok,spawn_link(torrent,init,[{Id,Record,StatusRecord}])}.
+start_link(Id,Record) ->
+	{ok,spawn_link(torrent,init,[{Id,Record}])}.
 
 %%TODO Status record should also come from here
-init({Id,Record,StatusRecord}) ->
+init({Id,Record}) ->
+	StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
+								   name = Record#torrent.info#info.name,
+								   size = Record#torrent.info#info.length,
+								   status = Record#torrent.status,
+								   downloaded = Record#torrent.info#info.length_complete,
+								   uploaded = Record#torrent.info#info.length_uploaded,
+								   timer = erlang:now()},
 	process_flag(trap_exit,true),
 	torrent_mapper:reg(Record#torrent.info_sha),
     case Record#torrent.status of
