@@ -24,21 +24,39 @@ get_data_xml(Filter) ->
 get_body([], Body) ->
 	Body;
 get_body([H|T], Body) ->
+    SizeKB = utils:bytes_to_kbytes(H#torrent_status.size),
+    case SizeKB > 1024 of
+        true -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MBs";
+        _ -> Size = io_lib:format("~.2f",[SizeKB]) ++ " KBs"
+    end,
+    
+    DSpeedKB = utils:bytes_to_kbytes(H#torrent_status.downspeed),
+    case DSpeedKB > 1024 of
+        true -> DSpeed = io_lib:format("~.2f",[utils:kbytes_to_mbytes(DSpeedKB)]) ++ " MBs/s";
+        _ -> DSpeed = io_lib:format("~.2f",[DSpeedKB]) ++ " KBs/s"
+    end,
+    
+    USpeedKB = utils:bytes_to_kbytes(H#torrent_status.upspeed),
+    case USpeedKB > 1024 of
+        true -> USpeed = io_lib:format("~.2f",[utils:kbytes_to_mbytes(USpeedKB)]) ++ " MBs/s";
+        _ -> USpeed = io_lib:format("~.2f",[USpeedKB]) ++ " KBs/s"
+    end,
+
 	NewRow = 
 		"<row status=\"" ++ atom_to_list(H#torrent_status.status) ++ "\" id=\"" ++ info_hash:to_hex(H#torrent_status.info_hash) ++ "\">
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
 			<cell><![CDATA[" ++ binary_to_list(H#torrent_status.name) ++ "]]></cell>
-			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.size) ++ "]]></cell>
-			<cell><![CDATA[" ++                 
-                "<div id='progressbar' \">
-                    <div id='progressMade' style=\"width:" ++ io_lib:format("~.2f",[(H#torrent_status.downloaded/H#torrent_status.size)* 100]) ++ "%;\"\>
-                </div>
-                <div id='progressText' >" ++ io_lib:format("~.2f",[(H#torrent_status.downloaded/H#torrent_status.size)*100]) ++ "%</div>
+			<cell><![CDATA[" ++ Size ++ "]]></cell>
+			<cell><![CDATA[" ++       
+                "   <div id='progressbar' \">
+                        <div id='progressMade' style=\"width:" ++ io_lib:format("~.2f",[(H#torrent_status.downloaded/H#torrent_status.size)* 100]) ++ "%;\"\>
+                    </div>
+                    <div id='progressText' >" ++ io_lib:format("~.2f",[(H#torrent_status.downloaded/H#torrent_status.size)*100]) ++ "%</div>
             </div>]]></cell>
 			<cell><![CDATA[" ++ atom_to_list(H#torrent_status.status) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.connected_peers) ++ " (" ++ integer_to_list(H#torrent_status.peers) ++ ")]]></cell>
-			<cell><![CDATA[" ++ float_to_list(H#torrent_status.downspeed) ++ "]]></cell>
-            <cell><![CDATA[" ++ float_to_list(H#torrent_status.upspeed) ++ "]]></cell>
+			<cell><![CDATA[" ++ DSpeed ++ "]]></cell>
+            <cell><![CDATA[" ++ USpeed ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.eta) ++ "]]></cell>
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.uploaded) ++ "]]></cell>
 		</row>",

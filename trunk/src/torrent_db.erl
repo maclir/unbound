@@ -188,11 +188,8 @@ init_test_()->
     [?_assert(init() == ok),
      ?_assert(init_table(true) == ok),
      ?_assert(init_table(false) == ok),
-     ?_assertException(error, function_clause,  init_table(non_bool))
-     ].
-
-manipulation_test_()->
-    [?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="first_torrent", length=10000, md5sum="md5sum", files=[]}, 
+     ?_assertException(error, function_clause,  init_table(non_bool)),
+     ?_assert(add( #info{piece_length=512, pieces=999, bitfield='_', private=0, name="first_torrent", length=10000, md5sum="md5sum", files=[]}, 
 			    "first_sha", "announce", ["announce", "list"], 
 			    "date", "comment", "created by", "encoding")== ok), %% Add a single-file entry to torrent table, id is 0. 
      ?_assert(num_torrents()==1), %% Get the number of torrent entries currently in the table.
