@@ -119,28 +119,36 @@ function parseFiles(xml) {
     var data = "";
     var startTag = "<table border='1' id='mainTable'><tbody><tr><td style=\"width: 120px\">Name</td><td style=\"width: 120px\">Size</td><td style=\"width: 120px\">Done</td></tr>";
     var endTag = "</tbody></table>";
-    $(xml).find('row').each(function() {
-        var $url = $(this);
-        var name = $url.find('name').text();
-        var size = $url.find('size').text();
-        var done = $url.find('done').text();
-        data += '<tr><td>' + name + '</td>';
-        data += '<td>' + size + '</td></tr>';
-        data += '<td>' + done + '</td></tr>';
+    $(xml).find("row").each(function() {
+        var url = $(this);
+        var name = $(url).find("name").text();
+        var size = $(url).find("size").text();
+        var done = $(url).find("done").text();
+        data += "<tr><td>" + name + "</td>";
+        data += "<td>" + size + "</td></tr>";
+        data += "<td>" + done + "</td></tr>";
      });
-    var finalData = $("#content").html(startTag + data + endTag);
+    var finalData = startTag + data + endTag;
     return finalData;
 }
 
 function addFiles(){
 //	data = parseFiles(xml),
-	$.post("/ajax", {row: selectedRow.replace("row", "") },
-			function(data) {
+	$(document).ready(function()
+	{
+	  $.ajax({
+		type: "POST",
+		url: "/ajax",
+		dataType: "xml",
+		data: { row: selectedRow.replace("row", "")},
+		success: function(data) {
 				console.log(data);
 				finalData = parseFiles(data);
 				console.log(finalData);
-				$(".east-south").append(data);
-		});
+				$(".east-south").append(finalData);
+			}
+	  });
+	});
 }
 
 function removeFiles(){
