@@ -218,6 +218,12 @@ img{
 }
 
 /* new torrent popup */
+
+#torrent_dialog p {
+	font-size: 14px;
+	margin-bottom: 4px;
+}
+
 #fade { /*--Transparent background layer--*/
 	display: none; /*--hidden by default--*/
 	background: #000;

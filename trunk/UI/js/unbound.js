@@ -80,7 +80,7 @@ function postCommand(command){
 	
 	if (command == "new"){
 		$("span.error-torrent").text("Loading").show();
-		$.post("/ajax", {command: command, url: $("input.new-torrent").val()},
+		$.post("/ajax", {command: command, url: $("input.new-torrent").val(), path: $("input.new-path").val()},
 			function(data) {
 			if (data == "done")
 			{
