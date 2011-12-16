@@ -1,4 +1,4 @@
-DEL \ebin\*.beam
+DEL ebin\*.beam
 escript.exe make.escript
 cd ebin
 erl
