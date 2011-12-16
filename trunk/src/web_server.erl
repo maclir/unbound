@@ -69,7 +69,6 @@ get_post_result([{<<"filter">>, Filter}]) ->
 %% Commands: resume, stop, delete
 get_post_result([{<<"row">>, Row},
 				 {<<"command">>,Command}]) ->
-	io:format("Command: ~p, Row: ~p~n", [Command, Row]),
     com_central:torrent_command(info_hash:from_hex(binary_to_list(Row)), binary_to_atom(Command, utf8)),
 	{text, <<"done">>};
 %% Commands: new
@@ -88,7 +87,6 @@ get_post_result([{<<"path">>,Path},
 
 %% Commands: exit, settings
 get_post_result([{<<"command">>,Command}]) ->
-	io:format("Command: ~p~n", [Command]),
     case list_to_binary(Command) of
         "exit" ->
             app_sup:stop();
