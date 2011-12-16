@@ -70,24 +70,28 @@ create_statuses([H|T], Statuses)->
     end.
 
 handle_call({add_new_torrent,Binary, Path},_From,State) ->
-    {ok,Record} = parser:decode(Binary),
-    torrent_db:init(),
-    case torrent_db:hash_exists(Record#torrent.info_sha) of
-	false ->
-	    NewRecord = Record#torrent{dir=Path},
-	    torrent_db:add(NewRecord),
-	    AppSupPid = whereis(app_sup),
-	    {client_id,Id} = lists:keyfind(client_id,1,State),
-	    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
-	    StartFunc = {torrent,start_link,[Id,NewRecord]},
-	    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,
-				  worker,[torrent]},
-	    supervisor:start_child(AppSupPid,ChildSpec),
-	    {reply,{result,ok},State};
-	true ->
-	    {reply,{error,duplicate},State}
+    case parser:decode(Binary) of
+	{ok, Record} ->
+	    torrent_db:init(),
+	    case torrent_db:hash_exists(Record#torrent.info_sha) of
+		false ->
+		    NewRecord = Record#torrent{dir=Path},
+		    torrent_db:add(NewRecord),
+		    AppSupPid = whereis(app_sup),
+		    {client_id,Id} = lists:keyfind(client_id,1,State),
+		    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
+		    StartFunc = {torrent,start_link,[Id,NewRecord]},
+		    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,
+				 worker,[torrent]},
+		    supervisor:start_child(AppSupPid,ChildSpec),
+		    {reply,{result,ok},State};
+		true ->
+		    {reply,{error,duplicate},State}
+	    end;
+	_Other ->
+	    {reply,{error,invalid_url},State}
     end;
-
+		 
 handle_call({torrent_command,Hash,Command},_From,State) ->
     {ok,Pid} = torrent_mapper:req(Hash),
     Pid ! {command, Command},
