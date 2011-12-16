@@ -1,6 +1,6 @@
 -module(utils).
 -export([kbytes_to_mbytes/1, bytes_to_kbytes/1, bytes_to_mbytes/1]).
-
+-export([mbytes_to_gbytes/1, bytes_to_gbytes/1, kbytes_to_gbytes/1]).
 %%----------------------------------------------------------------------
 %% Function:	        kbytes_to_mbytes/1
 %% Purpose:		Converts kilobytes to megabytes.
