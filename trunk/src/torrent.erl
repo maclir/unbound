@@ -16,7 +16,12 @@
 %% =============================================================================
 %% Torrent loader function that is responsible for opening the persistent
 %% storage and dynamically add all the torrents found into the supervisor.
-
+%%----------------------------------------------------------------------
+%% Function: start_link_loader/1
+%% Purpose:  spawns a process that tells the app_sup process to spawn and
+%%           supervise the torrent processes that are fetched from the database.
+%% Args:     Id(string)
+%%----------------------------------------------------------------------
 start_link_loader(Id) ->
 	Self = self(),
 	spawn_link(?MODULE,init_loader,[{Self,Id}]),
@@ -27,12 +32,22 @@ start_link_loader(Id) ->
 			{error,time_out}
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:  init_loader/1
+%% Purpose:   gets all the torrents from the database.
+%% Args:      {Pid,Id}(tuple)
+%%----------------------------------------------------------------------
 init_loader({Pid,Id})->
 	io:fwrite("Torrent Loader Started!\n"),
 	Pid ! {ok,self()},
 	RecordList = torrent_db:get_all_torrents(),
 	start_torrent(Pid,RecordList,Id).
 
+%%----------------------------------------------------------------------
+%% Function: start_torrent/3
+%% Purpose:  tells the app_sup process to spawn the given torrent process.
+%% Args:     Pid(pid),[Rocord|Tail](list),Id(string)
+%%----------------------------------------------------------------------
 start_torrent(Pid,[Record|Tail],Id) ->
 	InfoHash = info_hash:to_hex(Record#torrent.info_sha),
 	StartFunc = {torrent,start_link,[Id,Record]},
@@ -47,11 +62,21 @@ start_torrent(_Pid,[],_) ->
 
 %% =============================================================================
 %% Regular torrent functions
-
+%%----------------------------------------------------------------------
+%% Function: start_link/2
+%% Purpose:  spawns the torrent process.
+%% Args:     Id(string),Record(record)
+%%----------------------------------------------------------------------
 start_link(Id,Record) ->
 	{ok,spawn_link(torrent,init,[{Id,Record}])}.
 
-%%TODO Status record should also come from here
+
+%%----------------------------------------------------------------------
+%% Function:  init/1
+%% Purpose:   it sets initial status and registers the torrent with the
+%%            torrent_mapper process.
+%% Args:      {Id,Record}(tuple)
+%%----------------------------------------------------------------------
 init({Id,Record}) ->
 	StatusRecord = #torrent_status{info_hash = Record#torrent.info_sha,
 								   name = Record#torrent.info#info.name,
@@ -69,6 +94,11 @@ init({Id,Record}) ->
 			init_start(Id, Record, StatusRecord)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:  init_start/3
+%% Purpose:   spawns the downloader and tracker processes.
+%% Args:      Id(string),Record(record),StatusRecord(record)
+%%----------------------------------------------------------------------
 init_start(Id, Record, StatusRecord) ->
 	DownloadPid = spawn(download,init,[Record,self()]),
 	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
@@ -76,6 +106,11 @@ init_start(Id, Record, StatusRecord) ->
 	spawn_trackers(Announce,Record#torrent.info_sha,Id),
 	loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[], {0,0}, {0,0}).
 
+%%----------------------------------------------------------------------
+%% Function: loop/3
+%% Purpose:  receives commands from the tcp, nettransfer and piece processes.
+%% Args:     Record(record),StatusRecord(record),Id(string)
+%%----------------------------------------------------------------------
 loop(Record,StatusRecord, Id) ->
 	receive
 		{command, start} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
@@ -112,7 +147,14 @@ loop(Record,StatusRecord, Id) ->
 			loop(Record,StatusRecord, Id)
 	end.
 
-%%TODO status
+
+%%----------------------------------------------------------------------
+%% Function:  loop/10
+%% Purpose:   it receives commands from the tcp, nettransfer and piece processes.
+%% Args:      Record(record),StatudRecord(record),TrackerList(list),DownloadPid(pid),Id(string),ActiveNetList(list),
+%%             UnusedPeers(list),TrackerStats(tuple),RateLog(tuple)
+%% Returns>
+%%----------------------------------------------------------------------
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog) ->
 	receive
 		{command, start} ->
@@ -254,16 +296,29 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function: stop/3
+%% Purpose:  terminates the nettransfer and tracker processes.
+%% Args:     DownloadPid(pid),TrackerList(list),ActiveNetList(list)
+%%----------------------------------------------------------------------
 stop(DownloadPid, TrackerList, ActiveNetList) ->
 	DownloadPid ! {die},
 	send_stopped_tcps(ActiveNetList),
 	send_stopped_trackers(TrackerList).
 
+%%----------------------------------------------------------------------
+%% Function:  ban_net_pid/5
+%% Purpose:   it moves the pid from the active list to the LowPeerList. If the
+%%            reason is one of the following case clauses, it will be deleted alltogether.
+%% Args:      FromPid(pid), ActiveNetList(list), LowPeerList(list),
+%%            DownloadPid(pid), Reason(atom)
+%% Returns:   Status list
+%%----------------------------------------------------------------------
 ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	BadNet = lists:keyfind(FromPid,1,ActiveNetList),
 	NewActiveNetList = lists:delete(BadNet, ActiveNetList),
 	if
-		is_tuple(BadNet) ->			
+		is_tuple(BadNet) ->
 			case Reason of
 				_ when Reason == handshake;
 					   Reason == port_closed;
@@ -281,6 +336,12 @@ ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason) ->
 	DownloadPid ! {net_exited, FromPid},
 	{NewActiveNetList ,NewLowPeerList}.
 
+%%----------------------------------------------------------------------
+%% Function: spawn_trackers/3
+%% Purpose:  spawns new tracker process for each announce address found in the
+%%           torrent meta_data
+%% Args:    AnnounceList(list), InfoHash(string), Id(string)
+%%----------------------------------------------------------------------
 spawn_trackers([],_,_) ->
 	ok;
 spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
@@ -288,6 +349,13 @@ spawn_trackers([Announce|AnnounceList],InfoHash,Id) ->
 	spawn(tracker,init,[Self,Announce,InfoHash,Id]),
 	spawn_trackers(AnnounceList,InfoHash,Id).
 
+%%----------------------------------------------------------------------
+%% Function:  screen_peers/3
+%% Purpose:   when new peer list is received, it adds all unknown peers to the
+%%            active peer list.
+%% Args:      PeerList(list), ActiveNetList(list), List(list)
+%% Returns>   peer list.
+%%----------------------------------------------------------------------
 screen_peers([] ,_ActiveNetList, List) ->
 	List;
 screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
@@ -298,6 +366,13 @@ screen_peers([IpPort | PeerList] ,ActiveNetList, List) ->
 			screen_peers(PeerList, ActiveNetList, [IpPort|List])
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:  spawn_connections_init/6
+%% Purpose:   it spawns nettransfer if the status is downloading and otherwise
+%%            it doesn't do anything.
+%% Args:      Record(record), StatusRecord(record), ActiveNetList(list),
+%%            PeerList(list), UnusedPeers(list), Id(string)
+%%----------------------------------------------------------------------
 spawn_connections_init(Record, StatusRecord, ActiveNetList, PeerList, UnusedPeers, Id) ->
 	case StatusRecord#torrent_status.status of
 		downloading ->
@@ -314,6 +389,12 @@ spawn_connections_init(Record, StatusRecord, ActiveNetList, PeerList, UnusedPeer
 	NewActiveNetList = TempActiveNetList ++ ActiveNetList,
 	{NewActiveNetList, FinalUnusedPeers}.
 
+%%----------------------------------------------------------------------
+%% Function: spawn_connections/6
+%% Purpose:
+%% Args:
+%% Returns>
+%%----------------------------------------------------------------------
 spawn_connections(_,_InfoHash,_Id,NetList,Count,_Record) when Count < 1->
 	NetList;
 spawn_connections([],_InfoHash,_Id,NetList,_,_Record) ->
@@ -323,31 +404,57 @@ spawn_connections([{Ip,Port}|Rest],InfoHash,Id,NetList,Count,Record) ->
 	Pid = spawn_link(nettransfer,init,[Self,Ip,Port,InfoHash,Id,Record#torrent.info#info.bitfield]),
 	spawn_connections(Rest,InfoHash,Id, [{Pid, {Ip,Port}}|NetList],Count - 1, Record).
 
+%%----------------------------------------------------------------------
+%% Function:  send_have/2
+%% Purpose:   sends message to the nettransfer process to acknowledge that a new
+%%            piece has become available.
+%% Args:      PieceIndex(integer), peer_list(list)
+%%----------------------------------------------------------------------
 send_have(_,[]) ->
 	ok;
 send_have(PieceIndex, [{Pid,_Ip}|Tail]) ->
 	Pid ! {have, self(), PieceIndex},
 	send_have(PieceIndex,Tail).
 
+%%----------------------------------------------------------------------
+%% Function:  send_completed/1
+%% Purpose:   sends message to the tracker process to acknowledge that the
+%%            downloading is completed.
+%% Args:      peer_list(list)
+%%----------------------------------------------------------------------
 send_completed([]) ->
 	ok;
 send_completed([Pid|Tail]) ->
 	Pid ! {completed},
 	send_completed(Tail).
 
+%%----------------------------------------------------------------------
+%% Function: get_peers/1
+%% Purpose:  it send message to the tracker to get the peer_list.
+%% Args:     peer_list(list)
+%%----------------------------------------------------------------------
 get_peers([]) ->
 	ok;
 get_peers([Pid|Tail]) ->
 	Pid ! {get_peers},
 	get_peers(Tail).
 
+%%----------------------------------------------------------------------
+%% Function: send_stopped_tcps/1
+%% Purpose:  sends message to the all tcps to stop the transferring.
+%% Args:     peer_list(list)
+%%----------------------------------------------------------------------
 send_stopped_tcps([]) ->
 	ok;
 send_stopped_tcps([{Pid,_Ip}|Tail]) ->
 	Pid ! {stop, stopped},
 	send_stopped_tcps(Tail).
 
-
+%%----------------------------------------------------------------------
+%% Function: send_stopped_trackers/1
+%% Purpose:  sends message to the tracker to stop transmission.
+%% Args:     peer_list(list)
+%%----------------------------------------------------------------------
 send_stopped_trackers([]) ->
 	ok;
 send_stopped_trackers([Pid|Tail]) ->
