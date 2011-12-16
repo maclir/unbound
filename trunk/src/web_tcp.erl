@@ -88,7 +88,6 @@ port_name(Port) ->
 loop(ListenSock) ->
 	{ok, Sock} = gen_tcp:accept(ListenSock),
 	{ok, {{_Ip1,_Ip2,_Ip3,_Ip4}, _Port}} = inet:peername(Sock),
-	% io:format("~p.~p.~p.~p:~p~n", [Ip1, Ip2, Ip3, Ip4, Port]),
 	Handler = spawn(fun () ->
 						handle_req(gen_tcp:recv(Sock, 0), Sock)
 					end),
@@ -115,7 +114,6 @@ handle_req({ok, {http_request, Method, {_PathMode ,Path}, _Version}}, Sock) ->
 			send_unsupported_error(Sock)
 	end;
 handle_req(SockError, Sock) ->
-	io:format("Error in receiving: ~n~p~n~n", [SockError]),
 	gen_tcp:close(Sock).
 
 %%----------------------------------------------------------------------
