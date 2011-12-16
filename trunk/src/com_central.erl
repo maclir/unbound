@@ -138,7 +138,7 @@ handle_call({add_new_torrent,Binary, Path},_From,State) ->
 		    torrent_db:add(NewRecord),
 		    AppSupPid = whereis(app_sup),
 		    {client_id,Id} = lists:keyfind(client_id,1,State),
-		    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
+		    InfoHash = info_hash:to_hex(NewRecord#torrent.info_sha),
 		    StartFunc = {torrent,start_link,[Id,NewRecord]},
 		    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,
 				 worker,[torrent]},
