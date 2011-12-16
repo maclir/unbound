@@ -84,9 +84,7 @@ get_post_result([{<<"url">>, Url},
 		duplicate ->
 			{text, <<"torrent already exists">>};
 		invalid_url ->
-			{text, <<"invalud url">>};
-		invalid_folder ->
-			{text, <<"invalud folder path">>}
+			{text, <<"invalud url">>}
 	end;
 
 %% Commands: exit, settings
