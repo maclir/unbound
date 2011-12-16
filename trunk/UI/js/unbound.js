@@ -138,6 +138,7 @@ function parseFiles(xml) {
 }
 
 function addFiles(){
+	removeFiles();
 //	data = parseFiles(xml),
 	$(document).ready(function()
 	{
