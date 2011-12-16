@@ -1,0 +1,23 @@
+Application Supervisor started!
+Torrent Mapper started!
+Torrent Loader Started!
+Port Supervisor started
+Port loader started
+Port opened
+{ok,<0.122.0>}
+"0AAB5D21395772994E6443CBB3E2AE03CE523B32" started by client <<"-UT0001-261524405443">>
+"peer accepted handshake"
+{"got this during handshake: ",
+ {tcp,#Port<0.2139>,<<0,0,0,2,5,248,0,0,0,1,1>>}}
+{"got this during handshake: ", 
+ {tcp,#Port<0.2140>,
+      <<19,66,105,116,84,111,114,114,101,110,116,32,112,114,111,116,111,99,
+        111,108,0,0,0,0,0,16,0,5,10,171,93,33,57,87,114,153,78,100,67,203,
+        179,226,174,3,206,82,59,50,45,85,84,51,48,48,48,45,206,100,233,22,64,
+        93,13,171,165,143,78,10,0,0,0,2,5,0,0,0,0,5,4,0,0,0,3,0,0,0,5,4,0,0,
+        0,1,0,0,0,5,4,0,0,0,0>>}}
+{"got this during handshake: ",
+ {tcp,#Port<0.2140>,<<0,0,0,5,4,0,0,0,2,0,0,0,5,4,0,0,0,4>>}}
+got_keep_alive
+got_keep_alive
+got_keep_alive 

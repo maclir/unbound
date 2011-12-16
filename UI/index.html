@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<meta content="en" http-equiv="Content-Language">
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+		<title>3-pane splitter</title>
+		<link rel="icon" type="image/png" href="favicon.png">
+		<script type="text/javascript" src="js/jquery-1.6.4.min.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
+		<script type="text/javascript" src="js/jquery.layout.min.js"></script>
+		<script type="text/javascript" src="js/flexigrid.js"></script>
+		<script type="text/javascript" src="js/unbound.js"></script>
+		<link rel="stylesheet" type="text/css" href="css/main.css" />
+		<link rel="stylesheet" type="text/css" href="css/flexigrid.css" />
+	</head>
+	<body>
+		<div class="loading">
+			<div id="loading-box"><img src="img/logo-dark.png" alt="logo" />Loading</div>
+		</div>
+		<div class="pane outer-west">
+			<div id="unbound">unBound</div>
+			<ul>
+				<li id="downloading" title="downloading">Downloading</li>
+				<li id="seeding" title="seeding">Seeding</li>
+				<li id="stopped" title="stopped">Stopped</li>
+				<li id="all" title="all" class="selected">All</li>
+			</ul>
+		</div>
+		<div class="pane outer-center">
+			<div id="button-bar">
+				<div class="image-container first-element">
+					<a href="#?w=500" rel="torrent_dialog" class="poplight page"></a>
+				</div>
+				 <div class="image-container">
+					<a href="#" class="row-action delete" onclick="postCommand('delete')"></a>
+				</div>
+				<div class="image-container">
+					<a href="#" class="row-action play" onclick="postCommand('start')"></a>
+					<a href="#" class="row-action pause hard-disabled" onclick="postCommand('pause')"></a>
+					<a href="#" class="row-action stop" onclick="postCommand('stop')"></a>
+				</div>
+				<div class="image-container">
+					<a href="#" class="row-action arrowup hard-disabled" onclick="postCommand('priorityup')"></a>
+					<a href="#" class="row-action arrowdown hard-disabled" onclick="postCommand('prioritydown')"></a>
+				</div>
+				<div class="image-container">
+					<a href="#" class="eject" onclick="postCommand('exit')"></a>
+				</div>
+				<div class="image-container">
+					<a href="#" class="settings hard-disabled" onclick="postCommand('settings')"></a>
+				</div>
+				<div class="spacer"></div>
+			</div>
+			<div id="downloads-field">
+				<table class="downloads-table">
+				</table>
+			</div>
+			<div class="east-south">
+			</div>
+		</div>
+		<div id="torrent_dialog" class="popup_block">
+			<form id="target" action="#">
+				<p>Path (if left empty default path will be used)</p>
+				<input type="text" class="new-path"/>
+				<p>Torrent Url</p>
+				<input type="text" class="new-torrent" value="http://example.com/xyz.torrent" />
+				<input type="submit" value="Download" />
+			</form>
+			<span class="error-torrent"></span>
+		</div>
+	</body>
+</html>
