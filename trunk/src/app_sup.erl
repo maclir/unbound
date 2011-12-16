@@ -11,12 +11,10 @@
 -export([init/1]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  start_link/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 start_link() ->
     random:seed(erlang:now()),
     case whereis(?MODULE) of
@@ -34,12 +32,11 @@ start_link() ->
     end.
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  init/1
 %% Purpose:
-%% Args:
+%% Args:      id (list)
 %% Returns:
 %%----------------------------------------------------------------------
-
 init([Id]) ->
     io:fwrite("Application Supervisor started!\n"),
     {ok,{{one_for_one,1,10},
@@ -54,39 +51,35 @@ init([Id]) ->
 	 ]
 	}
     }.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: stop/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 stop() ->
     lists:foreach(fun({Id,_,_,_})-> supervisor:terminate_child(unbound_torrent,Id) end,supervisor:which_children(unbound_torrent)),
     exit(unbound_torrent,shutdown).
 
-%% Function for generating a random number with desired length
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
 
+%%----------------------------------------------------------------------
+%% Function:  get_random/2
+%% Purpose:   To generate a random number with desired length
+%% Args:      counter (integer),Binary(binary)
+%% Returns:    random number
+%%----------------------------------------------------------------------
 gen_random(0, <<Binary/binary>>) ->
     Binary;
 gen_random(Counter, <<Binary/binary>>)->
 	RandomBinary = <<(random:uniform(256) - 1)>>,
 	gen_random(Counter -1, <<RandomBinary/binary , Binary/binary>>).
 
-%% Function for generating a 20 charachter unique id client
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
 
+%%----------------------------------------------------------------------
+%% Function:   clientId/0
+%% Purpose:    It generates a 20 character unique id client
+%% Returns:    20 character unique ic client
+%%----------------------------------------------------------------------
 clientId() ->
 	GeneralCode = <<"-UB0001-">>,
 	UniqueCode = gen_random(12, <<>>),
