@@ -27,19 +27,24 @@ start_download() ->
 
 add_new_torrent_url(Url, Path) ->
     inets:start(),
-    {ok, {_Status,_Headers,Body}} = httpc:request(get,{Url,[]},[],[]),
-    IsDir = filelib:is_dir(Path),
-    case Path of
-	"" ->
-	    {ok, Dir} = file:get_cwd(),
-	    FinalPath = Dir ++ "/Unbound_Dest/";
-	_ when IsDir ->
-	    FinalPath = Path;
-	_ ->
-	    {ok, Dir} = file:get_cwd(),
-	    FinalPath = Dir ++ "/Unbound_Dest/"
-    end,
-    add_new_torrent_file(list_to_binary(Body), FinalPath).
+    io:fwrite("URL: ~p",[Url]),
+    case httpc:request(Url) of
+	{ok, {_Status,_Headers,Body}} ->
+	    IsDir = filelib:is_dir(Path),
+	    case Path of
+		"" ->
+		    {ok, Dir} = file:get_cwd(),
+		    FinalPath = Dir ++ "/Unbound_Dest/";
+		_ when IsDir ->
+		    FinalPath = Path;
+		_ ->
+		    {ok, Dir} = file:get_cwd(),
+		    FinalPath = Dir ++ "/Unbound_Dest/"
+	    end,
+	    add_new_torrent_file(list_to_binary(Body), FinalPath);
+	{error, Reason} ->
+	    {error, Reason}
+    end.
 
 add_new_torrent_file(Binary, Path) ->
     gen_server:call(?MODULE, {add_new_torrent,Binary, Path}).
@@ -75,11 +80,12 @@ handle_call({add_new_torrent,Binary, Path},_From,State) ->
 	    {client_id,Id} = lists:keyfind(client_id,1,State),
 	    InfoHash = info_hash:to_hex(Record#torrent.info_sha),
 	    StartFunc = {torrent,start_link,[Id,NewRecord]},
-	    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
+	    ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,
+				  worker,[torrent]},
 	    supervisor:start_child(AppSupPid,ChildSpec),
-	    {reply,ok,State};
+	    {reply,{result,ok},State};
 	true ->
-	    {reply,duplicate,State}
+	    {reply,{error,duplicate},State}
     end;
 
 handle_call({torrent_command,Hash,Command},_From,State) ->

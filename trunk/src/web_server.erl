@@ -75,8 +75,8 @@ get_post_result([{<<"row">>, Row},
 %% Commands: new
 get_post_result([{<<"url">>, Url},
 				 {<<"command">>,Command}]) ->
-	io:format("Command: ~p, Url: ~p~n", [Command, info_hash:url_decode(binary_to_list(Url))]),
-	Result = com_central:add_new_torrent_url(Url, ""),
+	io:format("Command: ~p, Url: ~p~n", [Command, binary_to_list(info_hash:url_decode(Url))]),
+	Result = com_central:add_new_torrent_url(binary_to_list(info_hash:url_decode(Url)), ""),
 	case Result of
 		ok ->
 			{text, <<"done">>};
