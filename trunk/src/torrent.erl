@@ -73,11 +73,11 @@ init_start(Id, Record, StatusRecord) ->
 
 loop(Record,StatusRecord, Id) ->
 	receive
-		{command, resume} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
+		{command, start} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
 			NewRecord = Record#torrent{status = seeding},
 			NewStatusRecord = StatusRecord#torrent_status{status = seeding},
 			init_start(Id, NewRecord,NewStatusRecord);
-		{command, resume} ->
+		{command, start} ->
 			NewRecord = Record#torrent{status = downloading},
 			NewStatusRecord = StatusRecord#torrent{status = downloading},
 			init_start(Id, NewRecord,NewStatusRecord);
@@ -91,7 +91,7 @@ loop(Record,StatusRecord, Id) ->
 %%TODO status
 loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats) ->
 	receive
-		{command, resume} ->
+		{command, start} ->
 			get_peers(TrackerList),
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
 		{command, stop} ->

@@ -64,6 +64,8 @@ function postCommand(command){
 		$.post("/ajax", {command: command, row: selectedRow.replace("row", "")},
 			function(data) {
 				console.log(data);
+				clearTimeout(timer);
+				reloadGrid();
 		});
 	}
 	
@@ -71,6 +73,8 @@ function postCommand(command){
 		$.post("/ajax", {command: command},
 			function(data) {
 				alert(data);
+				clearTimeout(timer);
+				reloadGrid();
 		});
 	}
 	
@@ -81,6 +85,8 @@ function postCommand(command){
 			if (data == "done")
 			{
 				closePopUp();
+				clearTimeout(timer);
+				reloadGrid();
 			} else {
 				console.log(data);
 				$("span.error-torrent").text(data).show();
