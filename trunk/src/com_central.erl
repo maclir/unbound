@@ -27,7 +27,6 @@ start_download() ->
 
 add_new_torrent_url(Url, Path) ->
     inets:start(),
-    io:fwrite("URL: ~p",[Url]),
     case httpc:request(Url) of
 	{ok, {_Status,_Headers,Body}} ->
 	    IsDir = filelib:is_dir(Path),
