@@ -215,7 +215,7 @@ $(document).ready(function() {
 		height:'auto',
 		striped: false,
 		singleSelect: true,
-		sortname: "priority",
+		sortname: "name",
 		sortorder: "asc",
 		resizable: true
 	});
