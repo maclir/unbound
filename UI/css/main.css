@@ -260,6 +260,24 @@ img{
 #progressText{
     position:relative; top:-19px; margin:0 auto;text-align:center;
 }
+#file-table {
+   border-right: 1px; width:100%; font-family: Verdana; font-size:8pt; 
+}
+#file-table td tr{
+    margin:0 0; padding:0 0;border: 0;
+}
+#file-table .file-name{
+    width:70%; background-color:#F5F5F5;
+}
+#file-table .file-size{
+   background-color:#FAFAFA;
+}
+#file-table .file-done{
+    background-color:#F5F5F5;
+}
+#file-table tr.table-header {
+    background-color: #DDDDDD; font-size:8pt; font-weight:bold;
+}
 img.btn_close {
 	float: right;
 	margin: -55px -55px 0 0;
