@@ -61,17 +61,17 @@ function reloadGrid(){
 function postCommand(command){
 	if(selectedRow && (command == "start" || command == "stop" || command == "pause" || command == "prioritydown" || command == "priorityup" || command == "delete"))
 	{
-		if (command == "delete")
-		{
-			selectedRow = null;
-			removeFiles();
-		}
 		$.post("/ajax", {command: command, row: selectedRow.replace("row", "")},
 			function(data) {
 				console.log(data);
 				clearTimeout(timer);
 				reloadGrid();
 		});
+		if (command == "delete")
+		{
+			selectedRow = null;
+			removeFiles();
+		}
 	}
 	
 	if (command == "settings" || command == "exit"){
