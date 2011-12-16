@@ -13,22 +13,18 @@
 -export([init/1]).
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function:  start_link/1
+%% Purpose:   spawns link the superviosr
+%% Args:       ClientId(string)
 %%----------------------------------------------------------------------
-
 start_link(ClientId) ->
     supervisor:start_link(?MODULE,[ClientId]).
 
 %%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
+%% Function:  init/1
+%% Purpose:   initializes the supervisor and spawns the listening tcp process.
+%% Args:      ClientId(string)
 %%----------------------------------------------------------------------
-
 init(ClientId) ->
     io:fwrite("Port Supervisor started\n"),
     {ok,{{one_for_one,1,10},
