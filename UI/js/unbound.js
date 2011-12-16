@@ -115,6 +115,38 @@ function disableButtons(){
 	$("#button-bar div a.row-action").addClass("disabled");
 }
 
+function parseFiles(xml) {
+    var data = "";
+    var startTag = "<table border='1' id='mainTable'><tbody><tr><td style=\"width: 120px\">Name</td><td style=\"width: 120px\">Size</td><td style=\"width: 120px\">Done</td></tr>";
+    var endTag = "</tbody></table>";
+    $(xml).find('row').each(function() {
+        var $url = $(this);
+        var name = $url.find('name').text();
+        var size = $url.find('size').text();
+        var done = $url.find('done').text();
+        data += '<tr><td>' + name + '</td>';
+        data += '<td>' + size + '</td></tr>';
+        data += '<td>' + done + '</td></tr>';
+     });
+    var finalData = $("#content").html(startTag + data + endTag);
+    return finalData;
+}
+
+function addFiles(){
+//	data = parseFiles(xml),
+	$.post("/ajax", {row: selectedRow.replace("row", "") },
+			function(data) {
+				console.log(data);
+				finalData = parseFiles(data);
+				console.log(finalData);
+				$(".east-south").append(data);
+		});
+}
+
+function removeFiles(){
+	$('#mainTable').remove();
+}
+
 var outerLayout, innerLayout, innerInnerLayout, gridorder;
 
 $(document).ready(function() {

@@ -102,7 +102,9 @@ loop(Record,StatusRecord, Id) ->
 				(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
 					Files = Record#torrent.info#info.files;
 				true ->
-					Files = [#file{path = Record#torrent.info#info.name}]
+					Files = [#file{	path = Record#torrent.info#info.name,
+									length = Record#torrent.info#info.length,
+									length_complete = Record#torrent.info#info.length_complete}]
 			end,
 			ComPid ! {files, Files},
 			loop(Record,StatusRecord, Id);
@@ -149,7 +151,9 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 				(is_list(Record#torrent.info#info.files) and (Record#torrent.info#info.files /= []) and is_record(hd(Record#torrent.info#info.files), file)) ->
 					Files = Record#torrent.info#info.files;
 				true ->
-					Files = [#file{path = Record#torrent.info#info.name}]
+					Files = [#file{	path = Record#torrent.info#info.name,
+									length = Record#torrent.info#info.length,
+									length_complete = Record#torrent.info#info.length_complete}]
 			end,
 			ComPid ! {files, Files},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
