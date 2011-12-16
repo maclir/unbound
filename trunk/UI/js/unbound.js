@@ -122,7 +122,7 @@ function disableButtons(){
 
 function parseFiles(xml) {
     var data = "";
-    var startTag = "<table border='1' id='file-table'><tbody><tr><td style=\"width: 120px\">Name</td><td style=\"width: 120px\">Size</td><td style=\"width: 120px\">Done</td></tr>";
+    var startTag = "<table id='file-table'><tbody><tr class='table-header'><td>Name</td><td>Size</td><td>Done</td></tr>";
     var endTag = "</tbody></table>";
     $(xml).find("row").each(function() {
         var url = $(this);
