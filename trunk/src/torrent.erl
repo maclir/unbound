@@ -119,12 +119,20 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			Now = erlang:now(),
 			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
-			io:fwrite("Log: ~p,~p,~p~n", [DownloadSizeLog, UploadSizeLog, Elapsed]),
+			
+			if
+				Elapsed > 3.0 ->
+					NewRateLog = {0,0},
+					NewTime = Now;
+				true ->
+					NewRateLog = RateLog,
+					NewTime = StatusRecord#torrent_status.timer
+			end,
 			DownloadSpeed = DownloadSizeLog/Elapsed,
 			UploadSpeed = UploadSizeLog/Elapsed,
-			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = Now},
+			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = NewTime},
 			Sender ! {status,NewStatusRecord},
-			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, {0,0});
+			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, NewRateLog);
 		{new_upload,TcpPid, IpPort} ->
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
