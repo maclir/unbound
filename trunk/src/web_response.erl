@@ -50,9 +50,9 @@ get_body_files([H|T], Body) ->
     end,
     
 	Row = "<row>" ++
-	"<name>" ++ Path ++ Name ++ "<name>" ++
-	"<size>" ++ Size ++ "<size>" ++
-	"<done>" ++ io_lib:format("~.2f",[(H#file.length/H#file.length_complete)*100]) ++ "%<done>" ++
+	"<name>" ++ Path ++ Name ++ "</name>" ++
+	"<size>" ++ Size ++ "</size>" ++
+	"<done>" ++ io_lib:format("~.2f",[(H#file.length/H#file.length_complete)*100]) ++ "%</done>" ++
 	"</row>",
 	get_body_files(T, Body ++ Row).
 %%----------------------------------------------------------------------
