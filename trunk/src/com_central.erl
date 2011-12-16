@@ -104,7 +104,6 @@ handle_call({get_all_torrents}, _From, State) ->
     Statuses = create_statuses(TorrentPids, []),
     {reply, Statuses, State}.
     
-
 handle_cast(_,_) ->
     ok.
 
