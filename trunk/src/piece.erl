@@ -110,9 +110,11 @@ create_blocklist(NumBlocks) ->
 
 %%----------------------------------------------------------------------
 %% Function:  request_block/4
-%% Purpose:
+%% Purpose:   it checks if it is the last block and sets the size accordingly
+%%            and sends the message to nettransfer process to download the block
 %% Args:      {Wanted,Downloading,Finished}(tuple),PieceIndex(integer),NetPid(pid),{LastBlockInfo,LastBlockSize}(tuple)
-%% Returns:
+%% Returns:   it puts the pid and the block in a tuple and puts that tuple into
+%%             another tuple.
 %%----------------------------------------------------------------------
 request_block({Wanted,Downloading,Finished},PieceIndex,NetPid,{LastBlockIndex,LastBlockSize}) ->
 	[HeadWanted|TailWanted] = Wanted,
