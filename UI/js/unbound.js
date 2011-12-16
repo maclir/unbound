@@ -202,7 +202,6 @@ $(document).ready(function() {
 		url: '/ajax',
 		dataType: 'xml',
 		colModel : [
-			{display: '#',			name : 'priority',	width : 030, sortable : true, align: 'left'},
 			{display: 'Name',		name : 'name',		width : 190, sortable : true, align: 'left'},
 			{display: 'Size',		name : 'size',		width : 060, sortable : true, align: 'left'},
 			{display: 'Done',		name : 'percent',	width : 080, sortable : true, align: 'left'},
