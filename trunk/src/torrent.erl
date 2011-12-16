@@ -39,8 +39,7 @@ start_torrent(Pid,[Record|Tail],Id) ->
 								   name = Record#torrent.info#info.name,
 								   size = Record#torrent.info#info.length,
 								   status = Record#torrent.status,
-								   download_timer = erlang:now(),
-								   upload_timer = erlang:now()},  
+								   timer = erlang:now()},  
 	StartFunc = {torrent,start_link,[Id,Record, StatusRecord]},
 	ChildSpec = {InfoHash,StartFunc,transient,brutal_kill,worker,[torrent]},
 	supervisor:start_child(Pid,ChildSpec),
@@ -69,31 +68,32 @@ init_start(Id, Record, StatusRecord) ->
 	AnnounceList = lists:flatten(Record#torrent.announce_list) -- [Record#torrent.announce],
 	Announce = AnnounceList ++ [Record#torrent.announce],
 	spawn_trackers(Announce,Record#torrent.info_sha,Id),
-	loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[], {0,0}).
+	loop(Record,StatusRecord,[],[],DownloadPid,Id,[],[], {0,0}, {0,0}).
 
 loop(Record,StatusRecord, Id) ->
 	receive
 		{command, start} when Record#torrent.info#info.length - Record#torrent.info#info.length_complete == 0->
 			NewRecord = Record#torrent{status = seeding},
-			NewStatusRecord = StatusRecord#torrent_status{status = seeding},
+			NewStatusRecord = StatusRecord#torrent_status{status = seeding, timer = erlang:now()},
 			init_start(Id, NewRecord,NewStatusRecord);
 		{command, start} ->
 			NewRecord = Record#torrent{status = downloading},
-			NewStatusRecord = StatusRecord#torrent{status = downloading},
+			NewStatusRecord = StatusRecord#torrent_status{status = downloading, timer = erlang:now()},
 			init_start(Id, NewRecord,NewStatusRecord);
 		{get_status_record,Sender} ->
-			Sender ! {status,StatusRecord},
-			loop(Record,StatusRecord, Id);
+			NewStatusRecord = StatusRecord#torrent_status{downspeed = 0.0, upspeed = 0.0, timer = erlang:now()},
+			Sender ! {status,NewStatusRecord},
+			loop(Record,NewStatusRecord, Id);
 		_ ->
 			loop(Record,StatusRecord, Id)
 	end.
 	
 %%TODO status
-loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats) ->
+loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog) ->
 	receive
 		{command, start} ->
 			get_peers(TrackerList),
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{command, stop} ->
 			stop(DownloadPid, TrackerList, ActiveNetList),
 			NewRecord = Record#torrent{status = stopped},
@@ -104,21 +104,27 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
 			torrent_mapper:free(Record#torrent.info_sha);
 		{get_status_record,Sender} ->
-			Sender ! {status,StatusRecord},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			Now = erlang:now(),
+			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer),
+			{DownloadSizeLog,UploadSizeLog} = RateLog,
+			DownloadSpeed = DownloadSizeLog/(Elapsed/1000),
+			UploadSpeed = UploadSizeLog/(Elapsed/1000),
+			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = Now},
+			Sender ! {status,NewStatusRecord},
+			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{new_upload,TcpPid, IpPort} ->
 			NetPid = spawn_link(nettransfer,init_upload,[self(),TcpPid,Record#torrent.info#info.bitfield]),
 			NewActiveNetList = [{NetPid,IpPort}|ActiveNetList],
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{get_statistics,Pid} ->
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
 			Pid ! {statistics,TrackerUploaded
 				   , TrackerDownloaded
 				   , Record#torrent.info#info.length - Record#torrent.info#info.length_complete},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{im_free, NetPid} ->
 			DownloadPid ! {new_free, NetPid},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{peer_list,FromPid,ReceivedPeerList} ->
 			io:fwrite("Peers: ~p~n", [ReceivedPeerList]),
 			TempTrackerList = lists:delete(FromPid, TrackerList),
@@ -128,7 +134,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{NewActiveNetList, FinalUnusedPeers} = spawn_connections_init(Record, StatusRecord, ActiveNetList ,NewUnusedPeers ++ LowPeerList, NewUnusedPeers, Id),
 			Peers = length(FinalUnusedPeers ++ NewActiveNetList),
 			NewStatusRecord = StatusRecord#torrent_status{peers=Peers,connected_peers=length(NewActiveNetList)},
-			loop(Record,NewStatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers, TrackerStats);
+			loop(Record,NewStatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers, TrackerStats, RateLog);
 		{bitfield,FromPid,ReceivedBitfield} ->
 			NumPieces = byte_size(Record#torrent.info#info.pieces) div 20,
 			case (bit_size(ReceivedBitfield) > NumPieces) of
@@ -145,17 +151,15 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 				false ->
 					FromPid ! bad_bitfield
 			end,
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{have,FromPid,Index} ->
 			DownloadPid ! {net_index_list, FromPid, [{Index}]},
-			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{dowloaded,SenderPid,PieceIndex,Data} ->
-			Now = erlang:now(),
-			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.download_timer),
-			Speed = byte_size(Data)/(Elapsed/1000),
 			TotalDownload = StatusRecord#torrent_status.downloaded + size(Data),
-			NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload,
-														  downspeed = Speed, download_timer = Now},
+			NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload},
+			{DownloadSizeLog,UploadSizeLog} = RateLog,
+			NewRateLog = {DownloadSizeLog + size(Data),UploadSizeLog},
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
 			NewTrackerDownloaded = TrackerDownloaded + size(Data),
 			NewTrackerStats = {NewTrackerDownloaded, TrackerUploaded},
@@ -183,13 +187,12 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					io:fwrite("left: ~.3f MegaByte~n", [(TempRecord#torrent.info#info.length - NewLength)/(1024*1024)]),
 					torrent_db:delete_by_SHA1(NewRecord#torrent.info_sha),
 					torrent_db:add(NewRecord),
-					loop(NewRecord,FinalStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats);
+					loop(NewRecord,FinalStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 				{error, _Reason} ->
 					SenderPid ! {error, corrupt_data},
-					loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats)
+					loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog)
 			end;
 		{upload,SenderPid,PieceIndex,Offset,Length} ->
-			%%TODO upspeed uploaded
 			io:fwrite("im uploading!!! ~n"),
 			{ok, File_Binary} = file_split:request_data(PieceIndex,Offset,Length, Record),
 			SenderPid ! {piece,PieceIndex,Offset,File_Binary},
@@ -197,17 +200,19 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
 			NewTrackerUploaded = TrackerUploaded + Length,
 			NewTrackerStats = {TrackerDownloaded, NewTrackerUploaded},
-			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats);
+			{DownloadSizeLog,UploadSizeLog} = RateLog,
+			NewRateLog = {DownloadSizeLog,UploadSizeLog + Length},
+			loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 		
 		{'EXIT',FromPid,Reason} ->
 			case Reason of
 				stopped ->
-					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats);
+					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 				_ ->
 					NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
 					{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 					{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
-					loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats)
+					loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
 			end
 	end.
 
