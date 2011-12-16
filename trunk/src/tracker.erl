@@ -8,6 +8,11 @@
 -module(tracker).
 -export([init/4]).
 
+%%----------------------------------------------------------------------
+%% Function:   init/4
+%% Purpose:    evaluates the given url and if it is http url connects to the tracker
+%% Args:       TorrentPid(pid),Announce(string),InfoHash(string),Id(string)
+%%----------------------------------------------------------------------
 init(TorrentPid,Announce,InfoHash,Id) ->
 	case Announce of
 		<<"http",_Rest/binary>> ->
@@ -19,7 +24,13 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 			io:fwrite("Tracker init got: ~w\n",[Var])
 	end.
 
-
+%%----------------------------------------------------------------------
+%% Function:  loop/5
+%% Purpose:   waits for commands coming from torrent if no commands is received
+%%            within the interval given by the tracker, it sends a request to
+%%            torrent and also if a command is received, then it sends it to the tracker.
+%% Args:      TorrentPid(pid),Announce(string),UrlInfoHash(string),Id(string),Interval(integer)
+%%----------------------------------------------------------------------
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 		{stopped} ->
@@ -33,6 +44,12 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:  perform_request/6
+%% Purpose:   performs the requests
+%% Args:      TorrentPid(pid),Announce(string),UrlInfoHash(string),Id(string),Event(string),NumWanted(integer)
+%% Returns:   peerlist retrieved from the tracker.
+%%----------------------------------------------------------------------
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
 	Self = self(),
 	TorrentPid ! {get_statistics,Self},
