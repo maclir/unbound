@@ -1,4 +1,4 @@
-%%%author: Nahid Vafaie ,Peter Myllykoski
+%%%author: Nahid Vafaie ,Peter Myllykoski, Alireza Pazirandeh
 %%% created: 18 Nov 2011
 
 -module(nettransfer).
