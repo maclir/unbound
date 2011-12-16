@@ -100,6 +100,9 @@ url_encode(<<Byte:8,Rest/binary>>) ->
 %% Args:      string
 %% Returns:   binary
 %%----------------------------------------------------------------------
+url_decode(<<>>) ->
+    <<>>;
+
 url_decode(<<String/binary>>) ->
     list_to_binary(url_decode(String,false)).
 
@@ -109,8 +112,6 @@ url_decode(<<String/binary>>) ->
 %% Args:     string, Hex(boolean)
 %% Returns:  list
 %%----------------------------------------------------------------------
-url_decode(<<>>,_Hex) ->
-    <<>>;
 
 url_decode(<<V1,V2,Tail/binary>>,Hex) ->
     if
