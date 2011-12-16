@@ -366,4 +366,7 @@ check_infohash(Socket,InfoHashFromPeer)->
 		receive
 			{new_master_pid, Pid} -> 
 				Pid
+			after 1000 ->
+				gen_tcp:close(Socket),
+				exit(self(), normal)
 		end.
