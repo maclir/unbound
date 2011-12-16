@@ -8,6 +8,12 @@
 -module(tracker).
 -export([init/4]).
 
+%%----------------------------------------------------------------------
+%% Function:   init/4
+%% Purpose:
+%% Args:		TorrentPid(pid),Announce(binary),InfoHash(string),Id(string)
+%% Returns:
+%%----------------------------------------------------------------------
 init(TorrentPid,Announce,InfoHash,Id) ->
 	case Announce of
 		<<"http",_Rest/binary>> ->
@@ -19,7 +25,12 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 			io:fwrite("Tracker init got: ~w\n",[Var])
 	end.
 
-
+%%----------------------------------------------------------------------
+%% Function:	loop/5
+%% Purpose:
+%% Args:		TorrentPid(pid),Announce(binary),UrlInfoHash(string),Id(string),Interval(integer)
+%% Returns:
+%%----------------------------------------------------------------------
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 		{stopped} ->
@@ -33,6 +44,12 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50)
 	end.
 
+%%----------------------------------------------------------------------
+%% Function:	perform_request/6
+%% Purpose:
+%% Args:		TorrentPid(pid),Announce(binary),UrlInfoHash(string),Id(string),Event(),NumWanted(integer)
+%% Returns:
+%%----------------------------------------------------------------------
 perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted) ->
 	Self = self(),
 	TorrentPid ! {get_statistics,Self},

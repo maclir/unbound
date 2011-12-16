@@ -9,12 +9,11 @@
 -export([to_hex/1,from_hex/1,url_encode/1,url_decode/1]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   to_hex/1
 %% Purpose:
-%% Args:
+%% Args:       <<C1:4,C2:4,Rest/binary>>(binary list)
 %% Returns:
 %%----------------------------------------------------------------------
-
 to_hex(<<C1:4,C2:4,Rest/binary>>) ->
     if
 	C1<10 ->
@@ -32,14 +31,14 @@ to_hex(<<C1:4,C2:4,Rest/binary>>) ->
 
 to_hex(<<>>) ->
     [].
+
 %% Crashes when given an empty string (list). Intentional?
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  from_hex/1
 %% Purpose:
-%% Args:
+%% Args:      [C1,C2|Tail](list)
 %% Returns:
 %%----------------------------------------------------------------------
-
 from_hex([C1,C2|[]]) ->
     if
 	C1>=$A,C1=<$F ->
@@ -67,12 +66,11 @@ from_hex([C1,C2|Tail]) ->
 
 %% Fails when given an empty binary.
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   url_encode/1
 %% Purpose:
-%% Args:
+%% Args:       <<Byte:8,Rest/binary>>(binary list)
 %% Returns:
 %%----------------------------------------------------------------------
-
 url_encode(<<Byte:8,Rest/binary>>) ->
     if
 	Byte>=$0,Byte=<$9 ->
@@ -95,17 +93,23 @@ url_encode(<<Byte:8,Rest/binary>>) ->
 	    EncRest = url_encode(Rest),
 	    <<Enc/binary,EncRest/binary>>
     end.
+
 %% Fails when given an empty binary or binary has one element(?).
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  url_encode/1
 %% Purpose:
-%% Args:
+%% Args:      <<String/binary>>
 %% Returns:
 %%----------------------------------------------------------------------
-
 url_decode(<<String/binary>>) ->
     list_to_binary(url_decode(String,false)).
 
+%%----------------------------------------------------------------------
+%% Function:	url_decode/2
+%% Purpose:
+%% Args:		<<V1,V2,Tail/binary>>(binary list),Hex(boolean)
+%% Returns:
+%%----------------------------------------------------------------------
 url_decode(<<V1,V2,Tail/binary>>,Hex) ->
     if
 	Hex == true ->
@@ -128,12 +132,7 @@ url_decode(<<V1/binary>>,false) ->
 %% Test Code:
 
 -include_lib("eunit/include/eunit.hrl").
-%%----------------------------------------------------------------------
-%% Function:
-%% Purpose:
-%% Args:
-%% Returns:
-%%----------------------------------------------------------------------
+
 
 hash_test_()->
     [?_assert(from_hex("6791797158d372E100021189cc76002531745038") ==

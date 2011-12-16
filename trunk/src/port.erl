@@ -11,12 +11,10 @@
 
 %% =============================================================================
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  start_link_loader/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 start_link_loader() ->
     Self = self(),
     spawn(?MODULE,init_loader,[Self]),
@@ -26,13 +24,13 @@ start_link_loader() ->
     after 100 ->
 	    {error,time_out}
     end.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   init_loader/1
 %% Purpose:
-%% Args:
+%% Args:        Pid(pid)
 %% Returns:
 %%----------------------------------------------------------------------
-
 init_loader(Pid) ->
     io:fwrite("Port loader started\n"),
     Pid ! {ok,self()},
@@ -42,33 +40,28 @@ init_loader(Pid) ->
 
 %% =============================================================================
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: start_link/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 start_link()->
     {ok,spawn_link(?MODULE,init,[])}.
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: init/0
 %% Purpose:
-%% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 init() ->
     {ok, ListenSocket} = gen_tcp:listen(6769, [binary, {active, false}]),
     accept(ListenSocket).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  accept/1
 %% Purpose:
-%% Args:
+%% Args:      listenSocket(integer)
 %% Returns:
 %%----------------------------------------------------------------------
-
 accept(ListenSocket) ->
     accept(ListenSocket).
 

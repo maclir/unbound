@@ -13,22 +13,20 @@
 -export([init/1]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   start_link/1
 %% Purpose:
-%% Args:
+%% Args:       ClientId(string)
 %% Returns:
 %%----------------------------------------------------------------------
-
 start_link(ClientId) ->
     supervisor:start_link(?MODULE,[ClientId]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: init/1
 %% Purpose:
-%% Args:
+%% Args:     ClientId(string)
 %% Returns:
 %%----------------------------------------------------------------------
-
 init(ClientId) ->
     io:fwrite("Port Supervisor started\n"),
     {ok,{{one_for_one,1,10},

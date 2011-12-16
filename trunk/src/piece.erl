@@ -9,12 +9,11 @@
 -export([init/3]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: init/3
 %% Purpose:
-%% Args:
+%% Args:     PieceIndex,TorrentPid,PieceSize
 %% Returns:
 %%----------------------------------------------------------------------
-
 init(PieceIndex,TorrentPid,PieceSize) ->
 	BlockSize = 16384,
 	TempNumBlocks = PieceSize div BlockSize,
@@ -31,13 +30,13 @@ init(PieceIndex,TorrentPid,PieceSize) ->
 	LastBlockInfo = {NumBlocks - 1 ,LastBlockSize},
 	loop([],PieceIndex,BlockStatus,TorrentPid,PieceSize,LastBlockInfo).
 
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: loop/6
 %% Purpose:
-%% Args:
+%% Args:      Piece, PieceIndex, BlockStatus, TorrentPid, PieceSize, LastBlockInfo
 %% Returns:
 %%----------------------------------------------------------------------
-
 loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 	receive
 		{unregister, PeerPid} ->
@@ -78,13 +77,13 @@ loop(Piece, PieceIndex, BlockStatus, TorrentPid,PieceSize,LastBlockInfo) ->
 			end,
 			loop(Piece,PieceIndex,NewBlockStatus,TorrentPid,PieceSize,LastBlockInfo)
 	end.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:    unregister_pid/2
 %% Purpose:
-%% Args:
+%% Args:        {PeerPid, {Wanted, Downloading, Finished}}
 %% Returns:
 %%----------------------------------------------------------------------
-
 unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
 	case lists:keyfind(PeerPid,2,Downloading) of
 		{Block,Pid} ->
@@ -92,37 +91,35 @@ unregister_pid(PeerPid, {Wanted, Downloading, Finished}) ->
 		false ->
 			{Wanted, Downloading, Finished}
 	end.
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  construct_piece/2
 %% Purpose:
 %% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 construct_piece([],<<Piece/binary>>) ->
 	Piece;
 construct_piece([{_, <<Block/binary>>}|T], <<Piece/binary>>) ->
 	construct_piece(T, <<Piece/binary, Block/binary>>).
+
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  create_blocklist/1
 %% Purpose:
-%% Args:
+%% Args:      NumBlocks
 %% Returns:
 %%----------------------------------------------------------------------
-
 create_blocklist(0) ->
 	[0];
 create_blocklist(NumBlocks) ->
 	[NumBlocks|create_blocklist(NumBlocks-1)].
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   request_block/4
 %% Purpose:
-%% Args:
+%% Args:       {Wanted,Downloading,Finished}, PieceIndex, NetPid,{LastBlockIndex,LastBlockSize}
 %% Returns:
 %%----------------------------------------------------------------------
-
-
 request_block({Wanted,Downloading,Finished},PieceIndex,NetPid,{LastBlockIndex,LastBlockSize}) ->
 	[HeadWanted|TailWanted] = Wanted,
 	if

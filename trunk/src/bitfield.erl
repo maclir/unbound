@@ -4,32 +4,29 @@
 -export([to_indexlist_que/3, to_indexlist/2, compare/2, count_zeros/1, has_one_zero/1, flip_bit/2]).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function: has_one_zero/1
 %% Purpose:
-%% Args:
+%% Args:     Bitfield
 %% Returns:
 %%----------------------------------------------------------------------
-
 has_one_zero(Bitfield) ->
 	count_zeros(Bitfield) == 1.
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  count_zeros/1
 %% Purpose:
-%% Args:
+%% Args:       Bitfield
 %% Returns:
 %%----------------------------------------------------------------------
-
 count_zeros(BitField) ->
 	length(to_indexlist(BitField, normal)).
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:  to_indexlist_que/3
 %% Purpose:
-%% Args:
+%% Args:      <<BitField/bitstring>>,PieceLength(integer),LastPieceLentgh(integer)
 %% Returns:
 %%----------------------------------------------------------------------
-
 to_indexlist_que(<<Bitfield/bitstring>>, PieceLength, LastPieceLentgh) ->
 	to_indexlist_que(0,Bitfield, PieceLength, LastPieceLentgh).
 
@@ -50,12 +47,11 @@ to_indexlist_que(Index, <<H:1,Rest/bitstring>>, PieceLength, LastPieceLentgh) ->
     end.
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   to_indexlist/2
 %% Purpose:
-%% Args:
+%% Args:       <<Bitfield/bitstring>>,invert(boolean)
 %% Returns:
 %%----------------------------------------------------------------------
-
 to_indexlist(<<Bitfield/bitstring>>, invert) ->
     to_indexlist(0,Bitfield, true);
 to_indexlist(<<Bitfield/bitstring>>, _) ->
@@ -76,15 +72,20 @@ to_indexlist(Index, <<H:1,Rest/bitstring>>, Invert) ->
     end.
 
 %%----------------------------------------------------------------------
-%% Function:
+%% Function:   compare/2
 %% Purpose:
-%% Args:
+%% Args:       FirstBitfield(binary),SecondBitfield(binary)
 %% Returns:
 %%----------------------------------------------------------------------
-
 compare(FirstBitfield, SecondBitfield) ->
 	compare(0, FirstBitfield, SecondBitfield, []).
 
+%%----------------------------------------------------------------------
+%% Function:	compare/4
+%% Purpose:
+%% Args:		Index,<<FirstBit
+%% Returns:
+%%----------------------------------------------------------------------
 compare(_Index,<<>>,<<>>, List) ->
     {result, List};
 compare(Index,<<FirstBit:1,Rest1/bitstring>>,<<FirstBit:1,Rest2/bitstring>>, List) ->
@@ -98,7 +99,6 @@ compare(Index,<<_FirstBit:1,Rest1/bitstring>>,<<_SecondtBit:1,Rest2/bitstring>>,
 %% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 flip_bit(Index, <<Bitfield/bitstring>>) ->
 	<<Header:Index/bitstring, FlipBit:1/bitstring, Rest/bitstring>> = Bitfield,
 	case FlipBit of
@@ -118,7 +118,6 @@ flip_bit(Index, <<Bitfield/bitstring>>) ->
 %% Args:
 %% Returns:
 %%----------------------------------------------------------------------
-
 zero_count_test_()->
     [
      ?_assert(bitfield:has_one_zero(<<2#10111111>>) == true),
