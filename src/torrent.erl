@@ -248,7 +248,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
 			NewTrackerDownloaded = TrackerDownloaded + byte_size(Data),
 			NewTrackerStats = {NewTrackerDownloaded, TrackerUploaded},
-			%%TODO eta
 			Done = bitfield:has_one_zero(Record#torrent.info#info.bitfield),
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok, OldTempRecord} ->
