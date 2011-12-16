@@ -24,7 +24,6 @@ get_data_xml(Filter) ->
 get_body([], Body) ->
 	Body;
 get_body([H|T], Body) ->
-    io:format("status ~p\n", [H]),
 	NewRow = 
 		"<row status=\"" ++ atom_to_list(H#torrent_status.status) ++ "\" id=\"" ++ info_hash:to_hex(H#torrent_status.info_hash) ++ "\">
 			<cell><![CDATA[" ++ integer_to_list(H#torrent_status.priority) ++ "]]></cell>
