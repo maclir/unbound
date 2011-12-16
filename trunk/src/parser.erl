@@ -12,12 +12,13 @@
 %%----------------------------------------------------------------------
 
 decode(Data) ->
-    InfoSha = calculateInfoSha(Data),
-    case catch dec(Data,#torrent{info_sha=InfoSha}) of
+    case catch dec(Data,#torrent{}) of
 	{'EXIT', _} ->
 	    {error, unparsed};
 	{Res, _} ->
-	    {ok, Res}
+	    InfoSha = calculateInfoSha(Data),
+	    NewRecord = Res#torrent{info_sha=InfoSha},
+	    {ok, NewRecord}
     end.
 %%----------------------------------------------------------------------
 %% Function:

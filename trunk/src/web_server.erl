@@ -79,11 +79,11 @@ get_post_result([{<<"url">>, Url},
 	io:format("Command: ~p, Url: ~p~n", [Command, binary_to_list(info_hash:url_decode(Url))]),
 	Result = com_central:add_new_torrent_url(binary_to_list(info_hash:url_decode(Url)), binary_to_list(Path)),
 	case Result of
-		ok ->
+		{result,ok} ->
 			{text, <<"done">>};
-		duplicate ->
+		{error,duplicate} ->
 			{text, <<"torrent already exists">>};
-		invalid_url ->
+		{error,invalid_url} ->
 			{text, <<"invalud url">>}
 	end;
 
