@@ -119,7 +119,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			Now = erlang:now(),
 			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
-			io:fwrite("Log: ~p,~p,~p", [DownloadSizeLog, UploadSizeLog, Elapsed]),
+			io:fwrite("Log: ~p,~p,~p~n", [DownloadSizeLog, UploadSizeLog, Elapsed]),
 			DownloadSpeed = DownloadSizeLog/Elapsed,
 			UploadSpeed = UploadSizeLog/Elapsed,
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = DownloadSpeed, upspeed = UploadSpeed, timer = Now},
