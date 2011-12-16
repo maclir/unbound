@@ -82,6 +82,6 @@ gen_random(Counter, <<Binary/binary>>)->
 %% Returns:    20 character unique ic client
 %%----------------------------------------------------------------------
 clientId() ->
-	GeneralCode = <<"-UB0001-">>,
+	GeneralCode = <<"UB0001--">>,
 	UniqueCode = gen_random(12, <<>>),
 	<<GeneralCode/binary, UniqueCode/binary>>.
