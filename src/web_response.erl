@@ -65,9 +65,10 @@ get_body([], Body) ->
 	Body;
 get_body([H|T], Body) ->
     SizeKB = utils:bytes_to_kbytes(H#torrent_status.size),
-    case SizeKB > 1024 of
-        true -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MB";
-        _ -> Size = io_lib:format("~.2f",[SizeKB]) ++ " KB"
+    if
+        SizeKB > 1024 * 1024 ->Size = io_lib:format("~.2f",[utils:kbytes_to_gbytes(SizeKB)]) ++ " GB";
+        SizeKB > 1024 -> Size = io_lib:format("~.2f",[utils:kbytes_to_mbytes(SizeKB)]) ++ " MB";
+        true -> Size = io_lib:format("~.2f",[SizeKB]) ++ " KB"
     end,
     
     UppedKB = utils:bytes_to_kbytes(H#torrent_status.uploaded),
