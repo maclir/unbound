@@ -56,7 +56,6 @@ start_torrent(_Pid,[],_) ->
 %% Regular torrent functions
 
 start_link(Id,Record, StatusRecord) ->
-	io:fwrite("in loop!!!~n"),
 	{ok,spawn_link(torrent,init,[{Id,Record,StatusRecord}])}.
 
 %%TODO Status record should also come from here
