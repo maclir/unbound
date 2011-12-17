@@ -44,7 +44,7 @@ write_to_file([{BinaryPath, StartPos, Length}|T], AllData, TempPath, Records) ->
 	file:pwrite(Index, StartPos, Data),
 	file:close(Index),
 	if
-		(is_list(Records#torrent.info#info.files) and Records#torrent.info#info.files /= [] and is_record(hd(Records#torrent.info#info.files), file)) ->
+		(is_list(Records#torrent.info#info.files) and (Records#torrent.info#info.files /= []) and is_record(hd(Records#torrent.info#info.files), file)) ->
 			NewRecord = alter_record(Length, BinaryPath, Records);
 		true ->
 			NewRecord = Records
