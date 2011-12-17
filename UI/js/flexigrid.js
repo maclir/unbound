@@ -218,7 +218,7 @@ var timeout = 1500;
 					);
 					this.hDiv.scrollLeft = this.bDiv.scrollLeft;
 					$('div:eq(' + n + ')', this.cDrag).siblings().show();
-					$('.dragging', this.cDrag).removeClass('dragging');
+				//	$('.dragging', this.cDrag).removeClass('dragging');
 					this.rePosDrag();
 					this.fixHeight();
 					this.colresize = false;
