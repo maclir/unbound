@@ -34,10 +34,10 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 loop(TorrentPid,Announce,UrlInfoHash,Id,Interval) ->
 	receive
 		{stopped} ->
-			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",0),
+			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"stopped",1),
 			exit(self(),stopped);
 		{completed} ->
-			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",0);
+			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",1);
 		{get_peers} ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",100)
 		after Interval*10 ->

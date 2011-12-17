@@ -241,8 +241,6 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			DownloadPid ! {net_index_list, FromPid, [{Index}]},
 			loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, TrackerStats, RateLog);
 		{dowloaded,SenderPid,PieceIndex,Data} ->
-			TotalDownload = StatusRecord#torrent_status.downloaded + byte_size(Data),
-			NewStatusRecord = StatusRecord#torrent_status{downloaded=TotalDownload},
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
 			NewRateLog = {DownloadSizeLog + byte_size(Data),UploadSizeLog},
 			{TrackerDownloaded, TrackerUploaded} = TrackerStats,
@@ -252,14 +250,16 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			case write_to_file:write(PieceIndex,Data,Record,Done) of
 				{ok, OldTempRecord} ->
 					case Done of
-						true when NewStatusRecord#torrent_status.status == downloading ->
-							FinalStatusRecord = NewStatusRecord#torrent_status{status=seeding},
+						true when StatusRecord#torrent_status.status == downloading ->
+							NewStatusRecord = StatusRecord#torrent_status{status=seeding},
 							TempRecord = OldTempRecord#torrent{status=seeding},
 							send_completed(TrackerList);
 						_Other ->
 							TempRecord = OldTempRecord,
-							FinalStatusRecord = NewStatusRecord
+							NewStatusRecord = StatusRecord
 					end,
+					TotalDownload = NewStatusRecord#torrent_status.downloaded + byte_size(Data),
+					FinalStatusRecord = NewStatusRecord#torrent_status{downloaded=TotalDownload},
 					SenderPid ! {ok, done},
 					DownloadPid ! {piece_done, PieceIndex},
 					send_have(PieceIndex,ActiveNetList),
@@ -271,7 +271,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 					loop(NewRecord,FinalStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 				{error, _Reason} ->
 					SenderPid ! {error, corrupt_data},
-					loop(Record,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog)
+					loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog)
 			end;
 		{upload,SenderPid,PieceIndex,Offset,Length} ->
 			{ok, File_Binary} = file_split:request_data(PieceIndex,Offset,Length, Record),
