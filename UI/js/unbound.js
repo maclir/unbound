@@ -154,7 +154,13 @@ function addFiles(){
 				console.log(data);
 				finalData = parseFiles(data);
 				console.log(finalData);
-				$(".east-south").append(finalData);
+				if ($('#file-table').is("*"))
+				{
+					$('#file-table').replaceWith(finalData);
+				} else
+				{
+					$('.east-south').append(finalData);
+				}
 			}
 	  });
 	});
