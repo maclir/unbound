@@ -56,6 +56,10 @@ function sortGrid(table, order) {
 function reloadGrid(){
 	if (timeout<30000) timeout +=100;
 	$('.downloads-table').flexReload();
+	if (selectedRow != null)
+	{
+		addFiles();
+	}
 };
 
 function postCommand(command){
@@ -138,7 +142,7 @@ function parseFiles(xml) {
 }
 
 function addFiles(){
-	removeFiles();
+
 	$(document).ready(function()
 	{
 	  $.ajax({
