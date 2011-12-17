@@ -109,9 +109,11 @@ create_statuses([H|T], Statuses)->
         {status, Status} ->
             create_statuses(T,
 			    [Status|Statuses]);
-        _ ->
+        KK ->
+			io:fwrite("got something unbelivable:~p~n", [KK]),
             Statuses
     after 5000 ->
+			io:fwrite("got something unbelivable: 5000 ~n"),
 			Statuses
     end.
 
