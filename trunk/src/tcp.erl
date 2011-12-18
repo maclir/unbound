@@ -4,17 +4,17 @@
 %%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/8, init_listening/2, scrape/2]).
+-export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/9, init_listening/2, scrape/2]).
 
 %%----------------------------------------------------------------------
-%% Function:	connect_to_server/8
+%% Function:	connect_to_server/9
 %% Purpose:		builds a request string and sends it to the tracker
 %% Args:		AnnounceBin,InfoHashBin,ClientIdBin (binaries)
 %%				Eventt (string)
 %%				UploadedVal,DownloadedVal,LeftVal,NumWantedVal (integers)
 %% Returns:		List of peers and the interval is successful
 %%----------------------------------------------------------------------	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,DownloadedVal,LeftVal,NumWantedVal)->   
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,tcp)->   
     Announce = binary_to_list(AnnounceBin) ++ "?",
     InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
     ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
@@ -44,9 +44,18 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,Downloa
 			end;
 		{error,Reason} ->
 			exit(self(), Reason)
+	end;
+	
+connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,{udp, TempConnectionId})->   
+	case TempConnectionId of
+		connection_id ->
+			%% http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html
+			%%TODO connecting phase, return {connection_id,ConnectionId}
+			ok;
+		ConnectionId ->
+			%%TODO normal phase, return like normal tcp: [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)]
+			ok
 	end.
-	
-	
 
 %%----------------------------------------------------------------------
 %% Function:	scrape/2
