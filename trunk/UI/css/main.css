@@ -3,7 +3,7 @@ html, body
 	margin: 0; /* Remove body margin/padding */
 	padding: 0;
 	overflow: hidden; /* Remove scroll bars on browser window */
-	font-family: Verdana;
+	font-family: Arial;
 }
 img{
     border:0;
@@ -223,6 +223,23 @@ img{
 	font-size: 14px;
 	margin-bottom: 4px;
 }
+#torrent_dialog a.link {
+	float:left;
+	clear: both;
+	text-decoration: none;
+	color: green;
+	font-size: 14px;
+	margin-bottom: 4px;
+}
+
+#torrent_dialog a.link:hover {
+	color: black;
+}
+
+#torrent_dialog .error-torrent {
+	font-size: 14px;
+	clear: both;
+}
 
 #fade { /*--Transparent background layer--*/
 	display: none; /*--hidden by default--*/
@@ -251,6 +268,14 @@ img{
 	-moz-border-radius: 10px;
 	border-radius: 10px;
 }
+
+img.btn_close {
+	float: right;
+	margin: -55px -55px 0 0;
+}
+
+
+/* progressbar */
 #progressbar{
     height:14px;width:100%;padding:0 0; margin:0 0; border:1px #ABABAB solid; border-radius:4px;
 }
@@ -277,10 +302,6 @@ img{
 }
 #file-table tr.table-header {
     background-color: #DDDDDD; font-size:8pt; font-weight:bold;
-}
-img.btn_close {
-	float: right;
-	margin: -55px -55px 0 0;
 }
 /*--Making IE6 Understand Fixed Positioning--*/
 *html #fade {

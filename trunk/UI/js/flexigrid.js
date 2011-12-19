@@ -917,26 +917,26 @@ var timeout = 1500;
 		g.addRowProp();
 		//set cDrag
 		var cdcol = $('thead tr:first th:first', g.hDiv).get(0);
-			console.log("cdcol:" + cdcol);
+//			console.log("cdcol:" + cdcol);
 		if (cdcol != null) {
 			g.cDrag.className = 'cDrag';
 			g.cdpad = 0;
 			g.cdpad += (isNaN(parseInt($('div', cdcol).css('borderLeftWidth'))) ? 0 : parseInt($('div', cdcol).css('borderLeftWidth')));
-			console.log(g.cdpad);0
+//			console.log(g.cdpad);0
 			g.cdpad += (isNaN(parseInt($('div', cdcol).css('borderRightWidth'))) ? 0 : parseInt($('div', cdcol).css('borderRightWidth')));
-			console.log(g.cdpad);0
+//			console.log(g.cdpad);0
 			g.cdpad += (isNaN(parseInt($('div', cdcol).css('paddingLeft'))) ? 0 : parseInt($('div', cdcol).css('paddingLeft')));
-			console.log(g.cdpad);5
+//			console.log(g.cdpad);5
 			g.cdpad += (isNaN(parseInt($('div', cdcol).css('paddingRight'))) ? 0 : parseInt($('div', cdcol).css('paddingRight')));
-			console.log(g.cdpad);10
+//			console.log(g.cdpad);10
 			g.cdpad += (isNaN(parseInt($(cdcol).css('borderLeftWidth'))) ? 0 : parseInt($(cdcol).css('borderLeftWidth')));
-			console.log(g.cdpad);10
+//			console.log(g.cdpad);10
 			g.cdpad += (isNaN(parseInt($(cdcol).css('borderRightWidth'))) ? 0 : parseInt($(cdcol).css('borderRightWidth')));
-			console.log(g.cdpad);11
+//			console.log(g.cdpad);11
 			g.cdpad += (isNaN(parseInt($(cdcol).css('paddingLeft'))) ? 0 : parseInt($(cdcol).css('paddingLeft')));
-			console.log(g.cdpad);11
+//			console.log(g.cdpad);11
 			g.cdpad += (isNaN(parseInt($(cdcol).css('paddingRight'))) ? 0 : parseInt($(cdcol).css('paddingRight')));
-			console.log(g.cdpad);11
+//			console.log(g.cdpad);11
 			g.cdpad = 11;
 			$(g.bDiv).before(g.cDrag);
 			var cdheight = $(g.bDiv).height();
