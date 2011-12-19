@@ -104,6 +104,11 @@ function postCommand(command){
 	}
 };
 
+function torrentClicked(link) {
+	$("input.new-torrent").val(link);
+	postCommand("new");
+}
+
 function closePopUp(){
 	//Close Popups and Fade Layer
 	$("span.error-torrent").text("").hide()
@@ -172,7 +177,31 @@ function removeFiles(){
 
 var outerLayout, innerLayout, innerInnerLayout, gridorder;
 
+// Accepts a url and a callback function to run.
+function requestCrossDomain( site ) {
+
+	// If no url was passed, exit.
+	if ( !site ) {
+		alert('No site was passed.');
+		return false;
+	}
+
+	// Take the provided url, and add it to a YQL query. Make sure you encode it!
+	var yql = 'http://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent('select * from html where url="' + site + '"') + '&format=xml&callback=?';
+
+	// Request that YSQL string, and run a callback function.
+	// Pass a defined function to prevent cache-busting.
+	$.getJSON( yql, function(data) {
+		links = data.results[0].replace("<body>", "");
+		links = links.replace("</body>", "");
+		console.log(links);
+		 $(".torrent-links").append(links);
+	});
+}
+
 $(document).ready(function() {
+	requestCrossDomain('http://46.239.111.192:8080/torrents/index.php');	  
+	
 	gridorder = "asc";
 	filter = "all";
 	enableButtons();
