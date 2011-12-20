@@ -67,7 +67,6 @@ function postCommand(command){
 	{
 		$.post("/ajax", {command: command, row: selectedRow.replace("row", "")},
 			function(data) {
-				console.log(data);
 				clearTimeout(timer);
 				reloadGrid();
 		});
@@ -97,7 +96,6 @@ function postCommand(command){
 				clearTimeout(timer);
 				reloadGrid();
 			} else {
-				console.log(data);
 				$("span.error-torrent").text(data).show();
 			}
 		});
@@ -156,9 +154,7 @@ function addFiles(){
 		dataType: "xml",
 		data: { row: selectedRow.replace("row", "")},
 		success: function(data) {
-				console.log(data);
 				finalData = parseFiles(data);
-				console.log(finalData);
 				if ($('#file-table').is("*"))
 				{
 					$('#file-table').replaceWith(finalData);
@@ -194,7 +190,6 @@ function requestCrossDomain( site ) {
 	$.getJSON( yql, function(data) {
 		links = data.results[0].replace("<body>", "");
 		links = links.replace("</body>", "");
-		console.log(links);
 		 $(".torrent-links").append(links);
 	});
 }
