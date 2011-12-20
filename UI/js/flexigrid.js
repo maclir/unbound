@@ -432,8 +432,12 @@ var timeout = 1500;
 					});
 				}
 				$('tr', t).unbind();
-				$(t).empty();
-				$(t).append(tbody);
+				
+				if ($('.downloads-table > tbody').is("*")) {
+					$('.downloads-table > tbody').replaceWith(tbody);
+				} else {
+					$('.downloads-table').append(tbody)
+				}
 				this.addCellProp();
 				this.addRowProp();
 				this.rePosDrag();
