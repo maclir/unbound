@@ -4,7 +4,7 @@
 %%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/9, init_listening/2, scrape/2]).
+-export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/9, connect_to_udp_server/10, init_listening/2, scrape/2]).
 
 %%----------------------------------------------------------------------
 %% Function:	connect_to_server/9
@@ -44,17 +44,36 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,Downloa
 			end;
 		{error,Reason} ->
 			exit(self(), Reason)
-	end;
+	end.
 	
-connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Event,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,{udp, TempConnectionId})->   
+connect_to_udp_server(AnnounceBin,TrackerPort,InfoHashBin,ClientIdBin,Event,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,{udp, TempConnectionId})->
+	{ok, Socket} = gen_udp:open(1235),
 	case TempConnectionId of
 		connection_id ->
 			%% http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html
-			%%TODO connecting phase, return {connection_id,ConnectionId}
-			ok;
+			TransactionID =  random:uniform(5000),
+			{ok, Socket} = gen_udp:open(1235),
+			%% i'm not sure about the format of 0x41727101980 here. i think it's wrong.
+			gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<"0x41727101980",0:32,TransactionID:32>>),
+				receive
+					{udp,_Sockett,_FromHost,_FromPort,<<_Action:32,TransactionID:32,ConnectionId:64>>} ->
+						{connection_id,ConnectionId};
+					Msg ->
+						Msg
+				end;
 		ConnectionId ->
 			%%TODO normal phase, return like normal tcp: [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)]
-			ok
+			TransactionID = random:uniform(5000),
+			Key = random:uniform(5000),
+		gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<ConnectionId:64,1:32,TransactionID:32,InfoHashBin,ClientIdBin,DownloadedVal:64,LeftVal:64,
+																		UploadedVal:64,Event:32,0:32,Key:32,NumWantedVal:32,6991:16>>),
+			receive
+					{udp,_Sockett,_FromHost,_FromPort,<<_Action:32,TransactionID:32,Interval:32,_NumPeers:32,_NumSeeders:32,Peers/binary>>} ->
+						[{"Interval",Interval},
+						 {"peers",separate(Peers)}];
+					Msg ->
+						Msg
+				end
 	end.
 
 %%----------------------------------------------------------------------
