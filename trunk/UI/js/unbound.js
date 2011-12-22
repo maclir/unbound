@@ -190,7 +190,52 @@ function requestCrossDomain( site ) {
 	$.getJSON( yql, function(data) {
 		links = data.results[0].replace("<body>", "");
 		links = links.replace("</body>", "");
-		 $(".torrent-links").append(links);
+		$(".torrent-links").append(links);
+		listFilter($("#torrent-search"),$("#torrent-list"));
+		$('INPUT.auto-hint, TEXTAREA.auto-hint').each(function(){
+			if($(this).attr('title') == ''){ return; }
+			if($(this).val() == ''){ $(this).val($(this).attr('title')); }
+			else { $(this).removeClass('auto-hint'); }
+		});
+			$('INPUT.auto-hint, TEXTAREA.auto-hint').focus(function(){
+		if($(this).val() == $(this).attr('title')){
+		    $(this).val('');
+		    $(this).removeClass('auto-hint');
+		}
+	});
+	$('INPUT.auto-hint, TEXTAREA.auto-hint').blur(function(){
+		if($(this).val() == '' && $(this).attr('title') != ''){
+		   $(this).val($(this).attr('title'));
+		   $(this).addClass('auto-hint');
+		}
+	});
+	});
+}
+
+jQuery.expr[':'].Contains = function(a,i,m){
+    return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase())>=0;
+};
+
+function listFilter(header, list) {
+	// create and add the filter form to the header
+	var form = $("<form>").attr({"class":"filter-form","action":"#"}),
+	input = $("<input>").attr({"class":"filter-input","type":"text","title":"search","class":"auto-hint"});
+	$(form).submit(function(){
+		return false;
+	});
+	
+	$(form).append(input).appendTo(header);
+	$(input).change( function () {
+		var filter = $(this).val(); // get the value of the input, which we filter on
+		if (filter) {
+			$(list).find("a:not(:Contains(" + filter + "))").parent().slideUp();
+			$(list).find("a:Contains(" + filter + ")").parent().slideDown();
+		} else {
+			$(list).find("li").slideDown();
+		}
+	}).keyup( function () {
+		// fire the above change event after every letter
+		$(this).change();
 	});
 }
 
@@ -264,8 +309,8 @@ $(document).ready(function() {
 	
 	$('.outer-west ul li').click(function(){
 		filter = $(this).attr('title');
-
 		selectedRow = null;
+		removeFiles();
 		clearTimeout(timer);
 		reloadGrid();
 		$(this).addClass("selected");
@@ -307,10 +352,6 @@ $(document).ready(function() {
 		, west__size: 125
 		, west__minSize: 100
 		, west__maxSize: 200
-		, spacing_open: 8 // ALL panes
-		, spacing_closed: 12 // ALL panes
-		//, north__spacing_open: 0
-		//, south__spacing_open: 0
 		, north__maxSize: 200
 		, south__maxSize: 200 
 	});
@@ -324,12 +365,11 @@ $(document).ready(function() {
 		, north__resizable: false
 		, north__slidable: false 
 		, south__paneSelector: ".east-south"
-		, south__spacing_closed: 12
-		, spacing_open: 8 // ALL panes
-		, spacing_closed: 8 // ALL panes
 		, south__size: 200
 		, south__minSize: 100
 		, south__maxSize: 350
+		, spacing_open: 8 // ALL panes
+		, spacing_closed: 10 // ALL panes
 	});
 	
 	$('.loading').hide();
