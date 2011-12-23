@@ -151,7 +151,20 @@ handle_call({add_new_torrent,Binary, Path},_From,State) ->
 
 handle_call({torrent_command,Hash,Command},_From,State) ->
     {ok,Pid} = torrent_mapper:req(Hash),
-    Pid ! {command, Command},
+	case Command of
+		delete ->
+    		Pid ! {command, self(),Command},
+			receive
+				done_deleted ->
+					ok
+			end,
+			HashHex = info_hash:to_hex(Hash),
+		    AppSupPid = whereis(app_sup),
+		    supervisor:terminate_child(AppSupPid,HashHex),
+		    supervisor:delete_child(AppSupPid,HashHex);
+		_->
+    		Pid ! {command, Command}
+	end,
     {reply, ok, State};
 
 handle_call({remove_torrents, _}, _From, State)->

@@ -124,9 +124,10 @@ loop(Record,StatusRecord, Id) ->
 			torrent_db:add(NewRecord),
 			NewStatusRecord = StatusRecord#torrent_status{status = downloading, timer = erlang:now()},
 			init_start(Id, NewRecord,NewStatusRecord);
-		{command, delete} ->
+		{command, Pid, delete} ->
 			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
-			torrent_mapper:free(Record#torrent.info_sha);
+			torrent_mapper:free(Record#torrent.info_sha),
+			Pid ! done_deleted;
 		{get_status_record,Sender} ->
 			NewStatusRecord = StatusRecord#torrent_status{downspeed = 0.0, upspeed = 0.0, timer = erlang:now()},
 			Sender ! {status,NewStatusRecord},
@@ -169,10 +170,11 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			torrent_db:add(NewRecord),
 			NewStatusRecord = StatusRecord#torrent_status{status = stopped},
 			loop(NewRecord,NewStatusRecord,Id);
-		{command, delete} ->
+		{command, Pid, delete} ->
 			stop(DownloadPid, TrackerList, ActiveNetList),
 			torrent_db:delete_by_SHA1(Record#torrent.info_sha),
-			torrent_mapper:free(Record#torrent.info_sha);
+			torrent_mapper:free(Record#torrent.info_sha),
+			Pid ! done_deleted;
 		{get_status_record,Sender} ->
 			Now = erlang:now(),
 			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
