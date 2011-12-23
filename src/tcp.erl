@@ -84,7 +84,7 @@ connect_to_server(AnnounceBinFull,InfoHashBin,ClientIdBin,Event,UploadedVal,Down
 			DecodedEvent = decode_event(Event),
 			%%TODO normal phase, return like normal tcp: [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)]
 			Result = gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<ConnectionId:64,1:32,TransactionID:32,InfoHashBin/binary,ClientIdBin/binary,DownloadedVal:64,LeftVal:64,
-																					 UploadedVal:64,DecodedEvent:32,0:32,Key:32,-1:32,6991:16>>),
+																					 UploadedVal:64,DecodedEvent:32,0:32,Key:32,NumWantedVal:32,6991:16>>),
 			case Result of
 				ok ->
 					receive
@@ -381,6 +381,9 @@ check_handshake(Socket,ClientId)->
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
 			exit(self(), "remote peer closed connection");
+		{stop,Reason} ->
+			gen_tcp:close(Socket),
+			exit(self(), Reason);
 		{tcp,_,Msg} ->
 			gen_tcp:close(Socket),
 			exit(self(), {"remote peer sent this",Msg})
@@ -420,7 +423,10 @@ check_infohash(Socket,InfoHashFromPeer)->
 	end,
 	receive
 		{new_master_pid, Pid} -> 
-			Pid
+			Pid;
+		{stop,Reason} ->
+			gen_tcp:close(Socket),
+			exit(self(), Reason)
 		after 1000 ->
 			gen_tcp:close(Socket),
 			exit(self(), normal)
