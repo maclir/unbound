@@ -178,7 +178,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			Elapsed = timer:now_diff(Now, StatusRecord#torrent_status.timer)/1000000,
 			{DownloadSizeLog,UploadSizeLog} = RateLog,
 			if
-				Elapsed > 3.0 ->
+				Elapsed > 5.0 ->
 					NewRateLog = {0,0},
 					NewTime = Now;
 				true ->
