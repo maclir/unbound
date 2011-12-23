@@ -174,7 +174,7 @@ separate(_)->
 %%				ClientId (string), MasterPid (pid)	
 %%----------------------------------------------------------------------
 open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
-	case gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0},{active,false}]) of
+	case gen_tcp:connect(DestinationIp, DestinationPort, [binary, {packet,0},{active,false}], 5000) of
 		{ok,Socket} -> 
 			connect_to_client(MasterPid, Socket,InfoHash,ClientId);
 		{error, Reason} ->
