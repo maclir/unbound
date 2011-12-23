@@ -230,7 +230,7 @@ img{
 }
 
 #torrent_dialog ul {
-	margin: 0;
+	margin-top: 5px;
 	padding: 0;
 }
 
@@ -238,14 +238,14 @@ img{
 	list-style: none;
 	float: left;
 	clear: both;
-	margin: 2px;
+	font-size: 12px;
 	padding: 0;
+	margin: 3px;
 }
 
 #torrent_dialog a.link {
 	text-decoration: none;
 	color: green;
-	font-size: 14px;
 }
 
 #torrent_dialog a.link:hover {

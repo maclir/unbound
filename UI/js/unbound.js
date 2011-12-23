@@ -188,27 +188,37 @@ function requestCrossDomain( site ) {
 	// Request that YSQL string, and run a callback function.
 	// Pass a defined function to prevent cache-busting.
 	$.getJSON( yql, function(data) {
-		links = data.results[0].replace("<body>", "");
-		links = links.replace("</body>", "");
-		$(".torrent-links").append(links);
-		listFilter($("#torrent-search"),$("#torrent-list"));
-		$('INPUT.auto-hint, TEXTAREA.auto-hint').each(function(){
-			if($(this).attr('title') == ''){ return; }
-			if($(this).val() == ''){ $(this).val($(this).attr('title')); }
-			else { $(this).removeClass('auto-hint'); }
-		});
-			$('INPUT.auto-hint, TEXTAREA.auto-hint').focus(function(){
-		if($(this).val() == $(this).attr('title')){
-		    $(this).val('');
-		    $(this).removeClass('auto-hint');
+		if (data.results[0])
+		{
+			links = data.results[0].replace("<body>", "");
+			links = links.replace("</body>", "");
+			$(".torrent-links").append(links);
+			listFilter($("#torrent-search"),$("#torrent-list"));
+			applyHints();
+		} else {
+			console.log("yql failed");
+			requestCrossDomain(site);
+		}
+	});
+}
+
+function applyHints() {
+	$('INPUT.auto-hint, TEXTAREA.auto-hint').each(function(){
+		if($(this).attr('title') == ''){ return; }
+		if($(this).val() == ''){ $(this).val($(this).attr('title')); }
+		else { $(this).removeClass('auto-hint'); }
+	});
+	$('INPUT.auto-hint, TEXTAREA.auto-hint').focus(function(){
+			if($(this).val() == $(this).attr('title')){
+				$(this).val('');
+				$(this).removeClass('auto-hint');
 		}
 	});
 	$('INPUT.auto-hint, TEXTAREA.auto-hint').blur(function(){
-		if($(this).val() == '' && $(this).attr('title') != ''){
-		   $(this).val($(this).attr('title'));
-		   $(this).addClass('auto-hint');
+			if($(this).val() == '' && $(this).attr('title') != ''){
+			   $(this).val($(this).attr('title'));
+			   $(this).addClass('auto-hint');
 		}
-	});
 	});
 }
 
@@ -241,7 +251,7 @@ function listFilter(header, list) {
 
 $(document).ready(function() {
 	requestCrossDomain('http://46.239.111.192:8080/torrents/index.php');	  
-	
+		
 	gridorder = "asc";
 	filter = "all";
 	enableButtons();
