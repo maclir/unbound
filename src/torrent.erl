@@ -142,6 +142,9 @@ loop(Record,StatusRecord, Id) ->
 			end,
 			ComPid ! {files, Files},
 			loop(Record,StatusRecord, Id);
+		{'EXIT',_FromPid,_Reason} ->
+			NewStatusRecord = StatusRecord#torrent_status{peers = StatusRecord#torrent_status.peers - 1, connected_peers = StatusRecord#torrent_status.connected_peers - 1},
+			loop(Record,NewStatusRecord, Id);
 		_Other ->
 			loop(Record,StatusRecord, Id)
 	end.
@@ -217,7 +220,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			TempUnusedPeers = screen_peers(ReceivedPeerList -- LowPeerList -- UnusedPeers,ActiveNetList,[]),
 			NewUnusedPeers = TempUnusedPeers ++ UnusedPeers,
 			{NewActiveNetList, FinalUnusedPeers} = spawn_connections_init(Record, StatusRecord, ActiveNetList ,NewUnusedPeers ++ LowPeerList, NewUnusedPeers, Id),
-			Peers = length(FinalUnusedPeers ++ NewActiveNetList),
+			Peers = length(FinalUnusedPeers ++ NewActiveNetList ++ LowPeerList),
 			NewStatusRecord = StatusRecord#torrent_status{peers=Peers,connected_peers=length(NewActiveNetList)},
 			loop(Record,NewStatusRecord,NewTrackerList,LowPeerList,DownloadPid,Id,NewActiveNetList,FinalUnusedPeers, TrackerStats, RateLog);
 		{bitfield,FromPid,ReceivedBitfield} ->
@@ -289,7 +292,7 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 		{'EXIT',FromPid,Reason} ->
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 			{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
-			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1 + length(FinalActiveNetList)},
+			NewStatusRecord = StatusRecord#torrent_status{peers = StatusRecord#torrent_status.peers - 1, connected_peers = length(FinalActiveNetList)},
 			loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
 	end.
 
