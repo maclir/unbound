@@ -7,7 +7,7 @@
 
 -module(app_sup).
 -behaviour(supervisor).
--export([start_link/0,stop/0,gen_random/2]).
+-export([start_link/0,stop/0,gen_random/1]).
 -export([init/1]).
 
 %%----------------------------------------------------------------------
@@ -15,7 +15,6 @@
 %% Purpose:   creates client id and starts the main process of applciation
 %%----------------------------------------------------------------------
 start_link() ->
-    random:seed(erlang:now()),
     case whereis(?MODULE) of
 	undefined ->
 	    inets:start(),
@@ -80,6 +79,16 @@ gen_random(Counter, <<Binary/binary>>)->
 	RandomBinary = <<(random:uniform(256) - 1)>>,
 	gen_random(Counter -1, <<RandomBinary/binary , Binary/binary>>).
 
+%%----------------------------------------------------------------------
+%% Function:  get_random/1
+%% Purpose:   To initialize the generatin of a random number
+%% Args:      counter (integer)
+%% Returns:    random number
+%%----------------------------------------------------------------------
+gen_random(Counter) ->
+	random:seed(erlang:now()),
+	gen_random(Counter, <<>>).
+
 
 %%----------------------------------------------------------------------
 %% Function:   clientId/0
@@ -88,5 +97,5 @@ gen_random(Counter, <<Binary/binary>>)->
 %%----------------------------------------------------------------------
 clientId() ->
 	GeneralCode = <<"UB0001--">>,
-	UniqueCode = gen_random(12, <<>>),
+	UniqueCode = gen_random(12),
 	<<GeneralCode/binary, UniqueCode/binary>>.

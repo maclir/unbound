@@ -287,9 +287,9 @@ loop(Record,StatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,Un
 			NewRateLog = {DownloadSizeLog,UploadSizeLog + Length},
 			loop(NewRecord,NewStatusRecord,TrackerList,LowPeerList,DownloadPid,Id,ActiveNetList,UnusedPeers, NewTrackerStats, NewRateLog);
 		{'EXIT',FromPid,Reason} ->
-			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1},
 			{TempActiveNetList ,NewLowPeerList} = ban_net_pid(FromPid, ActiveNetList, LowPeerList, DownloadPid, Reason),
 			{FinalActiveNetList, NewUnusedPeers} = spawn_connections_init(Record, StatusRecord, TempActiveNetList, UnusedPeers ++ LowPeerList, UnusedPeers, Id),
+			NewStatusRecord = StatusRecord#torrent_status{connected_peers = StatusRecord#torrent_status.connected_peers - 1 + length(FinalActiveNetList)},
 			loop(Record,NewStatusRecord,TrackerList,NewLowPeerList,DownloadPid,Id,FinalActiveNetList,NewUnusedPeers, TrackerStats, RateLog)
 	end.
 
