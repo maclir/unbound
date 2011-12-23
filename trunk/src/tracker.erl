@@ -19,7 +19,7 @@ init(TorrentPid,Announce,InfoHash,Id) ->
 			UrlInfoHash = info_hash:url_encode(InfoHash),
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"started",200, tcp);
 		<<"udp",_Rest/binary>> ->
-			perform_request(TorrentPid,Announce,InfoHash,Id,connection,200, {udp, connection_id});
+			perform_request(TorrentPid,Announce,InfoHash,Id,"started",200, {udp, connection_id});
 		_Var ->
 			ok
 	end.
@@ -40,7 +40,7 @@ loop(TorrentPid,Announce,UrlInfoHash,Id,Interval,Type) ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"completed",1, Type);
 		{get_peers} ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",100, Type)
-		after Interval ->
+		after Interval * 1000 ->
 			perform_request(TorrentPid,Announce,UrlInfoHash,Id,"none",50, Type)
 	end.
 
@@ -60,7 +60,9 @@ perform_request(TorrentPid,Announce,UrlInfoHash,Id,Event,NumWanted, Type) ->
 					TorrentPid ! {peer_list,self(),PeerList},
 					loop(TorrentPid,Announce,UrlInfoHash,Id,Interval, Type);
 				{connection_id,ConnectionId} ->
-					loop(TorrentPid,Announce,UrlInfoHash,Id,10, {udp, ConnectionId});
+					[{"Interval",Interval},{"peers",PeerList}] = tcp:connect_to_server(Announce,UrlInfoHash,Id,Event,Uploaded,Downloaded,Left,NumWanted, {udp, ConnectionId}),
+					TorrentPid ! {peer_list,self(),PeerList},
+					loop(TorrentPid,Announce,UrlInfoHash,Id,Interval, {udp, ConnectionId});
 				{error,Reason} ->
 					TorrentPid ! {error,Reason};
 				_K ->

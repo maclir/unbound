@@ -4,7 +4,7 @@
 %%%----------------------------------------------------------------------
 -module(tcp).
 -import(bencode, [decode/1, encode/1]).
--export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/9, connect_to_udp_server/10, init_listening/2, scrape/2]).
+-export([open_a_socket/5 ,check_handshake/2, start_listening/3,connect_to_server/9, init_listening/2, scrape/2]).
 
 %%----------------------------------------------------------------------
 %% Function:	connect_to_server/9
@@ -15,25 +15,25 @@
 %% Returns:		List of peers and the interval is successful
 %%----------------------------------------------------------------------	
 connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,tcp)->   
-    Announce = binary_to_list(AnnounceBin) ++ "?",
-    InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
-    ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
-    Port = "port=" ++ "6991" ++ "&",
-    Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
-    Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
-    Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
-    NumWanted = "numwant=" ++ integer_to_list(NumWantedVal) ++ "&", 
-    Compact = "compact=" ++ "1",
+	Announce = binary_to_list(AnnounceBin) ++ "?",
+	InfoHash = "info_hash=" ++ binary_to_list(InfoHashBin) ++ "&",
+	ClientId = "peer_id=" ++ binary_to_list(info_hash:url_encode(ClientIdBin)) ++ "&",
+	Port = "port=" ++ "6991" ++ "&",
+	Uploaded = "uploaded=" ++ integer_to_list(UploadedVal) ++ "&",
+	Downloaded = "downloaded=" ++ integer_to_list(DownloadedVal) ++ "&",
+	Left = "left=" ++ integer_to_list(LeftVal) ++ "&",
+	NumWanted = "numwant=" ++ integer_to_list(NumWantedVal) ++ "&", 
+	Compact = "compact=" ++ "1",
 	if Eventt /= "none" ->
-		Event = "&event=" ++ Eventt,
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ Event;
-	true->
-		RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
+		   Event = "&event=" ++ Eventt,
+		   RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact ++ Event;
+	   true->
+		   RequestString = Announce ++ InfoHash ++ ClientId ++ Port ++ Uploaded ++ Downloaded ++ Left ++ NumWanted ++ Compact
 	end,
 	
 	case httpc:request(get, {RequestString,[{"User-Agent", "Unbound"},
-																{"Accept", "*/*"}]
-											 },[], []) of
+											{"Accept", "*/*"}]
+							},[], []) of
 		{ok,{_,_,Response}} -> 
 			case decode(list_to_binary(Response)) of 
 				{ok,{dict,Pairs}} -> 
@@ -44,38 +44,73 @@ connect_to_server(AnnounceBin,InfoHashBin,ClientIdBin,Eventt,UploadedVal,Downloa
 			end;
 		{error,Reason} ->
 			exit(self(), Reason)
-	end.
-	
-connect_to_udp_server(AnnounceBin,TrackerPort,InfoHashBin,ClientIdBin,Event,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,{udp, TempConnectionId})->
-	{ok, Socket} = gen_udp:open(1235),
+	end;
+
+connect_to_server(AnnounceBinFull,InfoHashBin,ClientIdBin,Event,UploadedVal,DownloadedVal,LeftVal,NumWantedVal,{udp, TempConnectionId})->
+	{ok, Socket} = gen_udp:open(0, [{active, true}]),
+	<<TransactionID:32>> =  app_sup:gen_random(4),
+	[TempAnnounceBin,TrackerPortBinTemp] = binary:split(AnnounceBinFull,[<<":">>],[{scope,{byte_size(AnnounceBinFull),6-byte_size(AnnounceBinFull)}}]),
+	[TrackerPortBin|AnnounceBinTail] = binary:split(TrackerPortBinTemp,[<<"/">>],[]),
+	[_,AnnounceBinHead] = binary:split(TempAnnounceBin,[<<"udp://">>],[]),
+	case AnnounceBinTail of
+		[] ->
+			AnnounceBin = AnnounceBinHead;
+		[Tail] ->
+			AnnounceBin = <<AnnounceBinHead/binary, "/", Tail/binary>>
+	end,	
+	TrackerPort = list_to_integer(binary_to_list(TrackerPortBin)),
 	case TempConnectionId of
 		connection_id ->
 			%% http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html
-			TransactionID =  random:uniform(5000),
-			{ok, Socket} = gen_udp:open(1235),
-			%% i'm not sure about the format of 0x41727101980 here. i think it's wrong.
-			gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<"0x41727101980",0:32,TransactionID:32>>),
-				receive
-					{udp,_Sockett,_FromHost,_FromPort,<<_Action:32,TransactionID:32,ConnectionId:64>>} ->
-						{connection_id,ConnectionId};
-					Msg ->
-						Msg
-				end;
+			Result = gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<4497486125440:64,0:32,TransactionID:32>>),
+			case Result of
+				ok ->
+					receive
+						{udp,_Sockett,_FromHost,_FromPort,TempList} ->
+							<<_Action:32,TransactionID:32,ConnectionId:64>> = list_to_binary(TempList),
+							gen_udp:close(Socket),
+							{connection_id,ConnectionId};
+						Msg ->
+							io:fwrite("msg: ~p~n", [Msg]),
+							gen_udp:close(Socket),
+							Msg
+					end;
+				{error,Reason} ->
+					io:fwrite("err: ~p~n", [Reason]),
+					{error,Reason}
+			end;
 		ConnectionId ->
+			<<Key:32>> = app_sup:gen_random(4),
+			DecodedEvent = decode_event(Event),
 			%%TODO normal phase, return like normal tcp: [lists:keyfind("Interval",1,Result),lists:keyfind("peers",1,Result)]
-			TransactionID = random:uniform(5000),
-			Key = random:uniform(5000),
-		gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<ConnectionId:64,1:32,TransactionID:32,InfoHashBin,ClientIdBin,DownloadedVal:64,LeftVal:64,
-																		UploadedVal:64,Event:32,0:32,Key:32,NumWantedVal:32,6991:16>>),
-			receive
-					{udp,_Sockett,_FromHost,_FromPort,<<_Action:32,TransactionID:32,Interval:32,_NumPeers:32,_NumSeeders:32,Peers/binary>>} ->
-						[{"Interval",Interval},
-						 {"peers",separate(Peers)}];
-					Msg ->
-						Msg
-				end
+			Result = gen_udp:send(Socket,binary_to_list(AnnounceBin), TrackerPort, <<ConnectionId:64,1:32,TransactionID:32,InfoHashBin/binary,ClientIdBin/binary,DownloadedVal:64,LeftVal:64,
+																					 UploadedVal:64,DecodedEvent:32,0:32,Key:32,-1:32,6991:16>>),
+			case Result of
+				ok ->
+					receive
+						{udp,_Sockett,_FromHost,_FromPort,TempList} ->
+							<<_Action:32,TransactionID:32,Interval:32,_NumPeers:32,_NumSeeders:32,Peers/binary>> = list_to_binary(TempList),
+							gen_udp:close(Socket),
+							[{"Interval",Interval},
+							 {"peers",separate(Peers)}];
+						Msg ->
+							io:fwrite("msg: ~p~n", [Msg]),
+							gen_udp:close(Socket),
+							Msg
+					end;
+				{error,Reason} ->
+					io:fwrite("err: ~p~n", [Reason]),
+					{error,Reason}
+			end
 	end.
 
+decode_event(Event) ->
+	case Event of
+		"none" -> 0;
+		"completed" -> 1;
+		"started" -> 2;
+		"stopped" -> 3
+	end.
 %%----------------------------------------------------------------------
 %% Function:	scrape/2
 %% Purpose:		builds a scrape request string,sends it and
@@ -91,15 +126,15 @@ scrape(ScrapeBin,InfoHashBin)->
 	RequestString = Scrape ++ InfoHash,
 	{ok,{_,_,Response}} = httpc:request(get, {RequestString,[]},[], []),
 	case decode(list_to_binary(Response)) of	
-	{ok,
-		{dict,
-			[{<<"files">>,
-				{dict, [{InfoHash,
-							{dict,[{<<"complete">>,Complete},
-								   {<<"downloaded">>,Downloaded},
-								   {<<"incomplete">>,Incomplete}]}}]}}]}}-> 
-								   [{"Complete",Complete},{"Downloaded",Downloaded},{"Incomplete",Incomplete}];
-	_ -> "Tracker does not support scraping or probably does not like you~n"
+		{ok,
+		 {dict,
+		  [{<<"files">>,
+			{dict, [{InfoHash,
+					 {dict,[{<<"complete">>,Complete},
+							{<<"downloaded">>,Downloaded},
+							{<<"incomplete">>,Incomplete}]}}]}}]}}-> 
+			[{"Complete",Complete},{"Downloaded",Downloaded},{"Incomplete",Incomplete}];
+		_ -> "Tracker does not support scraping or probably does not like you~n"
 	end.
 
 %%----------------------------------------------------------------------
@@ -130,7 +165,7 @@ separate(<<Ip1:8, Ip2:8, Ip3:8, Ip4:8,Port:16,Rest/binary>>)->
 	[{{Ip1,Ip2,Ip3,Ip4},Port}|separate(Rest)];
 separate(_)->
 	ok.
-	
+
 %%----------------------------------------------------------------------
 %% Function:	open_a_socket/5
 %% Purpose:		connects to a peer	
@@ -155,15 +190,15 @@ open_a_socket(DestinationIp, DestinationPort,InfoHash,ClientId,MasterPid)->
 %%				ClientId (string)
 %%----------------------------------------------------------------------	
 connect_to_client(MasterPid, Socket,InfoHash,ClientId)-> 
-    gen_tcp:send(Socket,[
-			   19,
-			   "BitTorrent protocol",
-			   <<0,0,0,0,0,0,0,0>>,
-			   InfoHash,
-			   ClientId
+	gen_tcp:send(Socket,[
+						 19,
+						 "BitTorrent protocol",
+						 <<0,0,0,0,0,0,0,0>>,
+						 InfoHash,
+						 ClientId
 						]),
 	handshake_loop(MasterPid,Socket),
- 	inet:setopts(Socket, [{packet, 4},{active, true}]),
+	inet:setopts(Socket, [{packet, 4},{active, true}]),
 	main_loop(Socket, MasterPid).
 
 %%----------------------------------------------------------------------
@@ -174,17 +209,17 @@ connect_to_client(MasterPid, Socket,InfoHash,ClientId)->
 %% Args:		MasterPid (pid), Socket (socket)
 %%----------------------------------------------------------------------	
 handshake_loop(MasterPid, Socket)->
-case gen_tcp:recv(Socket,68) of
-	{ok,<< 19, "BitTorrent protocol", 
-						 _ReservedBytes:8/binary, 
-						 _InfoHash:20/binary, 
-						 _PeerID:20/binary
-						 >>}->
-		MasterPid ! "peer accepted handshake";
-	{error, _Reason}->
+	case gen_tcp:recv(Socket,68) of
+		{ok,<< 19, "BitTorrent protocol", 
+			   _ReservedBytes:8/binary, 
+			   _InfoHash:20/binary, 
+			   _PeerID:20/binary
+			   >>}->
+			MasterPid ! "peer accepted handshake";
+		{error, _Reason}->
 			gen_tcp:close(Socket),
 			exit(self(), handshake)
-end.
+	end.
 
 %%----------------------------------------------------------------------
 %% Function:	main_loop/2
@@ -257,11 +292,11 @@ main_loop(Socket, MasterPid)->
 			gen_tcp:close(Socket),
 			exit(self(), port_closed);
 		{tcp,_,<<7:8, 
-				_PieceIndex:32,
-				Offset:32,
-				Block/binary>>}->
-				MasterPid ! {got_block, Offset,byte_size(Block),Block},
-				main_loop(Socket, MasterPid);
+				 _PieceIndex:32,
+				 Offset:32,
+				 Block/binary>>}->
+			MasterPid ! {got_block, Offset,byte_size(Block),Block},
+			main_loop(Socket, MasterPid);
 		{stop,Reason} ->
 			gen_tcp:close(Socket),
 			exit(self(), Reason);
@@ -285,13 +320,13 @@ main_loop(Socket, MasterPid)->
 %% Args:		PortNumber(integer), ClietId(string)
 %%----------------------------------------------------------------------
 init_listening(PortNumber,ClientId) ->
-    ListeningPid = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
-    receive 
-	{ok, _Socket} ->
-	    {ok, ListeningPid};
-	{error, _ } ->
-	    {error, error_opening_socket}
-    end.
+	ListeningPid = spawn_link(tcp,start_listening,[self(),PortNumber,ClientId]),
+	receive 
+		{ok, _Socket} ->
+			{ok, ListeningPid};
+		{error, _ } ->
+			{error, error_opening_socket}
+	end.
 
 %%----------------------------------------------------------------------
 %% Function:	start_listening/3
@@ -300,18 +335,18 @@ init_listening(PortNumber,ClientId) ->
 %% Args:		InitPid (pid), PortNumber(integer), ClietId(string)
 %%----------------------------------------------------------------------
 start_listening(InitPid, PortNumber, ClientId)->
-    case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
-	{ok, Socket} ->
-	    InitPid ! {ok, Socket},
-	    accepting(Socket, ClientId);
-	{error, _} ->
-	    io:fwrite("Port ~p in use, retrying in 5 seconds\n",[PortNumber]),
-	    receive
-	    after 5000 ->
-		    ok
-	    end,
-	    start_listening(InitPid, PortNumber, ClientId)
-    end.
+	case gen_tcp:listen(PortNumber, [binary, {packet,0}]) of 
+		{ok, Socket} ->
+			InitPid ! {ok, Socket},
+			accepting(Socket, ClientId);
+		{error, _} ->
+			io:fwrite("Port ~p in use, retrying in 5 seconds\n",[PortNumber]),
+			receive
+				after 5000 ->
+					ok
+			end,
+			start_listening(InitPid, PortNumber, ClientId)
+	end.
 
 %%----------------------------------------------------------------------
 %% Function:	accepting/2
@@ -323,10 +358,10 @@ start_listening(InitPid, PortNumber, ClientId)->
 %% Args:		Socket (socket), ClietId(string)
 %%----------------------------------------------------------------------	
 accepting(Socket, ClientId)->
-    {ok, ListenSocket} = gen_tcp:accept(Socket),
-    HandlingPid = spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
-    gen_tcp:controlling_process(ListenSocket, HandlingPid),
-    accepting(Socket,ClientId).
+	{ok, ListenSocket} = gen_tcp:accept(Socket),
+	HandlingPid = spawn(?MODULE, check_handshake,[ListenSocket,ClientId]),
+	gen_tcp:controlling_process(ListenSocket, HandlingPid),
+	accepting(Socket,ClientId).
 
 %%----------------------------------------------------------------------
 %% Function:	check_handshake/2
@@ -336,13 +371,13 @@ accepting(Socket, ClientId)->
 check_handshake(Socket,ClientId)->
 	receive
 		{tcp,_,<< 19, "BitTorrent protocol", 
-						 _ReservedBytes:8/binary, 
-						 InfoHash:20/binary, 
-						 _PeerID:20/binary>>} ->
-							MasterPid = check_infohash(Socket,InfoHash),
-							send_handshake(Socket,InfoHash,ClientId),
-							inet:setopts(Socket, [{packet, 4},{active, true}]),
-							main_loop(Socket, MasterPid);
+				  _ReservedBytes:8/binary, 
+				  InfoHash:20/binary, 
+				  _PeerID:20/binary>>} ->
+			MasterPid = check_infohash(Socket,InfoHash),
+			send_handshake(Socket,InfoHash,ClientId),
+			inet:setopts(Socket, [{packet, 4},{active, true}]),
+			main_loop(Socket, MasterPid);
 		{tcp_closed,_}->
 			gen_tcp:close(Socket),
 			exit(self(), "remote peer closed connection");
@@ -359,11 +394,11 @@ check_handshake(Socket,ClientId)->
 %%----------------------------------------------------------------------		
 send_handshake(Socket, InfoHash, ClientId)->
 	gen_tcp:send(Socket,[
-			   19,
-			   "BitTorrent protocol",
-			   <<0,0,0,0,0,0,0,0>>,
-			   InfoHash,
-			   ClientId
+						 19,
+						 "BitTorrent protocol",
+						 <<0,0,0,0,0,0,0,0>>,
+						 InfoHash,
+						 ClientId
 						]).
 
 %%----------------------------------------------------------------------
@@ -383,10 +418,10 @@ check_infohash(Socket,InfoHashFromPeer)->
 			{ok, IpPort} = inet:peername(Socket),
 			TorrentPid ! {new_upload,self(),IpPort}
 	end,
-		receive
-			{new_master_pid, Pid} -> 
-				Pid
-			after 1000 ->
-				gen_tcp:close(Socket),
-				exit(self(), normal)
-		end.
+	receive
+		{new_master_pid, Pid} -> 
+			Pid
+		after 1000 ->
+			gen_tcp:close(Socket),
+			exit(self(), normal)
+	end.
